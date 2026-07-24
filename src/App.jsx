@@ -5,15 +5,20 @@ import logoImg from '../logo.png.jpg';
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
   const [searchTerm, setSearchTerm] = useState('');
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [driverSearchTerm, setDriverSearchTerm] = useState('');
   
-  // حالات النافذة المنبثقة (إضافة وتعديل)
+  // بيانات المشتركين والسائقين
+  const [students, setStudents] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  
+  // نافذة المشتركين (إضافة وتعديل)
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
 
-  // حقول النموذج
+  // حقول المشترك
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [university, setUniversity] = useState('جامعة ميسان');
@@ -21,9 +26,25 @@ export default function App() {
   const [status, setStatus] = useState('مدفوع');
   const [submitting, setSubmitting] = useState(false);
 
+  // نافذة السائقين (إضافة وتعديل)
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [isEditingDriver, setIsEditingDriver] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState(null);
+
+  // حقول السائق والسيارة
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [carType, setCarType] = useState('حافلة كيا كوستار');
+  const [carNumber, setCarNumber] = useState('');
+  const [route, setRoute] = useState('منطقة حي الخليج - الجامعة');
+  const [capacity, setCapacity] = useState('22');
+  const [driverStatus, setDriverStatus] = useState('نشط');
+  const [submittingDriver, setSubmittingDriver] = useState(false);
+
   // 1. جلب البيانات من Supabase
   useEffect(() => {
     fetchStudents();
+    fetchDrivers();
   }, []);
 
   async function fetchStudents() {
@@ -35,7 +56,7 @@ export default function App() {
         .order('id', { ascending: false });
 
       if (error) {
-        console.error('خطأ في جلب البيانات:', error);
+        console.error('خطأ في جلب بيانات الطلاب:', error);
       } else {
         setStudents(data || []);
       }
@@ -46,7 +67,27 @@ export default function App() {
     }
   }
 
-  // فتح نافذة إضافة جديد
+  async function fetchDrivers() {
+    setLoadingDrivers(true);
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) {
+        console.error('خطأ في جلب بيانات السائقين:', error);
+      } else {
+        setDrivers(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  }
+
+  // --- إدارة المشتركين ---
   const openAddModal = () => {
     setIsEditing(false);
     setSelectedStudentId(null);
@@ -58,7 +99,6 @@ export default function App() {
     setShowModal(true);
   };
 
-  // فتح نافذة التعديل
   const openEditModal = (student) => {
     setIsEditing(true);
     setSelectedStudentId(student.id);
@@ -70,7 +110,6 @@ export default function App() {
     setShowModal(true);
   };
 
-  // 2. حفظ المشترك (إضافة أو تعديل)
   async function handleSaveStudent(e) {
     e.preventDefault();
     if (!name || !phone) {
@@ -81,16 +120,9 @@ export default function App() {
     setSubmitting(true);
 
     if (isEditing) {
-      // تعديل بيانات مشترِك حالي
       const { error } = await supabase
         .from('students')
-        .update({
-          name,
-          phone,
-          university,
-          price,
-          status
-        })
+        .update({ name, phone, university, price, status })
         .eq('id', selectedStudentId);
 
       setSubmitting(false);
@@ -102,20 +134,17 @@ export default function App() {
         fetchStudents();
       }
     } else {
-      // إضافة مشترك جديد
       const { error } = await supabase
         .from('students')
-        .insert([
-          { 
-            name, 
-            phone, 
-            university, 
-            price, 
-            status,
-            days: 'سبت - اثنين - أربعاء',
-            created_at: new Date().toISOString().split('T')[0]
-          }
-        ]);
+        .insert([{ 
+          name, 
+          phone, 
+          university, 
+          price, 
+          status,
+          days: 'سبت - اثنين - أربعاء',
+          created_at: new Date().toISOString().split('T')[0]
+        }]);
 
       setSubmitting(false);
 
@@ -128,7 +157,6 @@ export default function App() {
     }
   }
 
-  // 3. حذف مشترك
   async function handleDeleteStudent(id, name) {
     if (window.confirm(`هل أنت تأكد من حذف المشترك: (${name})؟`)) {
       const { error } = await supabase
@@ -144,20 +172,119 @@ export default function App() {
     }
   }
 
-  // تصفية البيانات حسب البحث
+  // --- إدارة السائقين ---
+  const openAddDriverModal = () => {
+    setIsEditingDriver(false);
+    setSelectedDriverId(null);
+    setDriverName('');
+    setDriverPhone('');
+    setCarType('حافلة كيا كوستار');
+    setCarNumber('');
+    setRoute('منطقة حي الخليج - الجامعة');
+    setCapacity('22');
+    setDriverStatus('نشط');
+    setShowDriverModal(true);
+  };
+
+  const openEditDriverModal = (driver) => {
+    setIsEditingDriver(true);
+    setSelectedDriverId(driver.id);
+    setDriverName(driver.name || '');
+    setDriverPhone(driver.phone || '');
+    setCarType(driver.car_type || 'حافلة كيا كوستار');
+    setCarNumber(driver.car_number || '');
+    setRoute(driver.route || 'منطقة حي الخليج - الجامعة');
+    setCapacity(driver.capacity?.toString() || '22');
+    setDriverStatus(driver.status || 'نشط');
+    setShowDriverModal(true);
+  };
+
+  async function handleSaveDriver(e) {
+    e.preventDefault();
+    if (!driverName || !driverPhone) {
+      alert('يرجى إدخال اسم السائق ورقم الهاتف!');
+      return;
+    }
+
+    setSubmittingDriver(true);
+
+    const driverPayload = {
+      name: driverName,
+      phone: driverPhone,
+      car_type: carType,
+      car_number: carNumber,
+      route: route,
+      capacity: parseInt(capacity, 10) || 0,
+      status: driverStatus
+    };
+
+    if (isEditingDriver) {
+      const { error } = await supabase
+        .from('drivers')
+        .update(driverPayload)
+        .eq('id', selectedDriverId);
+
+      setSubmittingDriver(false);
+
+      if (error) {
+        alert('حدث خطأ أثناء التحديث: ' + error.message);
+      } else {
+        setShowDriverModal(false);
+        fetchDrivers();
+      }
+    } else {
+      const { error } = await supabase
+        .from('drivers')
+        .insert([{ 
+          ...driverPayload,
+          created_at: new Date().toISOString().split('T')[0]
+        }]);
+
+      setSubmittingDriver(false);
+
+      if (error) {
+        alert('حدث خطأ أثناء إضافة السائق (تأكد من إنشاء جدول drivers في Supabase): ' + error.message);
+      } else {
+        setShowDriverModal(false);
+        fetchDrivers();
+      }
+    }
+  }
+
+  async function handleDeleteDriver(id, name) {
+    if (window.confirm(`هل أنت متأكد من حذف السائق: (${name})؟`)) {
+      const { error } = await supabase
+        .from('drivers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert('حدث خطأ في الحذف: ' + error.message);
+      } else {
+        fetchDrivers();
+      }
+    }
+  }
+
+  // التصفية والبحث
   const filteredStudents = students.filter(student =>
     student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.phone?.includes(searchTerm)
   );
 
-  // حساب الإحصائيات الحقيقية والمالية
+  const filteredDrivers = drivers.filter(driver =>
+    driver.name?.toLowerCase().includes(driverSearchTerm.toLowerCase()) ||
+    driver.phone?.includes(driverSearchTerm) ||
+    driver.route?.toLowerCase().includes(driverSearchTerm.toLowerCase())
+  );
+
+  // حساب الإحصائيات
   const totalSubscribers = students.length;
   const paidStudents = students.filter(s => s.status === 'مدفوع' || !s.status);
   const paidCount = paidStudents.length;
   const lateCount = students.filter(s => s.status === 'متأخر').length;
   const unpaidCount = students.filter(s => s.status === 'غير مدفوع').length;
 
-  // استخراج الأرقام من النصوص لحساب إجمالي الأموال
   const parseAmount = (val) => {
     if (!val) return 0;
     const clean = val.toString().replace(/[^0-9]/g, '');
@@ -166,6 +293,11 @@ export default function App() {
 
   const totalExpectedRevenue = students.reduce((sum, s) => sum + parseAmount(s.price), 0);
   const totalCollectedRevenue = paidStudents.reduce((sum, s) => sum + parseAmount(s.price), 0);
+
+  // إحصائيات السائقين
+  const totalDrivers = drivers.length;
+  const activeDriversCount = drivers.filter(d => d.status === 'نشط' || !d.status).length;
+  const totalSeats = drivers.reduce((sum, d) => sum + (parseInt(d.capacity, 10) || 0), 0);
 
   const getStatusBadge = (st) => {
     switch (st) {
@@ -176,6 +308,18 @@ export default function App() {
         return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">متأخر</span>;
       case 'غير مدفوع':
         return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">غير مدفوع</span>;
+    }
+  };
+
+  const getDriverStatusBadge = (st) => {
+    switch (st) {
+      case 'نشط':
+      default:
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">نشط</span>;
+      case 'إجازة':
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">إجازة</span>;
+      case 'متوقف':
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">متوقف</span>;
     }
   };
 
@@ -201,7 +345,7 @@ export default function App() {
             {[
               { id: 'main', label: 'الرئيسية', icon: '🏠' },
               { id: 'subscribers', label: 'المشتركون', icon: '👥' },
-              { id: 'drivers', label: 'السائقون', icon: '🚗' },
+              { id: 'drivers', label: 'السائقون والسيارات', icon: '🚗' },
               { id: 'trips', label: 'الرحلات', icon: '🗺️' },
               { id: 'expenses', label: 'المصروفات', icon: '💵' },
               { id: 'reports', label: 'التقارير المالية', icon: '📊' },
@@ -239,7 +383,7 @@ export default function App() {
             <h1 className="text-xl font-bold text-slate-900">
               {activeTab === 'main' && 'لوحة التحكم السحابية'}
               {activeTab === 'subscribers' && 'إدارة المشتركين'}
-              {activeTab === 'drivers' && 'إدارة السائقين والخطوط'}
+              {activeTab === 'drivers' && 'إدارة السائقين والسيارات'}
               {activeTab === 'trips' && 'سجل الرحلات'}
               {activeTab === 'expenses' && 'إدارة المصروفات'}
               {activeTab === 'reports' && 'التقارير الحسابية'}
@@ -266,7 +410,7 @@ export default function App() {
         {/* محتوى اللوحة */}
         <main className="p-6 space-y-6">
           
-          {/* كروت الإحصائيات السريعة */}
+          {/* كروت الإحصائيات السريعة (المشتركون) */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-emerald-500">
               <p className="text-xs text-slate-500 font-medium">إجمالي المشتركين</p>
@@ -279,14 +423,14 @@ export default function App() {
               <span className="text-[10px] text-slate-400">حساب مكتمل</span>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-orange-500">
-              <p className="text-xs text-slate-500 font-medium">الاشتراكات المتأخرة</p>
-              <p className="text-xl font-bold text-amber-600 mt-1">{lateCount}</p>
-              <span className="text-[10px] text-slate-400">يحتاج مراجعة</span>
+              <p className="text-xs text-slate-500 font-medium">عدد السائقين</p>
+              <p className="text-xl font-bold text-amber-600 mt-1">{totalDrivers}</p>
+              <span className="text-[10px] text-slate-400">{activeDriversCount} سائق نشط</span>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-rose-500">
-              <p className="text-xs text-slate-500 font-medium">غير المدفوع</p>
-              <p className="text-xl font-bold text-rose-600 mt-1">{unpaidCount}</p>
-              <span className="text-[10px] text-slate-400">لم يتم السداد</span>
+              <p className="text-xs text-slate-500 font-medium">سعة المقاعد الكلية</p>
+              <p className="text-xl font-bold text-indigo-600 mt-1">{totalSeats}</p>
+              <span className="text-[10px] text-slate-400">مقعد متاح بالأسطول</span>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-purple-500">
               <p className="text-xs text-slate-500 font-medium">المبالغ المحصلة</p>
@@ -299,7 +443,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* العرض بناءً على التبويب المختار */}
+          {/* التبويب الرئيسي والمشتركين */}
           {(activeTab === 'main' || activeTab === 'subscribers') && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
@@ -337,7 +481,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* جدول البيانات */}
+                {/* جدول المشتركين */}
                 {loading ? (
                   <div className="p-12 text-center text-slate-400 font-medium text-sm">
                     جاري جلب البيانات من السيرفر... ⏳
@@ -436,12 +580,110 @@ export default function App() {
             </div>
           )}
 
-          {/* تبويب السائقين (مثال توضيحي) */}
+          {/* تبويب إدارة السائقين والسيارات بالكامل */}
           {activeTab === 'drivers' && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
-              <div className="text-4xl">🚗</div>
-              <h3 className="font-bold text-slate-800">قسم إدارة السائقين والخطوط</h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">سيتم ربط كادر السائقين والحافلات مع خطوط النقل الخاصة بـ (مسار إكس) هنا قريباً.</p>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+              
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">إدارة كادر السائقين والسيارات</h2>
+                  <p className="text-xs text-slate-400">سجل بيانات السائقين، نوع الحافلة، رقم اللوحة، الخط والمنطقة السكنية</p>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="بحث باسم السائق، الهاتف، أو الخط..."
+                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-64 focus:outline-none focus:border-orange-500"
+                    value={driverSearchTerm}
+                    onChange={(e) => setDriverSearchTerm(e.target.value)}
+                  />
+                  
+                  <button 
+                    onClick={openAddDriverModal}
+                    className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+</span> إضافة سائق جديد
+                  </button>
+                  
+                  <button 
+                    onClick={fetchDrivers}
+                    className="bg-slate-100 text-slate-700 text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-200"
+                    title="تحديث قائمة السائقين"
+                  >
+                    🔄 تحديث
+                  </button>
+                </div>
+              </div>
+
+              {/* جدول السائقين */}
+              {loadingDrivers ? (
+                <div className="p-12 text-center text-slate-400 font-medium text-sm">
+                  جاري جلب بيانات السائقين... ⏳
+                </div>
+              ) : filteredDrivers.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <p className="text-slate-400 text-sm">لا يوجد سائقين مضافين حالياً.</p>
+                  <button 
+                    onClick={openAddDriverModal}
+                    className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold"
+                  >
+                    إضافة أول سائق الآن
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-slate-50 text-slate-500 border-y border-slate-200">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th className="p-3">اسم السائق</th>
+                        <th className="p-3">رقم الهاتف</th>
+                        <th className="p-3">نوع المركبة</th>
+                        <th className="p-3">رقم السيارة</th>
+                        <th className="p-3">الخط / المنطقة Assigned Route</th>
+                        <th className="p-3 text-center">السعة (المقاعد)</th>
+                        <th className="p-3 text-center">الحالة</th>
+                        <th className="p-3 text-center">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredDrivers.map((driver, idx) => (
+                        <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
+                          <td className="p-3 font-bold text-slate-800 flex items-center gap-2">
+                            <span className="p-1.5 bg-slate-100 rounded-full">🧔🏻‍♂️</span>
+                            {driver.name}
+                          </td>
+                          <td className="p-3 text-slate-600 dir-ltr text-right">{driver.phone}</td>
+                          <td className="p-3 text-slate-700 font-semibold">{driver.car_type || 'حافلة كيا'}</td>
+                          <td className="p-3 text-slate-500 dir-ltr text-right">{driver.car_number || 'غير مدخل'}</td>
+                          <td className="p-3 text-orange-600 font-bold">{driver.route || 'منطقة عامة'}</td>
+                          <td className="p-3 text-center font-bold text-slate-800">{driver.capacity || 22} راكب</td>
+                          <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
+                          <td className="p-3 text-center space-x-1 space-x-reverse">
+                            <button 
+                              onClick={() => openEditDriverModal(driver)}
+                              className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
+                              title="تعديل السائق"
+                            >
+                              ✏️ تعديل
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteDriver(driver.id, driver.name)}
+                              className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
+                              title="حذف السائق"
+                            >
+                              🗑️ حذف
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -467,7 +709,7 @@ export default function App() {
 
       </div>
 
-      {/* النافذة المنبثقة (إضافة / تعديل) */}
+      {/* النافذة المنبثقة (إضافة / تعديل مشترك) */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
@@ -554,6 +796,124 @@ export default function App() {
                   className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 shadow-md"
                 >
                   {submitting ? 'جاري الحفظ...' : (isEditing ? 'حفظ التعديلات' : 'إضافة المشترك')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* النافذة المنبثقة (إضافة / تعديل سائق) */}
+      {showDriverModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="font-bold text-slate-800 text-base">
+                {isEditingDriver ? '✏️ تعديل بيانات السائق' : '🚗 إضافة سائق جديد'}
+              </h3>
+              <button onClick={() => setShowDriverModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveDriver} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">اسم السائق الثلاثي *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="مثال: أحمد جاسم محمد"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">رقم الهاتف *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="مثال: 07712345678"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 dir-ltr text-right"
+                  value={driverPhone}
+                  onChange={(e) => setDriverPhone(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">نوع السيارة / الحافلة</label>
+                  <input 
+                    type="text"
+                    placeholder="كيا كوستار / تويوتا"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                    value={carType}
+                    onChange={(e) => setCarType(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">رقم اللوحة / السيارة</label>
+                  <input 
+                    type="text"
+                    placeholder="مثال: 12345 ميسان"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                    value={carNumber}
+                    onChange={(e) => setCarNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">الخط / المنطقة السكنية</label>
+                <input 
+                  type="text"
+                  placeholder="مثال: حي الخليج - جامعة ميسان"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                  value={route}
+                  onChange={(e) => setRoute(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">سعة المقاعد</label>
+                  <input 
+                    type="number"
+                    placeholder="22"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">حالة السائق</label>
+                  <select 
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 bg-white"
+                    value={driverStatus}
+                    onChange={(e) => setDriverStatus(e.target.value)}
+                  >
+                    <option value="نشط">نشط</option>
+                    <option value="إجازة">إجازة</option>
+                    <option value="متوقف">متوقف</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t">
+                <button 
+                  type="button"
+                  onClick={() => setShowDriverModal(false)}
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  type="submit"
+                  disabled={submittingDriver}
+                  className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 shadow-md"
+                >
+                  {submittingDriver ? 'جاري الحفظ...' : (isEditingDriver ? 'حفظ التعديلات' : 'إضافة السائق')}
                 </button>
               </div>
             </form>
