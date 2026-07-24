@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import logoImg from './logo.png.jpg';
+import logoImg from '../logo.png.jpg';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
