@@ -24,6 +24,7 @@ export default function App() {
   const [university, setUniversity] = useState('جامعة ميسان');
   const [price, setPrice] = useState('90,000');
   const [status, setStatus] = useState('مدفوع');
+  const [driverId, setDriverId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // نافذة السائقين (إضافة وتعديل)
@@ -96,6 +97,7 @@ export default function App() {
     setUniversity('جامعة ميسان');
     setPrice('90,000');
     setStatus('مدفوع');
+    setDriverId('');
     setShowModal(true);
   };
 
@@ -107,6 +109,7 @@ export default function App() {
     setUniversity(student.university || 'جامعة ميسان');
     setPrice(student.price || '90,000');
     setStatus(student.status || 'مدفوع');
+    setDriverId(student.driver_id ? student.driver_id.toString() : '');
     setShowModal(true);
   };
 
@@ -119,10 +122,19 @@ export default function App() {
 
     setSubmitting(true);
 
+    const studentPayload = {
+      name,
+      phone,
+      university,
+      price,
+      status,
+      driver_id: driverId ? parseInt(driverId, 10) : null
+    };
+
     if (isEditing) {
       const { error } = await supabase
         .from('students')
-        .update({ name, phone, university, price, status })
+        .update(studentPayload)
         .eq('id', selectedStudentId);
 
       setSubmitting(false);
@@ -137,11 +149,7 @@ export default function App() {
       const { error } = await supabase
         .from('students')
         .insert([{ 
-          name, 
-          phone, 
-          university, 
-          price, 
-          status,
+          ...studentPayload,
           days: 'سبت - اثنين - أربعاء',
           created_at: new Date().toISOString().split('T')[0]
         }]);
@@ -243,7 +251,7 @@ export default function App() {
       setSubmittingDriver(false);
 
       if (error) {
-        alert('حدث خطأ أثناء إضافة السائق (تأكد من إنشاء جدول drivers في Supabase): ' + error.message);
+        alert('حدث خطأ أثناء إضافة السائق: ' + error.message);
       } else {
         setShowDriverModal(false);
         fetchDrivers();
@@ -262,6 +270,7 @@ export default function App() {
         alert('حدث خطأ في الحذف: ' + error.message);
       } else {
         fetchDrivers();
+        fetchStudents();
       }
     }
   }
@@ -278,7 +287,7 @@ export default function App() {
     driver.route?.toLowerCase().includes(driverSearchTerm.toLowerCase())
   );
 
-  // حساب الإحصائيات
+  // إحصائيات المشتركين
   const totalSubscribers = students.length;
   const paidStudents = students.filter(s => s.status === 'مدفوع' || !s.status);
   const paidCount = paidStudents.length;
@@ -298,6 +307,17 @@ export default function App() {
   const totalDrivers = drivers.length;
   const activeDriversCount = drivers.filter(d => d.status === 'نشط' || !d.status).length;
   const totalSeats = drivers.reduce((sum, d) => sum + (parseInt(d.capacity, 10) || 0), 0);
+
+  // دوال مساعدة لربط الأسماء
+  const getDriverName = (dId) => {
+    if (!dId) return <span className="text-slate-400 font-normal">غير محدد</span>;
+    const found = drivers.find(d => d.id === dId);
+    return found ? <span className="font-bold text-orange-600">🚗 {found.name}</span> : <span className="text-slate-400">غير محدد</span>;
+  };
+
+  const getStudentCountForDriver = (dId) => {
+    return students.filter(s => s.driver_id === dId).length;
+  };
 
   const getStatusBadge = (st) => {
     switch (st) {
@@ -410,7 +430,7 @@ export default function App() {
         {/* محتوى اللوحة */}
         <main className="p-6 space-y-6">
           
-          {/* كروت الإحصائيات السريعة (المشتركون) */}
+          {/* كروت الإحصائيات السريعة */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-emerald-500">
               <p className="text-xs text-slate-500 font-medium">إجمالي المشتركين</p>
@@ -427,7 +447,7 @@ export default function App() {
               <p className="text-xl font-bold text-amber-600 mt-1">{totalDrivers}</p>
               <span className="text-[10px] text-slate-400">{activeDriversCount} سائق نشط</span>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-rose-500">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-indigo-500">
               <p className="text-xs text-slate-500 font-medium">سعة المقاعد الكلية</p>
               <p className="text-xl font-bold text-indigo-600 mt-1">{totalSeats}</p>
               <span className="text-[10px] text-slate-400">مقعد متاح بالأسطول</span>
@@ -451,8 +471,8 @@ export default function App() {
                 
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-800">قائمة المشتركين الحقيقية</h2>
-                    <p className="text-xs text-slate-400">إدارة المشتركين، تعديل الحالات، والحذف المباشر</p>
+                    <h2 className="text-base font-bold text-slate-800">قائمة المشتركين والخطوط</h2>
+                    <p className="text-xs text-slate-400">إدارة المشتركين، ربط السائق بالحافلة، وتعديل حالات الدفع</p>
                   </div>
                   
                   <div className="flex items-center gap-3">
@@ -505,7 +525,7 @@ export default function App() {
                           <th className="p-3">اسم المشترك</th>
                           <th className="p-3">رقم الهاتف</th>
                           <th className="p-3">الجامعة / الجهة</th>
-                          <th className="p-3">تاريخ الإضافة</th>
+                          <th className="p-3">السائق المخصص</th>
                           <th className="p-3">قيمة الاشتراك</th>
                           <th className="p-3 text-center">الحالة</th>
                           <th className="p-3 text-center">الإجراءات</th>
@@ -518,9 +538,7 @@ export default function App() {
                             <td className="p-3 font-bold text-slate-800">{student.name}</td>
                             <td className="p-3 text-slate-600 dir-ltr text-right">{student.phone}</td>
                             <td className="p-3 text-slate-600">{student.university || 'جامعة ميسان'}</td>
-                            <td className="p-3 text-slate-500">
-                              {student.created_at ? new Date(student.created_at).toLocaleDateString('ar-EG') : 'اليوم'}
-                            </td>
+                            <td className="p-3">{getDriverName(student.driver_id)}</td>
                             <td className="p-3 font-bold text-slate-800">{student.price || '90,000'} د.ع</td>
                             <td className="p-3 text-center">{getStatusBadge(student.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
@@ -580,14 +598,14 @@ export default function App() {
             </div>
           )}
 
-          {/* تبويب إدارة السائقين والسيارات بالكامل */}
+          {/* تبويب إدارة السائقين والسيارات */}
           {activeTab === 'drivers' && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
               
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-800">إدارة كادر السائقين والسيارات</h2>
-                  <p className="text-xs text-slate-400">سجل بيانات السائقين، نوع الحافلة، رقم اللوحة، الخط والمنطقة السكنية</p>
+                  <h2 className="text-base font-bold text-slate-800">إدارة كادر السائقين والحافلات</h2>
+                  <p className="text-xs text-slate-400">سجل بيانات السائقين، سعة المقاعد، وعدد الطلاب المسجلين لكل حافلة</p>
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -639,46 +657,58 @@ export default function App() {
                         <th className="p-3">#</th>
                         <th className="p-3">اسم السائق</th>
                         <th className="p-3">رقم الهاتف</th>
-                        <th className="p-3">نوع المركبة</th>
-                        <th className="p-3">رقم السيارة</th>
-                        <th className="p-3">الخط / المنطقة Assigned Route</th>
-                        <th className="p-3 text-center">السعة (المقاعد)</th>
+                        <th className="p-3">نوع المركبة واللوحة</th>
+                        <th className="p-3">الخط / المنطقة</th>
+                        <th className="p-3 text-center">الركاب / السعة الكلية</th>
                         <th className="p-3 text-center">الحالة</th>
                         <th className="p-3 text-center">الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredDrivers.map((driver, idx) => (
-                        <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
-                          <td className="p-3 font-bold text-slate-800 flex items-center gap-2">
-                            <span className="p-1.5 bg-slate-100 rounded-full">🧔🏻‍♂️</span>
-                            {driver.name}
-                          </td>
-                          <td className="p-3 text-slate-600 dir-ltr text-right">{driver.phone}</td>
-                          <td className="p-3 text-slate-700 font-semibold">{driver.car_type || 'حافلة كيا'}</td>
-                          <td className="p-3 text-slate-500 dir-ltr text-right">{driver.car_number || 'غير مدخل'}</td>
-                          <td className="p-3 text-orange-600 font-bold">{driver.route || 'منطقة عامة'}</td>
-                          <td className="p-3 text-center font-bold text-slate-800">{driver.capacity || 22} راكب</td>
-                          <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
-                          <td className="p-3 text-center space-x-1 space-x-reverse">
-                            <button 
-                              onClick={() => openEditDriverModal(driver)}
-                              className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
-                              title="تعديل السائق"
-                            >
-                              ✏️ تعديل
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteDriver(driver.id, driver.name)}
-                              className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
-                              title="حذف السائق"
-                            >
-                              🗑️ حذف
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredDrivers.map((driver, idx) => {
+                        const count = getStudentCountForDriver(driver.id);
+                        const maxCap = parseInt(driver.capacity, 10) || 0;
+                        const isFull = count >= maxCap && maxCap > 0;
+
+                        return (
+                          <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
+                            <td className="p-3 font-bold text-slate-800 flex items-center gap-2">
+                              <span className="p-1.5 bg-slate-100 rounded-full">🧔🏻‍♂️</span>
+                              {driver.name}
+                            </td>
+                            <td className="p-3 text-slate-600 dir-ltr text-right">{driver.phone}</td>
+                            <td className="p-3 text-slate-700 font-medium">
+                              {driver.car_type || 'حافلة'} ({driver.car_number || 'بدون رقم'})
+                            </td>
+                            <td className="p-3 text-orange-600 font-bold">{driver.route || 'منطقة عامة'}</td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2.5 py-1 rounded-md font-bold text-xs ${
+                                isFull ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-700'
+                              }`}>
+                                {count} / {maxCap} طالب
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
+                            <td className="p-3 text-center space-x-1 space-x-reverse">
+                              <button 
+                                onClick={() => openEditDriverModal(driver)}
+                                className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
+                                title="تعديل السائق"
+                              >
+                                ✏️ تعديل
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteDriver(driver.id, driver.name)}
+                                className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
+                                title="حذف السائق"
+                              >
+                                🗑️ حذف
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -687,7 +717,7 @@ export default function App() {
             </div>
           )}
 
-          {/* تبويب الرحلات */}
+          {/* تبويب الرحلات والمصروفات */}
           {activeTab === 'trips' && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">🗺️</div>
@@ -696,7 +726,6 @@ export default function App() {
             </div>
           )}
 
-          {/* تبويب المصروفات والتقارير */}
           {(activeTab === 'expenses' || activeTab === 'reports') && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">📊</div>
@@ -754,6 +783,23 @@ export default function App() {
                   value={university}
                   onChange={(e) => setUniversity(e.target.value)}
                 />
+              </div>
+
+              {/* اختيار السائق المخصص */}
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">تحديد السائق / الحافلة المخصصة</label>
+                <select 
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 bg-white"
+                  value={driverId}
+                  onChange={(e) => setDriverId(e.target.value)}
+                >
+                  <option value="">-- بدون تحديد سائق --</option>
+                  {drivers.map(drv => (
+                    <option key={drv.id} value={drv.id}>
+                      🚗 {drv.name} ({drv.route || 'عام'}) - {drv.car_type || 'حافلة'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -876,7 +922,7 @@ export default function App() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">سعة المقاعد</label>
+                  <label className="block text-slate-600 font-bold mb-1">سعة المقاعد الكلية</label>
                   <input 
                     type="number"
                     placeholder="22"
