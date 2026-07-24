@@ -88,6 +88,145 @@ export default function App() {
     }
   }
 
+  // --- تصدير إلى Excel (CSV يدعم اللغة العربية) ---
+  const exportStudentsToExcel = () => {
+    if (students.length === 0) {
+      alert('لا توجد بيانات مشتركون لتصديرها!');
+      return;
+    }
+    const headers = ['#', 'اسم المشترك', 'رقم الهاتف', 'الجامعة', 'السائق المخصص', 'قيمة الاشتراك', 'الحالة'];
+    const rows = students.map((s, idx) => [
+      idx + 1,
+      s.name || '',
+      s.phone || '',
+      s.university || '',
+      drivers.find(d => d.id === s.driver_id)?.name || 'غير محدد',
+      s.price || '',
+      s.status || ''
+    ]);
+
+    let csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `كشف_المشتركين_مسار_إكس_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportDriversToExcel = () => {
+    if (drivers.length === 0) {
+      alert('لا توجد بيانات سائقين لتصديرها!');
+      return;
+    }
+    const headers = ['#', 'اسم السائق', 'رقم الهاتف', 'نوع المركبة', 'رقم اللوحة', 'الخط', 'السعة الكلية', 'عدد الركاب', 'الحالة'];
+    const rows = drivers.map((d, idx) => [
+      idx + 1,
+      d.name || '',
+      d.phone || '',
+      d.car_type || '',
+      d.car_number || '',
+      d.route || '',
+      d.capacity || 0,
+      students.filter(s => s.driver_id === d.id).length,
+      d.status || ''
+    ]);
+
+    let csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `كشف_السائقين_مسار_إكس_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- طباعة كشف الركاب للسائق (PDF / Print) ---
+  const handlePrintDriverManifest = (driver) => {
+    const driverStudents = students.filter(s => s.driver_id === driver.id);
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <title>كشف ركاب - السائق ${driver.name}</title>
+        <style>
+          body { font-family: 'Tajawal', Tahoma, Arial, sans-serif; padding: 25px; direction: rtl; color: #1e293b; }
+          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+          .header h2 { margin: 0; color: #0f172a; font-size: 22px; }
+          .header p { margin: 5px 0 0 0; color: #64748b; font-size: 13px; }
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-size: 13px; }
+          th { background-color: #f1f5f9; font-weight: bold; color: #0f172a; }
+          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>منصة مسار إكس - كشف خطوط النقل والطلاب</h2>
+          <p>تاريخ إصدار الكشف: ${new Date().toLocaleDateString('ar-IQ')} | الوقت: ${new Date().toLocaleTimeString('ar-IQ')}</p>
+        </div>
+        
+        <div class="info-grid">
+          <div><strong>اسم السائق:</strong> ${driver.name}</div>
+          <div><strong>رقم الهاتف:</strong> ${driver.phone}</div>
+          <div><strong>السيارة / اللوحة:</strong> ${driver.car_type || ''} (${driver.car_number || 'بدون رقم'})</div>
+          <div><strong>الخط / المسار:</strong> ${driver.route || 'عام'}</div>
+          <div><strong>عدد الطلاب المسجلين:</strong> ${driverStudents.length} / ${driver.capacity || 0} طالب</div>
+          <div><strong>حالة الحافلة:</strong> ${driver.status || 'نشط'}</div>
+        </div>
+
+        <h3 style="margin-bottom: 5px; font-size: 16px;">قائمة الركاب والطلاب المسجلين:</h3>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>اسم الطالب / المشترك</th>
+              <th>رقم الهاتف</th>
+              <th>الجامعة / الكلية</th>
+              <th>حالة الدفع</th>
+              <th style="width: 120px;">ملاحظات / الحضور</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${driverStudents.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #94a3b8;">لا يوجد طلاب مخصصين لهذا السائق حتى الآن</td></tr>' : 
+              driverStudents.map((st, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td><strong>${st.name}</strong></td>
+                  <td dir="ltr" style="text-align:right;">${st.phone}</td>
+                  <td>${st.university || 'جامعة ميسان'}</td>
+                  <td>${st.status || 'مدفوع'}</td>
+                  <td></td>
+                </tr>
+              `).join('')
+            }
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>توقيع السائق: ............................</div>
+          <div>توقيع إدارة مسار إكس: ............................</div>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   // --- إدارة المشتركين ---
   const openAddModal = () => {
     setIsEditing(false);
@@ -475,28 +614,36 @@ export default function App() {
                     <p className="text-xs text-slate-400">إدارة المشتركين، ربط السائق بالحافلة، وتعديل حالات الدفع</p>
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       placeholder="بحث باسم المشترك أو الهاتف..."
-                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-60 focus:outline-none focus:border-orange-500"
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48 focus:outline-none focus:border-orange-500"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
+
+                    <button 
+                      onClick={exportStudentsToExcel}
+                      className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700 shadow-sm flex items-center gap-1 cursor-pointer"
+                      title="تصدير كـ Excel"
+                    >
+                      📥 تصدير Excel
+                    </button>
                     
                     <button 
                       onClick={openAddModal}
-                      className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
+                      className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
                     >
-                      <span>+</span> إضافة مشترك جديد
+                      <span>+</span> إضافة مشترك
                     </button>
                     
                     <button 
                       onClick={fetchStudents}
-                      className="bg-slate-100 text-slate-700 text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-200"
+                      className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg font-medium hover:bg-slate-200"
                       title="تحديث البيانات"
                     >
-                      🔄 تحديث
+                      🔄
                     </button>
                   </div>
                 </div>
@@ -605,31 +752,39 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-base font-bold text-slate-800">إدارة كادر السائقين والحافلات</h2>
-                  <p className="text-xs text-slate-400">سجل بيانات السائقين، سعة المقاعد، وعدد الطلاب المسجلين لكل حافلة</p>
+                  <p className="text-xs text-slate-400">سجل بيانات السائقين، سعة المقاعد، وطباعة كشوفات الخطوط اليومية</p>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder="بحث باسم السائق، الهاتف، أو الخط..."
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-64 focus:outline-none focus:border-orange-500"
+                    placeholder="بحث باسم السائق، الهاتف..."
+                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48 focus:outline-none focus:border-orange-500"
                     value={driverSearchTerm}
                     onChange={(e) => setDriverSearchTerm(e.target.value)}
                   />
+
+                  <button 
+                    onClick={exportDriversToExcel}
+                    className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700 shadow-sm flex items-center gap-1 cursor-pointer"
+                    title="تصدير كـ Excel"
+                  >
+                    📥 تصدير Excel
+                  </button>
                   
                   <button 
                     onClick={openAddDriverModal}
-                    className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
+                    className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
                   >
                     <span>+</span> إضافة سائق جديد
                   </button>
                   
                   <button 
                     onClick={fetchDrivers}
-                    className="bg-slate-100 text-slate-700 text-xs px-3 py-2 rounded-lg font-medium hover:bg-slate-200"
+                    className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg font-medium hover:bg-slate-200"
                     title="تحديث قائمة السائقين"
                   >
-                    🔄 تحديث
+                    🔄
                   </button>
                 </div>
               </div>
@@ -659,9 +814,9 @@ export default function App() {
                         <th className="p-3">رقم الهاتف</th>
                         <th className="p-3">نوع المركبة واللوحة</th>
                         <th className="p-3">الخط / المنطقة</th>
-                        <th className="p-3 text-center">الركاب / السعة الكلية</th>
+                        <th className="p-3 text-center">الركاب / السعة</th>
                         <th className="p-3 text-center">الحالة</th>
-                        <th className="p-3 text-center">الإجراءات</th>
+                        <th className="p-3 text-center">الإجراءات والطباعة</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -691,6 +846,13 @@ export default function App() {
                             </td>
                             <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
+                              <button 
+                                onClick={() => handlePrintDriverManifest(driver)}
+                                className="text-blue-700 hover:text-blue-900 bg-blue-50 p-1.5 rounded-md font-bold text-xs"
+                                title="طباعة كشف الركاب لهذا السائق"
+                              >
+                                🖨️ طباعة كشف الركاب
+                              </button>
                               <button 
                                 onClick={() => openEditDriverModal(driver)}
                                 className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
