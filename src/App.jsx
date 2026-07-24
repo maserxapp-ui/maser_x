@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import logoImg from './logo.png.jpg';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
@@ -124,15 +125,11 @@ export default function App() {
         <div>
           {/* قسم الشعار (Logo Section) */}
           <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
-            <div className="bg-white p-2 rounded-2xl shadow-md flex items-center justify-center w-28 h-20 mb-2">
+            <div className="p-2 flex items-center justify-center w-28 h-20 mb-2">
               <img 
-                src="/logo.png.jpg" 
+                src={logoImg} 
                 alt="شعار مسار إكس" 
                 className="max-h-full max-w-full object-contain"
-                onError={(e) => {
-                  // في حال عدم توفر الصورة يظهر اسم مسار إكس
-                  e.target.style.display = 'none';
-                }}
               />
             </div>
             <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
