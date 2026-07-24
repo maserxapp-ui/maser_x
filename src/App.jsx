@@ -1,613 +1,623 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from './supabase';
-import logoImg from '../logo.png.jpg';
+'use client';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('main');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [driverSearchTerm, setDriverSearchTerm] = useState('');
+import React, { useState, useEffect, useMemo } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import * as XLSX from 'xlsx';
+
+// 1. تهيئة عميل Supabase
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// أنواع البيانات (Interfaces)
+interface Student {
+  id: string | number;
+  name: string;
+  phone: string;
+  university?: string;
+  driver_id?: string | number | null;
+  price?: string | number;
+  status: 'مدفوع' | 'متأخر' | 'غير مدفوع' | string;
+}
+
+interface Driver {
+  id: string | number;
+  name: string;
+  phone: string;
+  car_type?: string;
+  car_number?: string;
+  route?: string;
+  capacity: string | number;
+  status: 'نشط' | 'إجازة' | 'متوقف' | string;
+}
+
+interface Trip {
+  id: string | number;
+  trip_name: string;
+  driver_id?: string | number | null;
+  route?: string;
+  start_time?: string;
+  date?: string;
+  status: 'قيد الانتظار' | 'بالطريق' | 'اكتملت' | 'ملغاة' | string;
+}
+
+export default function TransportDashboard() {
+  // حالة التبويب النشط
+  const [activeTab, setActiveTab] = useState<'main' | 'subscribers' | 'drivers' | 'trips' | 'expenses' | 'reports'>('main');
+
+  // البيانات
+  const [students, setStudents] = useState<Student[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   
-  // بيانات المشتركين والسائقين
-  const [students, setStudents] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingDrivers, setLoadingDrivers] = useState(true);
-  
-  // نافذة المشتركين (إضافة وتعديل)
-  const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  // حالات التحميل
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingDrivers, setLoadingDrivers] = useState<boolean>(true);
+  const [loadingTrips, setLoadingTrips] = useState<boolean>(true);
 
-  // حقول المشترك
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [university, setUniversity] = useState('جامعة ميسان');
-  const [price, setPrice] = useState('90,000');
-  const [status, setStatus] = useState('مدفوع');
-  const [driverId, setDriverId] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  // حالات البحث
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [driverSearchTerm, setDriverSearchTerm] = useState<string>('');
+  const [tripSearchTerm, setTripSearchTerm] = useState<string>('');
 
-  // نافذة السائقين (إضافة وتعديل)
-  const [showDriverModal, setShowDriverModal] = useState(false);
-  const [isEditingDriver, setIsEditingDriver] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState(null);
+  // ---------- حالات نموذج المشترك ----------
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editingStudentId, setEditingStudentId] = useState<string | number | null>(null);
+  const [name, setName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [university, setUniversity] = useState<string>('جامعة ميسان');
+  const [driverId, setDriverId] = useState<string>('');
+  const [price, setPrice] = useState<string>('90,000');
+  const [status, setStatus] = useState<string>('مدفوع');
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // حقول السائق والسيارة
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [carType, setCarType] = useState('حافلة كيا كوستار');
-  const [carNumber, setCarNumber] = useState('');
-  const [route, setRoute] = useState('منطقة حي الخليج - الجامعة');
-  const [capacity, setCapacity] = useState('22');
-  const [driverStatus, setDriverStatus] = useState('نشط');
-  const [submittingDriver, setSubmittingDriver] = useState(false);
+  // ---------- حالات نموذج السائق ----------
+  const [showDriverModal, setShowDriverModal] = useState<boolean>(false);
+  const [isEditingDriver, setIsEditingDriver] = useState<boolean>(false);
+  const [editingDriverId, setEditingDriverId] = useState<string | number | null>(null);
+  const [driverName, setDriverName] = useState<string>('');
+  const [driverPhone, setDriverPhone] = useState<string>('');
+  const [carType, setCarType] = useState<string>('');
+  const [carNumber, setCarNumber] = useState<string>('');
+  const [route, setRoute] = useState<string>('');
+  const [capacity, setCapacity] = useState<string>('22');
+  const [driverStatus, setDriverStatus] = useState<string>('نشط');
+  const [submittingDriver, setSubmittingDriver] = useState<boolean>(false);
 
-  // 1. جلب البيانات من Supabase
-  useEffect(() => {
-    fetchStudents();
-    fetchDrivers();
-  }, []);
+  // ---------- حالات نموذج الرحلة ----------
+  const [showTripModal, setShowTripModal] = useState<boolean>(false);
+  const [isEditingTrip, setIsEditingTrip] = useState<boolean>(false);
+  const [editingTripId, setEditingTripId] = useState<string | number | null>(null);
+  const [tripName, setTripName] = useState<string>('');
+  const [tripDriverId, setTripDriverId] = useState<string>('');
+  const [tripRoute, setTripRoute] = useState<string>('');
+  const [startTime, setStartTime] = useState<string>('07:00 ص');
+  const [tripDate, setTripDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [tripStatus, setTripStatus] = useState<string>('قيد الانتظار');
+  const [submittingTrip, setSubmittingTrip] = useState<boolean>(false);
 
-  async function fetchStudents() {
+  // ----------------------------------------------------
+  // جلب البيانات من Supabase
+  // ----------------------------------------------------
+  const fetchStudents = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .order('id', { ascending: false });
-
-      if (error) {
-        console.error('خطأ في جلب بيانات الطلاب:', error);
-      } else {
-        setStudents(data || []);
-      }
+      const { data, error } = await supabase.from('students').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      setStudents(data || []);
     } catch (err) {
-      console.error(err);
+      console.error('خطأ في جلب بيانات المشتركين:', err);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function fetchDrivers() {
+  const fetchDrivers = async () => {
     setLoadingDrivers(true);
     try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .order('id', { ascending: false });
-
-      if (error) {
-        console.error('خطأ في جلب بيانات السائقين:', error);
-      } else {
-        setDrivers(data || []);
-      }
+      const { data, error } = await supabase.from('drivers').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      setDrivers(data || []);
     } catch (err) {
-      console.error(err);
+      console.error('خطأ في جلب بيانات السائقين:', err);
     } finally {
       setLoadingDrivers(false);
     }
-  }
+  };
 
-  // --- تصدير إلى Excel (CSV يدعم اللغة العربية) ---
-  const exportStudentsToExcel = () => {
-    if (students.length === 0) {
-      alert('لا توجد بيانات مشتركون لتصديرها!');
-      return;
+  const fetchTrips = async () => {
+    setLoadingTrips(true);
+    try {
+      const { data, error } = await supabase.from('trips').select('*').order('id', { ascending: false });
+      if (error) throw error;
+      setTrips(data || []);
+    } catch (err) {
+      console.error('خطأ في جلب بيانات الرحلات:', err);
+    } finally {
+      setLoadingTrips(false);
     }
-    const headers = ['#', 'اسم المشترك', 'رقم الهاتف', 'الجامعة', 'السائق المخصص', 'قيمة الاشتراك', 'الحالة'];
-    const rows = students.map((s, idx) => [
-      idx + 1,
-      s.name || '',
-      s.phone || '',
-      s.university || '',
-      drivers.find(d => d.id === s.driver_id)?.name || 'غير محدد',
-      s.price || '',
-      s.status || ''
-    ]);
-
-    let csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `كشف_المشتركين_مسار_إكس_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
-  const exportDriversToExcel = () => {
-    if (drivers.length === 0) {
-      alert('لا توجد بيانات سائقين لتصديرها!');
-      return;
+  useEffect(() => {
+    fetchStudents();
+    fetchDrivers();
+    fetchTrips();
+  }, []);
+
+  // ----------------------------------------------------
+  // الفلترة والحسابات
+  // ----------------------------------------------------
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => 
+      s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone?.includes(searchTerm)
+    );
+  }, [students, searchTerm]);
+
+  const filteredDrivers = useMemo(() => {
+    return drivers.filter(d => 
+      d.name?.toLowerCase().includes(driverSearchTerm.toLowerCase()) ||
+      d.phone?.includes(driverSearchTerm) ||
+      d.route?.toLowerCase().includes(driverSearchTerm.toLowerCase())
+    );
+  }, [drivers, driverSearchTerm]);
+
+  const filteredTrips = useMemo(() => {
+    return trips.filter(t => 
+      t.trip_name?.toLowerCase().includes(tripSearchTerm.toLowerCase()) ||
+      t.route?.toLowerCase().includes(tripSearchTerm.toLowerCase())
+    );
+  }, [trips, tripSearchTerm]);
+
+  // إحصائيات
+  const totalSubscribers = students.length;
+  const paidCount = students.filter(s => s.status === 'مدفوع').length;
+  const lateCount = students.filter(s => s.status === 'متأخر').length;
+  const unpaidCount = students.filter(s => s.status === 'غير مدفوع').length;
+
+  const totalCollectedRevenue = useMemo(() => {
+    return students
+      .filter(s => s.status === 'مدفوع')
+      .reduce((sum, s) => {
+        const numericPrice = parseInt(String(s.price || '90000').replace(/[^0-9]/g, ''), 10) || 0;
+        return sum + numericPrice;
+      }, 0);
+  }, [students]);
+
+  const getStudentCountForDriver = (dId: string | number) => {
+    return students.filter(s => String(s.driver_id) === String(dId)).length;
+  };
+
+  const getDriverName = (dId?: string | number | null) => {
+    if (!dId) return <span className="text-slate-400 font-normal">غير مخصص</span>;
+    const found = drivers.find(d => String(d.id) === String(dId));
+    return found ? <span className="font-bold text-slate-700">🚗 {found.name}</span> : <span className="text-slate-400">غير معروف</span>;
+  };
+
+  const getStatusBadge = (st: string) => {
+    switch (st) {
+      case 'مدفوع':
+        return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">مدفوع</span>;
+      case 'متأخر':
+        return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-bold">متأخر</span>;
+      default:
+        return <span className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full text-[11px] font-bold">غير مدفوع</span>;
     }
-    const headers = ['#', 'اسم السائق', 'رقم الهاتف', 'نوع المركبة', 'رقم اللوحة', 'الخط', 'السعة الكلية', 'عدد الركاب', 'الحالة'];
-    const rows = drivers.map((d, idx) => [
-      idx + 1,
-      d.name || '',
-      d.phone || '',
-      d.car_type || '',
-      d.car_number || '',
-      d.route || '',
-      d.capacity || 0,
-      students.filter(s => s.driver_id === d.id).length,
-      d.status || ''
-    ]);
-
-    let csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.map(item => `"${item}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `كشف_السائقين_مسار_إكس_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
-  // --- طباعة كشف الركاب للسائق (PDF / Print) ---
-  const handlePrintDriverManifest = (driver) => {
-    const driverStudents = students.filter(s => s.driver_id === driver.id);
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <title>كشف ركاب - السائق ${driver.name}</title>
-        <style>
-          body { font-family: 'Tajawal', Tahoma, Arial, sans-serif; padding: 25px; direction: rtl; color: #1e293b; }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
-          .header h2 { margin: 0; color: #0f172a; font-size: 22px; }
-          .header p { margin: 5px 0 0 0; color: #64748b; font-size: 13px; }
-          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-size: 13px; }
-          th { background-color: #f1f5f9; font-weight: bold; color: #0f172a; }
-          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
-          @media print {
-            body { padding: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h2>منصة مسار إكس - كشف خطوط النقل والطلاب</h2>
-          <p>تاريخ إصدار الكشف: ${new Date().toLocaleDateString('ar-IQ')} | الوقت: ${new Date().toLocaleTimeString('ar-IQ')}</p>
-        </div>
-        
-        <div class="info-grid">
-          <div><strong>اسم السائق:</strong> ${driver.name}</div>
-          <div><strong>رقم الهاتف:</strong> ${driver.phone}</div>
-          <div><strong>السيارة / اللوحة:</strong> ${driver.car_type || ''} (${driver.car_number || 'بدون رقم'})</div>
-          <div><strong>الخط / المسار:</strong> ${driver.route || 'عام'}</div>
-          <div><strong>عدد الطلاب المسجلين:</strong> ${driverStudents.length} / ${driver.capacity || 0} طالب</div>
-          <div><strong>حالة الحافلة:</strong> ${driver.status || 'نشط'}</div>
-        </div>
-
-        <h3 style="margin-bottom: 5px; font-size: 16px;">قائمة الركاب والطلاب المسجلين:</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px;">#</th>
-              <th>اسم الطالب / المشترك</th>
-              <th>رقم الهاتف</th>
-              <th>الجامعة / الكلية</th>
-              <th>حالة الدفع</th>
-              <th style="width: 120px;">ملاحظات / الحضور</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${driverStudents.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #94a3b8;">لا يوجد طلاب مخصصين لهذا السائق حتى الآن</td></tr>' : 
-              driverStudents.map((st, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td><strong>${st.name}</strong></td>
-                  <td dir="ltr" style="text-align:right;">${st.phone}</td>
-                  <td>${st.university || 'جامعة ميسان'}</td>
-                  <td>${st.status || 'مدفوع'}</td>
-                  <td></td>
-                </tr>
-              `).join('')
-            }
-          </tbody>
-        </table>
-
-        <div class="footer">
-          <div>توقيع السائق: ............................</div>
-          <div>توقيع إدارة مسار إكس: ............................</div>
-        </div>
-
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
+  const getDriverStatusBadge = (st: string) => {
+    switch (st) {
+      case 'نشط':
+        return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">نشط</span>;
+      case 'إجازة':
+        return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-bold">إجازة</span>;
+      default:
+        return <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-[11px] font-bold">متوقف</span>;
+    }
   };
 
-  // --- إدارة المشتركين ---
+  const getTripStatusBadge = (st: string) => {
+    switch (st) {
+      case 'بالطريق':
+        return <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold animate-pulse">🚍 بالطريق</span>;
+      case 'اكتملت':
+        return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">✅ اكتملت</span>;
+      case 'ملغاة':
+        return <span className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full text-[11px] font-bold">❌ ملغاة</span>;
+      default:
+        return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-bold">⏳ قيد الانتظار</span>;
+    }
+  };
+
+  // ----------------------------------------------------
+  // إدارة المشتركين
+  // ----------------------------------------------------
   const openAddModal = () => {
     setIsEditing(false);
-    setSelectedStudentId(null);
+    setEditingStudentId(null);
     setName('');
     setPhone('');
     setUniversity('جامعة ميسان');
+    setDriverId('');
     setPrice('90,000');
     setStatus('مدفوع');
-    setDriverId('');
     setShowModal(true);
   };
 
-  const openEditModal = (student) => {
+  const openEditModal = (student: Student) => {
     setIsEditing(true);
-    setSelectedStudentId(student.id);
+    setEditingStudentId(student.id);
     setName(student.name || '');
     setPhone(student.phone || '');
     setUniversity(student.university || 'جامعة ميسان');
-    setPrice(student.price || '90,000');
+    setDriverId(student.driver_id ? String(student.driver_id) : '');
+    setPrice(String(student.price || '90,000'));
     setStatus(student.status || 'مدفوع');
-    setDriverId(student.driver_id ? student.driver_id.toString() : '');
     setShowModal(true);
   };
 
-  async function handleSaveStudent(e) {
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone) {
-      alert('يرجى إدخال اسم المشترك ورقم الهاتف!');
-      return;
-    }
-
     setSubmitting(true);
-
-    const studentPayload = {
-      name,
-      phone,
-      university,
-      price,
-      status,
-      driver_id: driverId ? parseInt(driverId, 10) : null
-    };
-
-    if (isEditing) {
-      const { error } = await supabase
-        .from('students')
-        .update(studentPayload)
-        .eq('id', selectedStudentId);
-
+    const payload = { name, phone, university, driver_id: driverId ? driverId : null, price, status };
+    try {
+      if (isEditing && editingStudentId) {
+        const { error } = await supabase.from('students').update(payload).eq('id', editingStudentId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('students').insert([payload]);
+        if (error) throw error;
+      }
+      setShowModal(false);
+      fetchStudents();
+    } catch (err) {
+      alert('حدث خطأ أثناء حفظ بيانات المشترك');
+    } finally {
       setSubmitting(false);
-
-      if (error) {
-        alert('حدث خطأ أثناء التحديث: ' + error.message);
-      } else {
-        setShowModal(false);
-        fetchStudents();
-      }
-    } else {
-      const { error } = await supabase
-        .from('students')
-        .insert([{ 
-          ...studentPayload,
-          days: 'سبت - اثنين - أربعاء',
-          created_at: new Date().toISOString().split('T')[0]
-        }]);
-
-      setSubmitting(false);
-
-      if (error) {
-        alert('حدث خطأ أثناء الإضافة: ' + error.message);
-      } else {
-        setShowModal(false);
-        fetchStudents();
-      }
     }
-  }
+  };
 
-  async function handleDeleteStudent(id, name) {
-    if (window.confirm(`هل أنت تأكد من حذف المشترك: (${name})؟`)) {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        alert('حدث خطأ في الحذف: ' + error.message);
-      } else {
-        fetchStudents();
-      }
+  const handleDeleteStudent = async (id: string | number, studentName: string) => {
+    if (!confirm(`هل أنت تأكد من حذف المشترك "${studentName}"؟`)) return;
+    try {
+      const { error } = await supabase.from('students').delete().eq('id', id);
+      if (error) throw error;
+      fetchStudents();
+    } catch (err) {
+      alert('تعذر حذف المشترك');
     }
-  }
+  };
 
-  // --- إدارة السائقين ---
+  // ----------------------------------------------------
+  // إدارة السائقين
+  // ----------------------------------------------------
   const openAddDriverModal = () => {
     setIsEditingDriver(false);
-    setSelectedDriverId(null);
+    setEditingDriverId(null);
     setDriverName('');
     setDriverPhone('');
-    setCarType('حافلة كيا كوستار');
+    setCarType('');
     setCarNumber('');
-    setRoute('منطقة حي الخليج - الجامعة');
+    setRoute('');
     setCapacity('22');
     setDriverStatus('نشط');
     setShowDriverModal(true);
   };
 
-  const openEditDriverModal = (driver) => {
+  const openEditDriverModal = (driver: Driver) => {
     setIsEditingDriver(true);
-    setSelectedDriverId(driver.id);
+    setEditingDriverId(driver.id);
     setDriverName(driver.name || '');
     setDriverPhone(driver.phone || '');
-    setCarType(driver.car_type || 'حافلة كيا كوستار');
+    setCarType(driver.car_type || '');
     setCarNumber(driver.car_number || '');
-    setRoute(driver.route || 'منطقة حي الخليج - الجامعة');
-    setCapacity(driver.capacity?.toString() || '22');
+    setRoute(driver.route || '');
+    setCapacity(String(driver.capacity || '22'));
     setDriverStatus(driver.status || 'نشط');
     setShowDriverModal(true);
   };
 
-  async function handleSaveDriver(e) {
+  const handleSaveDriver = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!driverName || !driverPhone) {
-      alert('يرجى إدخال اسم السائق ورقم الهاتف!');
-      return;
-    }
-
     setSubmittingDriver(true);
+    const payload = { name: driverName, phone: driverPhone, car_type: carType, car_number: carNumber, route, capacity, status: driverStatus };
+    try {
+      if (isEditingDriver && editingDriverId) {
+        const { error } = await supabase.from('drivers').update(payload).eq('id', editingDriverId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('drivers').insert([payload]);
+        if (error) throw error;
+      }
+      setShowDriverModal(false);
+      fetchDrivers();
+    } catch (err) {
+      alert('حدث خطأ أثناء حفظ بيانات السائق');
+    } finally {
+      setSubmittingDriver(false);
+    }
+  };
 
-    const driverPayload = {
-      name: driverName,
-      phone: driverPhone,
-      car_type: carType,
-      car_number: carNumber,
-      route: route,
-      capacity: parseInt(capacity, 10) || 0,
-      status: driverStatus
+  const handleDeleteDriver = async (id: string | number, dName: string) => {
+    if (!confirm(`هل أنت تأكد من حذف السائق "${dName}"؟`)) return;
+    try {
+      const { error } = await supabase.from('drivers').delete().eq('id', id);
+      if (error) throw error;
+      fetchDrivers();
+    } catch (err) {
+      alert('تعذر حذف السائق');
+    }
+  };
+
+  // ----------------------------------------------------
+  // إدارة الرحلات
+  // ----------------------------------------------------
+  const openAddTripModal = () => {
+    setIsEditingTrip(false);
+    setEditingTripId(null);
+    setTripName('رحلة الصباح - جامعة ميسان');
+    setTripDriverId('');
+    setTripRoute('');
+    setStartTime('07:00 ص');
+    setTripDate(new Date().toISOString().slice(0, 10));
+    setTripStatus('قيد الانتظار');
+    setShowTripModal(true);
+  };
+
+  const openEditTripModal = (trip: Trip) => {
+    setIsEditingTrip(true);
+    setEditingTripId(trip.id);
+    setTripName(trip.trip_name || '');
+    setTripDriverId(trip.driver_id ? String(trip.driver_id) : '');
+    setTripRoute(trip.route || '');
+    setStartTime(trip.start_time || '07:00 ص');
+    setTripDate(trip.date || new Date().toISOString().slice(0, 10));
+    setTripStatus(trip.status || 'قيد الانتظار');
+    setShowTripModal(true);
+  };
+
+  const handleSaveTrip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingTrip(true);
+    const payload = {
+      trip_name: tripName,
+      driver_id: tripDriverId ? tripDriverId : null,
+      route: tripRoute,
+      start_time: startTime,
+      date: tripDate,
+      status: tripStatus
     };
 
-    if (isEditingDriver) {
-      const { error } = await supabase
-        .from('drivers')
-        .update(driverPayload)
-        .eq('id', selectedDriverId);
-
-      setSubmittingDriver(false);
-
-      if (error) {
-        alert('حدث خطأ أثناء التحديث: ' + error.message);
+    try {
+      if (isEditingTrip && editingTripId) {
+        const { error } = await supabase.from('trips').update(payload).eq('id', editingTripId);
+        if (error) throw error;
       } else {
-        setShowDriverModal(false);
-        fetchDrivers();
+        const { error } = await supabase.from('trips').insert([payload]);
+        if (error) throw error;
       }
-    } else {
-      const { error } = await supabase
-        .from('drivers')
-        .insert([{ 
-          ...driverPayload,
-          created_at: new Date().toISOString().split('T')[0]
-        }]);
-
-      setSubmittingDriver(false);
-
-      if (error) {
-        alert('حدث خطأ أثناء إضافة السائق: ' + error.message);
-      } else {
-        setShowDriverModal(false);
-        fetchDrivers();
-      }
-    }
-  }
-
-  async function handleDeleteDriver(id, name) {
-    if (window.confirm(`هل أنت متأكد من حذف السائق: (${name})؟`)) {
-      const { error } = await supabase
-        .from('drivers')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        alert('حدث خطأ في الحذف: ' + error.message);
-      } else {
-        fetchDrivers();
-        fetchStudents();
-      }
-    }
-  }
-
-  // التصفية والبحث
-  const filteredStudents = students.filter(student =>
-    student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.phone?.includes(searchTerm)
-  );
-
-  const filteredDrivers = drivers.filter(driver =>
-    driver.name?.toLowerCase().includes(driverSearchTerm.toLowerCase()) ||
-    driver.phone?.includes(driverSearchTerm) ||
-    driver.route?.toLowerCase().includes(driverSearchTerm.toLowerCase())
-  );
-
-  // إحصائيات المشتركين
-  const totalSubscribers = students.length;
-  const paidStudents = students.filter(s => s.status === 'مدفوع' || !s.status);
-  const paidCount = paidStudents.length;
-  const lateCount = students.filter(s => s.status === 'متأخر').length;
-  const unpaidCount = students.filter(s => s.status === 'غير مدفوع').length;
-
-  const parseAmount = (val) => {
-    if (!val) return 0;
-    const clean = val.toString().replace(/[^0-9]/g, '');
-    return parseInt(clean, 10) || 0;
-  };
-
-  const totalExpectedRevenue = students.reduce((sum, s) => sum + parseAmount(s.price), 0);
-  const totalCollectedRevenue = paidStudents.reduce((sum, s) => sum + parseAmount(s.price), 0);
-
-  // إحصائيات السائقين
-  const totalDrivers = drivers.length;
-  const activeDriversCount = drivers.filter(d => d.status === 'نشط' || !d.status).length;
-  const totalSeats = drivers.reduce((sum, d) => sum + (parseInt(d.capacity, 10) || 0), 0);
-
-  // دوال مساعدة لربط الأسماء
-  const getDriverName = (dId) => {
-    if (!dId) return <span className="text-slate-400 font-normal">غير محدد</span>;
-    const found = drivers.find(d => d.id === dId);
-    return found ? <span className="font-bold text-orange-600">🚗 {found.name}</span> : <span className="text-slate-400">غير محدد</span>;
-  };
-
-  const getStudentCountForDriver = (dId) => {
-    return students.filter(s => s.driver_id === dId).length;
-  };
-
-  const getStatusBadge = (st) => {
-    switch (st) {
-      case 'مدفوع':
-      default:
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">مدفوع</span>;
-      case 'متأخر':
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">متأخر</span>;
-      case 'غير مدفوع':
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">غير مدفوع</span>;
+      setShowTripModal(false);
+      fetchTrips();
+    } catch (err) {
+      alert('حدث خطأ أثناء حفظ بيانات الرحلة');
+    } finally {
+      setSubmittingTrip(false);
     }
   };
 
-  const getDriverStatusBadge = (st) => {
-    switch (st) {
-      case 'نشط':
-      default:
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">نشط</span>;
-      case 'إجازة':
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">إجازة</span>;
-      case 'متوقف':
-        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">متوقف</span>;
+  const handleDeleteTrip = async (id: string | number, nameStr: string) => {
+    if (!confirm(`هل أنت تأكد من حذف "${nameStr}"؟`)) return;
+    try {
+      const { error } = await supabase.from('trips').delete().eq('id', id);
+      if (error) throw error;
+      fetchTrips();
+    } catch (err) {
+      alert('تعذر حذف الرحلة');
     }
+  };
+
+  // ----------------------------------------------------
+  // تصدير Excel والطباعة
+  // ----------------------------------------------------
+  const exportStudentsToExcel = () => {
+    const dataToExport = filteredStudents.map((s, idx) => ({
+      '#': idx + 1,
+      'اسم المشترك': s.name,
+      'رقم الهاتف': s.phone,
+      'الجامعة / الجهة': s.university || 'جامعة ميسان',
+      'السائق المخصص': drivers.find(d => String(d.id) === String(s.driver_id))?.name || 'غير مخصص',
+      'قيمة الاشتراك': s.price,
+      'حالة الدفع': s.status
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'المشتركين');
+    XLSX.writeFile(workbook, `قائمة_المشتركين_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  const exportDriversToExcel = () => {
+    const dataToExport = filteredDrivers.map((d, idx) => ({
+      '#': idx + 1,
+      'اسم السائق': d.name,
+      'رقم الهاتف': d.phone,
+      'نوع المركبة': d.car_type,
+      'رقم اللوحة': d.car_number,
+      'الخط / المنطقة': d.route,
+      'عدد الركاب المسجلين': getStudentCountForDriver(d.id),
+      'السعة الكلية': d.capacity,
+      'الحالة': d.status
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'السائقين');
+    XLSX.writeFile(workbook, `قائمة_السائقين_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  const exportTripsToExcel = () => {
+    const dataToExport = filteredTrips.map((t, idx) => ({
+      '#': idx + 1,
+      'عنوان الرحلة': t.trip_name,
+      'السائق': drivers.find(d => String(d.id) === String(t.driver_id))?.name || 'غير مخصص',
+      'خط السير': t.route,
+      'التاريخ': t.date,
+      'وقت الانطلاق': t.start_time,
+      'حالة الرحلة': t.status
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'الرحلات');
+    XLSX.writeFile(workbook, `جدول_الرحلات_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+
+  const handlePrintDriverManifest = (driver: Driver) => {
+    const assignedStudents = students.filter(s => String(s.driver_id) === String(driver.id));
+    const printWin = window.open('', '_blank');
+    if (!printWin) return alert('يرجى السماح بالنوَافذ المنبثقة للطباعة');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>كشف خط السائق - ${driver.name}</title>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #1e293b; }
+          .header { text-align: center; border-bottom: 2px solid #ea580c; padding-bottom: 12px; margin-bottom: 20px; }
+          .title { font-size: 22px; font-weight: bold; color: #ea580c; }
+          .subtitle { font-size: 14px; color: #64748b; margin-top: 4px; }
+          .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; p: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; font-size: 13px; }
+          th { background-color: #f1f5f9; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">كشف ركاب الحافلة اليومي</div>
+          <div class="subtitle">نظام إدارة النقل والخطوط - محافظة ميسان</div>
+        </div>
+
+        <div class="info-grid">
+          <div><strong>اسم السائق:</strong> ${driver.name}</div>
+          <div><strong>رقم الهاتف:</strong> ${driver.phone}</div>
+          <div><strong>الخط / المنطقة:</strong> ${driver.route || 'عام'}</div>
+          <div><strong>نوع السيارة:</strong> ${driver.car_type || 'حافلة'}</div>
+          <div><strong>رقم السيارة:</strong> ${driver.car_number || 'بدون رقم'}</div>
+          <div><strong>عدد الركاب:</strong> ${assignedStudents.length} / ${driver.capacity}</div>
+        </div>
+
+        <h3>قائمة الطلاب المسجلين:</h3>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>اسم المشترك / الطالب</th>
+              <th>رقم الهاتف</th>
+              <th>الجامعة / الجهة</th>
+              <th>حالة الاشتراك</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${assignedStudents.length === 0 ? `
+              <tr><td colspan="5" style="text-align:center; padding: 20px; color: #94a3b8;">لا يوجد طلاب مسجلين على هذا السائق حالياً</td></tr>
+            ` : assignedStudents.map((st, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td><strong>${st.name}</strong></td>
+                <td>${st.phone}</td>
+                <td>${st.university || 'جامعة ميسان'}</td>
+                <td>${st.status}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    printWin.document.write(htmlContent);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 500);
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
+    <div className="min-h-screen bg-slate-50 text-slate-800 dir-rtl font-sans pb-12">
       
-      {/* القائمة الجانبية (Sidebar) */}
-      <aside className="w-64 bg-[#0e1e38] text-slate-300 flex flex-col justify-between shadow-xl z-20">
-        <div>
-          {/* قسم الشعار */}
-          <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
-            <div className="p-2 flex items-center justify-center w-28 h-20 mb-2">
-              <img 
-                src={logoImg} 
-                alt="شعار مسار إكس" 
-                className="max-h-full max-w-full object-contain"
-              />
+      {/* Header */}
+      <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🚌</span>
+            <div>
+              <h1 className="font-bold text-base text-slate-100">لوحة إدارة النقل والرحلات والمشتركين</h1>
+              <p className="text-[11px] text-slate-400">محافظة ميسان - جامعة ميسان وخطوط المحافظات</p>
             </div>
-            <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
           </div>
 
-          <nav className="p-3 space-y-1">
-            {[
-              { id: 'main', label: 'الرئيسية', icon: '🏠' },
-              { id: 'subscribers', label: 'المشتركون', icon: '👥' },
-              { id: 'drivers', label: 'السائقون والسيارات', icon: '🚗' },
-              { id: 'trips', label: 'الرحلات', icon: '🗺️' },
-              { id: 'expenses', label: 'المصروفات', icon: '💵' },
-              { id: 'reports', label: 'التقارير المالية', icon: '📊' },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === item.id
-                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                    : 'hover:bg-slate-800 text-slate-300'
-                }`}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full border border-emerald-500/20 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              متصل بـ Supabase
+            </span>
+          </div>
         </div>
+      </header>
 
-        <div className="p-4 border-t border-slate-700/50">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
-            <span>🚪</span>
-            <span>تسجيل الخروج</span>
+      {/* Main Content Layout */}
+      <div className="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        {/* Sidebar */}
+        <aside className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-3 shadow-sm h-fit space-y-1">
+          <button
+            onClick={() => setActiveTab('main')}
+            className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-between ${
+              activeTab === 'main' || activeTab === 'subscribers' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>👥 المشتركين والخطوط</span>
+            <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full">{totalSubscribers}</span>
           </button>
-        </div>
-      </aside>
 
-      {/* المحتوى الرئيسي */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        
-        {/* الشريط العلوي */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">
-              {activeTab === 'main' && 'لوحة التحكم السحابية'}
-              {activeTab === 'subscribers' && 'إدارة المشتركين'}
-              {activeTab === 'drivers' && 'إدارة السائقين والسيارات'}
-              {activeTab === 'trips' && 'سجل الرحلات'}
-              {activeTab === 'expenses' && 'إدارة المصروفات'}
-              {activeTab === 'reports' && 'التقارير الحسابية'}
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">منصة مسار إكس - إدارة الخطوط والاشتراكات</p>
-          </div>
+          <button
+            onClick={() => setActiveTab('drivers')}
+            className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-between ${
+              activeTab === 'drivers' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>🧔🏻‍♂️ السائقين والحافلات</span>
+            <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full">{drivers.length}</span>
+          </button>
 
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative">
-              🔔 <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full"></span>
-            </button>
-            <div className="flex items-center gap-3 border-r pr-4 border-slate-200">
-              <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">
-                👤
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-slate-800">مدير النظام</p>
-                <p className="text-xs text-emerald-600 font-semibold">● متصل الآن</p>
-              </div>
-            </div>
-          </div>
-        </header>
+          <button
+            onClick={() => setActiveTab('trips')}
+            className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-between ${
+              activeTab === 'trips' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>🗺️ الرحلات والتحركات</span>
+            <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full">{trips.length}</span>
+          </button>
 
-        {/* محتوى اللوحة */}
-        <main className="p-6 space-y-6">
-          
-          {/* كروت الإحصائيات السريعة */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-emerald-500">
-              <p className="text-xs text-slate-500 font-medium">إجمالي المشتركين</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">{totalSubscribers}</p>
-              <span className="text-[10px] text-slate-400">مشترك مضاف</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-blue-500">
-              <p className="text-xs text-slate-500 font-medium">الاشتراكات المدفوعة</p>
-              <p className="text-xl font-bold text-emerald-600 mt-1">{paidCount}</p>
-              <span className="text-[10px] text-slate-400">حساب مكتمل</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-orange-500">
-              <p className="text-xs text-slate-500 font-medium">عدد السائقين</p>
-              <p className="text-xl font-bold text-amber-600 mt-1">{totalDrivers}</p>
-              <span className="text-[10px] text-slate-400">{activeDriversCount} سائق نشط</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-indigo-500">
-              <p className="text-xs text-slate-500 font-medium">سعة المقاعد الكلية</p>
-              <p className="text-xl font-bold text-indigo-600 mt-1">{totalSeats}</p>
-              <span className="text-[10px] text-slate-400">مقعد متاح بالأسطول</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-purple-500">
-              <p className="text-xs text-slate-500 font-medium">المبالغ المحصلة</p>
-              <p className="text-lg font-bold text-emerald-600 mt-1">{totalCollectedRevenue.toLocaleString()} د.ع</p>
-              <span className="text-[10px] text-slate-400">من أصل {totalExpectedRevenue.toLocaleString()}</span>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-cyan-500">
-              <p className="text-xs text-slate-500 font-medium">حالة السيرفر</p>
-              <p className="text-sm font-bold text-emerald-600 mt-2">متصل بـ Supabase</p>
-            </div>
-          </div>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-between ${
+              activeTab === 'reports' || activeTab === 'expenses' ? 'bg-orange-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>📊 التقارير المالية</span>
+          </button>
+        </aside>
 
-          {/* التبويب الرئيسي والمشتركين */}
+        {/* Main Area */}
+        <main className="lg:col-span-4 space-y-6">
+
+          {/* تبويب المشتركين */}
           {(activeTab === 'main' || activeTab === 'subscribers') && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
               <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-                
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <h2 className="text-base font-bold text-slate-800">قائمة المشتركين والخطوط</h2>
@@ -622,47 +632,22 @@ export default function App() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
-
-                    <button 
-                      onClick={exportStudentsToExcel}
-                      className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700 shadow-sm flex items-center gap-1 cursor-pointer"
-                      title="تصدير كـ Excel"
-                    >
-                      📥 تصدير Excel
+                    <button onClick={exportStudentsToExcel} className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700">
+                      📥 Excel
                     </button>
-                    
-                    <button 
-                      onClick={openAddModal}
-                      className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>+</span> إضافة مشترك
+                    <button onClick={openAddModal} className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600">
+                      + إضافة مشترك
                     </button>
-                    
-                    <button 
-                      onClick={fetchStudents}
-                      className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg font-medium hover:bg-slate-200"
-                      title="تحديث البيانات"
-                    >
+                    <button onClick={fetchStudents} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg hover:bg-slate-200">
                       🔄
                     </button>
                   </div>
                 </div>
 
-                {/* جدول المشتركين */}
                 {loading ? (
-                  <div className="p-12 text-center text-slate-400 font-medium text-sm">
-                    جاري جلب البيانات من السيرفر... ⏳
-                  </div>
+                  <div className="p-12 text-center text-slate-400 font-medium text-sm">جاري جلب البيانات... ⏳</div>
                 ) : filteredStudents.length === 0 ? (
-                  <div className="p-12 text-center space-y-3">
-                    <p className="text-slate-400 text-sm">لا يوجد مشتركين حالياً في قاعدة البيانات.</p>
-                    <button 
-                      onClick={openAddModal}
-                      className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold"
-                    >
-                      إضافة أول مشترك الآن
-                    </button>
-                  </div>
+                  <div className="p-12 text-center text-slate-400 text-sm">لا يوجد مشتركين حالياً.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-right text-xs">
@@ -680,7 +665,7 @@ export default function App() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filteredStudents.map((student, idx) => (
-                          <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                          <tr key={student.id} className="hover:bg-slate-50">
                             <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
                             <td className="p-3 font-bold text-slate-800">{student.name}</td>
                             <td className="p-3 text-slate-600 dir-ltr text-right">{student.phone}</td>
@@ -689,20 +674,8 @@ export default function App() {
                             <td className="p-3 font-bold text-slate-800">{student.price || '90,000'} د.ع</td>
                             <td className="p-3 text-center">{getStatusBadge(student.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
-                              <button 
-                                onClick={() => openEditModal(student)}
-                                className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
-                                title="تعديل البيانات"
-                              >
-                                ✏️ تعديل
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteStudent(student.id, student.name)}
-                                className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
-                                title="حذف المشترك"
-                              >
-                                🗑️ حذف
-                              </button>
+                              <button onClick={() => openEditModal(student)} className="text-amber-600 bg-amber-50 p-1.5 rounded-md font-bold">✏️ تعديل</button>
+                              <button onClick={() => handleDeleteStudent(student.id, student.name)} className="text-rose-500 bg-rose-50 p-1.5 rounded-md font-bold">🗑️ حذف</button>
                             </td>
                           </tr>
                         ))}
@@ -710,34 +683,18 @@ export default function App() {
                     </table>
                   </div>
                 )}
-
               </div>
 
-              {/* العمود الجانبي للملخص */}
+              {/* Sidebar stats */}
               <div className="space-y-6">
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">ملخص الحسابات الفعلي</h3>
+                  <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">ملخص الحسابات</h3>
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600">إجمالي المشتركين</span>
-                      <span className="font-bold text-slate-900">{totalSubscribers}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> الاشتراك المدفوع</span>
-                      <span className="font-bold text-emerald-600">{paidCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> المتأخرين</span>
-                      <span className="font-bold text-amber-600">{lateCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500"></span> غير المدفوع</span>
-                      <span className="font-bold text-rose-600">{unpaidCount}</span>
-                    </div>
-                    <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                      <span className="font-bold text-slate-700">المبلغ المستحصل:</span>
-                      <span className="font-bold text-emerald-600 text-sm">{totalCollectedRevenue.toLocaleString()} د.ع</span>
-                    </div>
+                    <div className="flex justify-between"><span className="text-slate-600">إجمالي المشتركين</span><span className="font-bold">{totalSubscribers}</span></div>
+                    <div className="flex justify-between"><span className="text-emerald-600">الاشتراك المدفوع</span><span className="font-bold text-emerald-600">{paidCount}</span></div>
+                    <div className="flex justify-between"><span className="text-amber-600">المتأخرين</span><span className="font-bold text-amber-600">{lateCount}</span></div>
+                    <div className="flex justify-between"><span className="text-rose-600">غير المدفوع</span><span className="font-bold text-rose-600">{unpaidCount}</span></div>
+                    <div className="border-t pt-2 flex justify-between"><span className="font-bold">المستحصل:</span><span className="font-bold text-emerald-600 text-sm">{totalCollectedRevenue.toLocaleString()} د.ع</span></div>
                   </div>
                 </div>
               </div>
@@ -745,65 +702,31 @@ export default function App() {
             </div>
           )}
 
-          {/* تبويب إدارة السائقين والسيارات */}
+          {/* تبويب السائقين */}
           {activeTab === 'drivers' && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-              
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-base font-bold text-slate-800">إدارة كادر السائقين والحافلات</h2>
-                  <p className="text-xs text-slate-400">سجل بيانات السائقين، سعة المقاعد، وطباعة كشوفات الخطوط اليومية</p>
+                  <p className="text-xs text-slate-400">سجل بيانات السائقين والتحكم بالسعة وطباعة الكشوفات</p>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder="بحث باسم السائق، الهاتف..."
-                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48 focus:outline-none focus:border-orange-500"
+                    placeholder="بحث..."
+                    className="px-3 py-1.5 border rounded-lg text-xs w-48 focus:outline-none"
                     value={driverSearchTerm}
                     onChange={(e) => setDriverSearchTerm(e.target.value)}
                   />
-
-                  <button 
-                    onClick={exportDriversToExcel}
-                    className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700 shadow-sm flex items-center gap-1 cursor-pointer"
-                    title="تصدير كـ Excel"
-                  >
-                    📥 تصدير Excel
-                  </button>
-                  
-                  <button 
-                    onClick={openAddDriverModal}
-                    className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600 shadow-sm flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>+</span> إضافة سائق جديد
-                  </button>
-                  
-                  <button 
-                    onClick={fetchDrivers}
-                    className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg font-medium hover:bg-slate-200"
-                    title="تحديث قائمة السائقين"
-                  >
-                    🔄
-                  </button>
+                  <button onClick={exportDriversToExcel} className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold">📥 Excel</button>
+                  <button onClick={openAddDriverModal} className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold">+ إضافة سائق</button>
+                  <button onClick={fetchDrivers} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg">🔄</button>
                 </div>
               </div>
 
-              {/* جدول السائقين */}
               {loadingDrivers ? (
-                <div className="p-12 text-center text-slate-400 font-medium text-sm">
-                  جاري جلب بيانات السائقين... ⏳
-                </div>
-              ) : filteredDrivers.length === 0 ? (
-                <div className="p-12 text-center space-y-3">
-                  <p className="text-slate-400 text-sm">لا يوجد سائقين مضافين حالياً.</p>
-                  <button 
-                    onClick={openAddDriverModal}
-                    className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold"
-                  >
-                    إضافة أول سائق الآن
-                  </button>
-                </div>
+                <div className="p-12 text-center text-slate-400 text-sm">جاري التحميل...</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
@@ -816,57 +739,30 @@ export default function App() {
                         <th className="p-3">الخط / المنطقة</th>
                         <th className="p-3 text-center">الركاب / السعة</th>
                         <th className="p-3 text-center">الحالة</th>
-                        <th className="p-3 text-center">الإجراءات والطباعة</th>
+                        <th className="p-3 text-center">الإجراءات</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredDrivers.map((driver, idx) => {
                         const count = getStudentCountForDriver(driver.id);
-                        const maxCap = parseInt(driver.capacity, 10) || 0;
-                        const isFull = count >= maxCap && maxCap > 0;
-
+                        const maxCap = parseInt(String(driver.capacity), 10) || 0;
                         return (
-                          <tr key={driver.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
-                            <td className="p-3 font-bold text-slate-800 flex items-center gap-2">
-                              <span className="p-1.5 bg-slate-100 rounded-full">🧔🏻‍♂️</span>
-                              {driver.name}
-                            </td>
-                            <td className="p-3 text-slate-600 dir-ltr text-right">{driver.phone}</td>
-                            <td className="p-3 text-slate-700 font-medium">
-                              {driver.car_type || 'حافلة'} ({driver.car_number || 'بدون رقم'})
-                            </td>
-                            <td className="p-3 text-orange-600 font-bold">{driver.route || 'منطقة عامة'}</td>
+                          <tr key={driver.id} className="hover:bg-slate-50">
+                            <td className="p-3 text-slate-400">{idx + 1}</td>
+                            <td className="p-3 font-bold text-slate-800">🧔🏻‍♂️ {driver.name}</td>
+                            <td className="p-3 dir-ltr text-right">{driver.phone}</td>
+                            <td className="p-3">{driver.car_type || 'حافلة'} ({driver.car_number || 'بدون رقم'})</td>
+                            <td className="p-3 text-orange-600 font-bold">{driver.route || 'عام'}</td>
                             <td className="p-3 text-center">
-                              <span className={`px-2.5 py-1 rounded-md font-bold text-xs ${
-                                isFull ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-700'
-                              }`}>
-                                {count} / {maxCap} طالب
+                              <span className={`px-2 py-1 rounded font-bold ${count >= maxCap ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-blue-700'}`}>
+                                {count} / {maxCap}
                               </span>
                             </td>
                             <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
-                              <button 
-                                onClick={() => handlePrintDriverManifest(driver)}
-                                className="text-blue-700 hover:text-blue-900 bg-blue-50 p-1.5 rounded-md font-bold text-xs"
-                                title="طباعة كشف الركاب لهذا السائق"
-                              >
-                                🖨️ طباعة كشف الركاب
-                              </button>
-                              <button 
-                                onClick={() => openEditDriverModal(driver)}
-                                className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
-                                title="تعديل السائق"
-                              >
-                                ✏️ تعديل
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteDriver(driver.id, driver.name)}
-                                className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
-                                title="حذف السائق"
-                              >
-                                🗑️ حذف
-                              </button>
+                              <button onClick={() => handlePrintDriverManifest(driver)} className="text-blue-700 bg-blue-50 p-1.5 rounded font-bold">🖨️ طباعة</button>
+                              <button onClick={() => openEditDriverModal(driver)} className="text-amber-600 bg-amber-50 p-1.5 rounded font-bold">✏️ تعديل</button>
+                              <button onClick={() => handleDeleteDriver(driver.id, driver.name)} className="text-rose-500 bg-rose-50 p-1.5 rounded font-bold">🗑️ حذف</button>
                             </td>
                           </tr>
                         );
@@ -875,254 +771,248 @@ export default function App() {
                   </table>
                 </div>
               )}
-
             </div>
           )}
 
-          {/* تبويب الرحلات والمصروفات */}
+          {/* تبويب الرحلات المكتمل والفعال */}
           {activeTab === 'trips' && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
-              <div className="text-4xl">🗺️</div>
-              <h3 className="font-bold text-slate-800">جدول الرحلات والتحركات</h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">يمكنك جدولة الرحلات اليومية لمحافظة ميسان وباقي الخطوط بسهولة.</p>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">جدول إدارة الرحلات اليومية والتحركات</h2>
+                  <p className="text-xs text-slate-400">متابعة انطلاق الحافلات، تحديد الأوقات، وتحديث حالة الخطوط مباشر</p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="بحث باسم الرحلة أو الخط..."
+                    className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs w-48 focus:outline-none focus:border-orange-500"
+                    value={tripSearchTerm}
+                    onChange={(e) => setTripSearchTerm(e.target.value)}
+                  />
+                  <button onClick={exportTripsToExcel} className="bg-emerald-600 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-emerald-700">
+                    📥 Excel
+                  </button>
+                  <button onClick={openAddTripModal} className="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg font-bold hover:bg-orange-600">
+                    + جدولة رحلة جديدة
+                  </button>
+                  <button onClick={fetchTrips} className="bg-slate-100 text-slate-700 text-xs px-2.5 py-2 rounded-lg hover:bg-slate-200">
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              {loadingTrips ? (
+                <div className="p-12 text-center text-slate-400 text-sm">جاري جلب جدول الرحلات... ⏳</div>
+              ) : filteredTrips.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <p className="text-slate-400 text-sm">لا يوجد رحلات مسجلة اليوم.</p>
+                  <button onClick={openAddTripModal} className="bg-orange-500 text-white text-xs px-4 py-2 rounded-lg font-bold">
+                    إضافة أول رحلة الآن
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-slate-50 text-slate-500 border-y border-slate-200">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th className="p-3">عنوان الرحلة</th>
+                        <th className="p-3">السائق الحافلة</th>
+                        <th className="p-3">خط السير / الوجهة</th>
+                        <th className="p-3">تاريخ ووقت الانطلاق</th>
+                        <th className="p-3 text-center">حالة الرحلة</th>
+                        <th className="p-3 text-center">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredTrips.map((trip, idx) => (
+                        <tr key={trip.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
+                          <td className="p-3 font-bold text-slate-800">🚌 {trip.trip_name}</td>
+                          <td className="p-3">{getDriverName(trip.driver_id)}</td>
+                          <td className="p-3 font-medium text-orange-600">{trip.route || 'غير حدد'}</td>
+                          <td className="p-3 text-slate-600">
+                            <span className="font-bold text-slate-700">{trip.date}</span> ({trip.start_time})
+                          </td>
+                          <td className="p-3 text-center">{getTripStatusBadge(trip.status)}</td>
+                          <td className="p-3 text-center space-x-1 space-x-reverse">
+                            <button onClick={() => openEditTripModal(trip)} className="text-amber-600 bg-amber-50 p-1.5 rounded-md font-bold">✏️ تعديل</button>
+                            <button onClick={() => handleDeleteTrip(trip.id, trip.trip_name)} className="text-rose-500 bg-rose-50 p-1.5 rounded-md font-bold">🗑️ حذف</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
+          {/* التقارير */}
           {(activeTab === 'expenses' || activeTab === 'reports') && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">📊</div>
-              <h3 className="font-bold text-slate-800">التقارير الحسابية والمصروفات</h3>
+              <h3 className="font-bold text-slate-800">التقارير الحسابية والمالية</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
             </div>
           )}
 
         </main>
-
       </div>
 
-      {/* النافذة المنبثقة (إضافة / تعديل مشترك) */}
+      {/* Modal - المشتركين */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-slate-800 text-base">
-                {isEditing ? '✏️ تعديل بيانات المشترك' : '➕ إضافة مشترك جديد'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+              <h3 className="font-bold text-slate-800 text-base">{isEditing ? '✏️ تعديل مشترك' : '➕ إضافة مشترك'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 text-lg">✕</button>
             </div>
-
             <form onSubmit={handleSaveStudent} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-600 font-bold mb-1">اسم الطالب / المشترك *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="مثال: عبد الرحمن علي"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
+                <label className="block text-slate-600 font-bold mb-1">اسم المشترك *</label>
+                <input type="text" required className="w-full px-3 py-2 border rounded-lg" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
-
               <div>
                 <label className="block text-slate-600 font-bold mb-1">رقم الهاتف *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="مثال: 07701234567"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 dir-ltr text-right"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <input type="text" required className="w-full px-3 py-2 border rounded-lg dir-ltr text-right" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
-
               <div>
                 <label className="block text-slate-600 font-bold mb-1">الجامعة / الجهة</label>
-                <input 
-                  type="text"
-                  placeholder="جامعة ميسان"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                  value={university}
-                  onChange={(e) => setUniversity(e.target.value)}
-                />
+                <input type="text" className="w-full px-3 py-2 border rounded-lg" value={university} onChange={(e) => setUniversity(e.target.value)} />
               </div>
-
-              {/* اختيار السائق المخصص */}
               <div>
-                <label className="block text-slate-600 font-bold mb-1">تحديد السائق / الحافلة المخصصة</label>
-                <select 
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 bg-white"
-                  value={driverId}
-                  onChange={(e) => setDriverId(e.target.value)}
-                >
-                  <option value="">-- بدون تحديد سائق --</option>
-                  {drivers.map(drv => (
-                    <option key={drv.id} value={drv.id}>
-                      🚗 {drv.name} ({drv.route || 'عام'}) - {drv.car_type || 'حافلة'}
-                    </option>
-                  ))}
+                <label className="block text-slate-600 font-bold mb-1">السائق المخصص</label>
+                <select className="w-full px-3 py-2 border rounded-lg bg-white" value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+                  <option value="">-- بدون تحديد --</option>
+                  {drivers.map(drv => <option key={drv.id} value={drv.id}>🚗 {drv.name} ({drv.route})</option>)}
                 </select>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">قيمة الاشتراك (دينار)</label>
-                  <input 
-                    type="text"
-                    placeholder="90,000"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                  />
+                  <label className="block text-slate-600 font-bold mb-1">قيمة الاشتراك</label>
+                  <input type="text" className="w-full px-3 py-2 border rounded-lg" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </div>
-
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">حالة الدفع</label>
-                  <select 
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 bg-white"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                  >
+                  <label className="block text-slate-600 font-bold mb-1">الحالة</label>
+                  <select className="w-full px-3 py-2 border rounded-lg bg-white" value={status} onChange={(e) => setStatus(e.target.value)}>
                     <option value="مدفوع">مدفوع</option>
                     <option value="متأخر">متأخر</option>
                     <option value="غير مدفوع">غير مدفوع</option>
                   </select>
                 </div>
               </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2 border-t">
-                <button 
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 shadow-md"
-                >
-                  {submitting ? 'جاري الحفظ...' : (isEditing ? 'حفظ التعديلات' : 'إضافة المشترك')}
-                </button>
+              <div className="pt-3 flex justify-end gap-2 border-t">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 font-bold">إلغاء</button>
+                <button type="submit" disabled={submitting} className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold">{submitting ? 'حفظ...' : 'حفظ'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* النافذة المنبثقة (إضافة / تعديل سائق) */}
+      {/* Modal - السائقين */}
       {showDriverModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-slate-800 text-base">
-                {isEditingDriver ? '✏️ تعديل بيانات السائق' : '🚗 إضافة سائق جديد'}
-              </h3>
-              <button onClick={() => setShowDriverModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+              <h3 className="font-bold text-slate-800 text-base">{isEditingDriver ? '✏️ تعديل سائق' : '🚗 إضافة سائق'}</h3>
+              <button onClick={() => setShowDriverModal(false)} className="text-slate-400 text-lg">✕</button>
             </div>
-
             <form onSubmit={handleSaveDriver} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-600 font-bold mb-1">اسم السائق الثلاثي *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="مثال: أحمد جاسم محمد"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                  value={driverName}
-                  onChange={(e) => setDriverName(e.target.value)}
-                />
+                <label className="block text-slate-600 font-bold mb-1">اسم السائق *</label>
+                <input type="text" required className="w-full px-3 py-2 border rounded-lg" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
               </div>
-
               <div>
                 <label className="block text-slate-600 font-bold mb-1">رقم الهاتف *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="مثال: 07712345678"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 dir-ltr text-right"
-                  value={driverPhone}
-                  onChange={(e) => setDriverPhone(e.target.value)}
-                />
+                <input type="text" required className="w-full px-3 py-2 border rounded-lg dir-ltr text-right" value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">نوع السيارة / الحافلة</label>
-                  <input 
-                    type="text"
-                    placeholder="كيا كوستار / تويوتا"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                    value={carType}
-                    onChange={(e) => setCarType(e.target.value)}
-                  />
+                  <label className="block text-slate-600 font-bold mb-1">نوع المركبة</label>
+                  <input type="text" className="w-full px-3 py-2 border rounded-lg" value={carType} onChange={(e) => setCarType(e.target.value)} />
                 </div>
-
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">رقم اللوحة / السيارة</label>
-                  <input 
-                    type="text"
-                    placeholder="مثال: 12345 ميسان"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                    value={carNumber}
-                    onChange={(e) => setCarNumber(e.target.value)}
-                  />
+                  <label className="block text-slate-600 font-bold mb-1">رقم اللوحة</label>
+                  <input type="text" className="w-full px-3 py-2 border rounded-lg" value={carNumber} onChange={(e) => setCarNumber(e.target.value)} />
                 </div>
               </div>
-
               <div>
-                <label className="block text-slate-600 font-bold mb-1">الخط / المنطقة السكنية</label>
-                <input 
-                  type="text"
-                  placeholder="مثال: حي الخليج - جامعة ميسان"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                  value={route}
-                  onChange={(e) => setRoute(e.target.value)}
-                />
+                <label className="block text-slate-600 font-bold mb-1">الخط / المنطقة</label>
+                <input type="text" className="w-full px-3 py-2 border rounded-lg" value={route} onChange={(e) => setRoute(e.target.value)} />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">سعة المقاعد الكلية</label>
-                  <input 
-                    type="number"
-                    placeholder="22"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                  />
+                  <label className="block text-slate-600 font-bold mb-1">سعة المقاعد</label>
+                  <input type="number" className="w-full px-3 py-2 border rounded-lg" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
                 </div>
-
                 <div>
-                  <label className="block text-slate-600 font-bold mb-1">حالة السائق</label>
-                  <select 
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 bg-white"
-                    value={driverStatus}
-                    onChange={(e) => setDriverStatus(e.target.value)}
-                  >
+                  <label className="block text-slate-600 font-bold mb-1">الحالة</label>
+                  <select className="w-full px-3 py-2 border rounded-lg bg-white" value={driverStatus} onChange={(e) => setDriverStatus(e.target.value)}>
                     <option value="نشط">نشط</option>
                     <option value="إجازة">إجازة</option>
                     <option value="متوقف">متوقف</option>
                   </select>
                 </div>
               </div>
+              <div className="pt-3 flex justify-end gap-2 border-t">
+                <button type="button" onClick={() => setShowDriverModal(false)} className="px-4 py-2 text-slate-600 font-bold">إلغاء</button>
+                <button type="submit" disabled={submittingDriver} className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold">{submittingDriver ? 'حفظ...' : 'حفظ'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t">
-                <button 
-                  type="button"
-                  onClick={() => setShowDriverModal(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
-                >
-                  إلغاء
-                </button>
-                <button 
-                  type="submit"
-                  disabled={submittingDriver}
-                  className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 shadow-md"
-                >
-                  {submittingDriver ? 'جاري الحفظ...' : (isEditingDriver ? 'حفظ التعديلات' : 'إضافة السائق')}
-                </button>
+      {/* Modal - الرحلات */}
+      {showTripModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="font-bold text-slate-800 text-base">{isEditingTrip ? '✏️ تعديل رحلة' : '🗺️ جدولة رحلة جديدة'}</h3>
+              <button onClick={() => setShowTripModal(false)} className="text-slate-400 text-lg">✕</button>
+            </div>
+            <form onSubmit={handleSaveTrip} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">عنوان الرحلة *</label>
+                <input type="text" required placeholder="مثال: رحلة الصباح - جامعة ميسان" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500" value={tripName} onChange={(e) => setTripName(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">السائق المكلف بالرحلة</label>
+                <select className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:border-orange-500" value={tripDriverId} onChange={(e) => setTripDriverId(e.target.value)}>
+                  <option value="">-- اختار السائق --</option>
+                  {drivers.map(drv => <option key={drv.id} value={drv.id}>🚗 {drv.name} ({drv.car_type || 'حافلة'})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">خط السير / المسار</label>
+                <input type="text" placeholder="حي الخليج ⬅️ جامعة ميسان" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500" value={tripRoute} onChange={(e) => setTripRoute(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">تاريخ الرحلة</label>
+                  <input type="date" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500" value={tripDate} onChange={(e) => setTripDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">وقت الانطلاق</label>
+                  <input type="text" placeholder="07:00 ص" className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">حالة الرحلة</label>
+                <select className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:border-orange-500" value={tripStatus} onChange={(e) => setTripStatus(e.target.value)}>
+                  <option value="قيد الانتظار">⏳ قيد الانتظار</option>
+                  <option value="بالطريق">🚍 بالطريق</option>
+                  <option value="اكتملت">✅ اكتملت</option>
+                  <option value="ملغاة">❌ ملغاة</option>
+                </select>
+              </div>
+              <div className="pt-3 flex justify-end gap-2 border-t">
+                <button type="button" onClick={() => setShowTripModal(false)} className="px-4 py-2 text-slate-600 font-bold">إلغاء</button>
+                <button type="submit" disabled={submittingTrip} className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600">{submittingTrip ? 'حفظ...' : 'حفظ الرحلة'}</button>
               </div>
             </form>
           </div>
