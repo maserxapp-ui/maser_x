@@ -126,7 +126,7 @@ export default function App() {
           <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
             <div className="bg-white p-2 rounded-2xl shadow-md flex items-center justify-center w-28 h-20 mb-2">
               <img 
-                src="/logo.png" 
+                src="/logo.png.jpg" 
                 alt="شعار مسار إكس" 
                 className="max-h-full max-w-full object-contain"
                 onError={(e) => {
