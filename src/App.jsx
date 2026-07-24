@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
+import SubscribersManager from './SubscribersManager';
 
 // 1. تهيئة عميل Supabase
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
@@ -580,6 +581,7 @@ export default function TransportDashboard() {
 
         {/* Main Area */}
         <main className="lg:col-span-4 space-y-6">
+          <SubscribersManager />
 
           {/* تبويب المشتركين */}
           {(activeTab === 'main' || activeTab === 'subscribers') && (
