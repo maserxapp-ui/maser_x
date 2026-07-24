@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import logoImg from '../logo.png.jpg';
+import UserViews from './UserViews';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
+  const [viewMode, setViewMode] = useState('admin');
   const [searchTerm, setSearchTerm] = useState('');
   const [driverSearchTerm, setDriverSearchTerm] = useState('');
   
@@ -481,7 +483,9 @@ export default function App() {
         return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">متوقف</span>;
     }
   };
-
+if (viewMode === 'user') {
+    return <UserViews supabase={supabase} onBackToAdmin={() => setViewMode('admin')} />;
+  }
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
@@ -499,6 +503,12 @@ export default function App() {
             </div>
             <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
           </div>
+          <button 
+    onClick={() => setViewMode('user')}
+    className="m-3 p-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition cursor-pointer"
+  >
+    🔑 دخول الطلاب والسائقين
+  </button>
 
           <nav className="p-3 space-y-1">
             {[
