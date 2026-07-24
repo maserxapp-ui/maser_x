@@ -9,93 +9,61 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-supab
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// أنواع البيانات (Interfaces)
-interface Student {
-  id: string | number;
-  name: string;
-  phone: string;
-  university?: string;
-  driver_id?: string | number | null;
-  price?: string | number;
-  status: 'مدفوع' | 'متأخر' | 'غير مدفوع' | string;
-}
-
-interface Driver {
-  id: string | number;
-  name: string;
-  phone: string;
-  car_type?: string;
-  car_number?: string;
-  route?: string;
-  capacity: string | number;
-  status: 'نشط' | 'إجازة' | 'متوقف' | string;
-}
-
-interface Trip {
-  id: string | number;
-  trip_name: string;
-  driver_id?: string | number | null;
-  route?: string;
-  start_time?: string;
-  date?: string;
-  status: 'قيد الانتظار' | 'بالطريق' | 'اكتملت' | 'ملغاة' | string;
-}
-
 export default function TransportDashboard() {
   // حالة التبويب النشط
-  const [activeTab, setActiveTab] = useState<'main' | 'subscribers' | 'drivers' | 'trips' | 'expenses' | 'reports'>('main');
+  const [activeTab, setActiveTab] = useState('main');
 
-  // البيانات
-  const [students, setStudents] = useState<Student[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
+  // البيانات الرئيسية
+  const [students, setStudents] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [trips, setTrips] = useState([]);
   
   // حالات التحميل
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingDrivers, setLoadingDrivers] = useState<boolean>(true);
-  const [loadingTrips, setLoadingTrips] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+  const [loadingTrips, setLoadingTrips] = useState(true);
 
   // حالات البحث
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [driverSearchTerm, setDriverSearchTerm] = useState<string>('');
-  const [tripSearchTerm, setTripSearchTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [driverSearchTerm, setDriverSearchTerm] = useState('');
+  const [tripSearchTerm, setTripSearchTerm] = useState('');
 
   // ---------- حالات نموذج المشترك ----------
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editingStudentId, setEditingStudentId] = useState<string | number | null>(null);
-  const [name, setName] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [university, setUniversity] = useState<string>('جامعة ميسان');
-  const [driverId, setDriverId] = useState<string>('');
-  const [price, setPrice] = useState<string>('90,000');
-  const [status, setStatus] = useState<string>('مدفوع');
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [university, setUniversity] = useState('جامعة ميسان');
+  const [driverId, setDriverId] = useState('');
+  const [price, setPrice] = useState('90,000');
+  const [status, setStatus] = useState('مدفوع');
+  const [submitting, setSubmitting] = useState(false);
 
   // ---------- حالات نموذج السائق ----------
-  const [showDriverModal, setShowDriverModal] = useState<boolean>(false);
-  const [isEditingDriver, setIsEditingDriver] = useState<boolean>(false);
-  const [editingDriverId, setEditingDriverId] = useState<string | number | null>(null);
-  const [driverName, setDriverName] = useState<string>('');
-  const [driverPhone, setDriverPhone] = useState<string>('');
-  const [carType, setCarType] = useState<string>('');
-  const [carNumber, setCarNumber] = useState<string>('');
-  const [route, setRoute] = useState<string>('');
-  const [capacity, setCapacity] = useState<string>('22');
-  const [driverStatus, setDriverStatus] = useState<string>('نشط');
-  const [submittingDriver, setSubmittingDriver] = useState<boolean>(false);
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [isEditingDriver, setIsEditingDriver] = useState(false);
+  const [editingDriverId, setEditingDriverId] = useState(null);
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [carType, setCarType] = useState('');
+  const [carNumber, setCarNumber] = useState('');
+  const [route, setRoute] = useState('');
+  const [capacity, setCapacity] = useState('22');
+  const [driverStatus, setDriverStatus] = useState('نشط');
+  const [submittingDriver, setSubmittingDriver] = useState(false);
 
   // ---------- حالات نموذج الرحلة ----------
-  const [showTripModal, setShowTripModal] = useState<boolean>(false);
-  const [isEditingTrip, setIsEditingTrip] = useState<boolean>(false);
-  const [editingTripId, setEditingTripId] = useState<string | number | null>(null);
-  const [tripName, setTripName] = useState<string>('');
-  const [tripDriverId, setTripDriverId] = useState<string>('');
-  const [tripRoute, setTripRoute] = useState<string>('');
-  const [startTime, setStartTime] = useState<string>('07:00 ص');
-  const [tripDate, setTripDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [tripStatus, setTripStatus] = useState<string>('قيد الانتظار');
-  const [submittingTrip, setSubmittingTrip] = useState<boolean>(false);
+  const [showTripModal, setShowTripModal] = useState(false);
+  const [isEditingTrip, setIsEditingTrip] = useState(false);
+  const [editingTripId, setEditingTripId] = useState(null);
+  const [tripName, setTripName] = useState('');
+  const [tripDriverId, setTripDriverId] = useState('');
+  const [tripRoute, setTripRoute] = useState('');
+  const [startTime, setStartTime] = useState('07:00 ص');
+  const [tripDate, setTripDate] = useState(new Date().toISOString().slice(0, 10));
+  const [tripStatus, setTripStatus] = useState('قيد الانتظار');
+  const [submittingTrip, setSubmittingTrip] = useState(false);
 
   // ----------------------------------------------------
   // جلب البيانات من Supabase
@@ -185,17 +153,17 @@ export default function TransportDashboard() {
       }, 0);
   }, [students]);
 
-  const getStudentCountForDriver = (dId: string | number) => {
+  const getStudentCountForDriver = (dId) => {
     return students.filter(s => String(s.driver_id) === String(dId)).length;
   };
 
-  const getDriverName = (dId?: string | number | null) => {
+  const getDriverName = (dId) => {
     if (!dId) return <span className="text-slate-400 font-normal">غير مخصص</span>;
     const found = drivers.find(d => String(d.id) === String(dId));
     return found ? <span className="font-bold text-slate-700">🚗 {found.name}</span> : <span className="text-slate-400">غير معروف</span>;
   };
 
-  const getStatusBadge = (st: string) => {
+  const getStatusBadge = (st) => {
     switch (st) {
       case 'مدفوع':
         return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">مدفوع</span>;
@@ -206,7 +174,7 @@ export default function TransportDashboard() {
     }
   };
 
-  const getDriverStatusBadge = (st: string) => {
+  const getDriverStatusBadge = (st) => {
     switch (st) {
       case 'نشط':
         return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[11px] font-bold">نشط</span>;
@@ -217,7 +185,7 @@ export default function TransportDashboard() {
     }
   };
 
-  const getTripStatusBadge = (st: string) => {
+  const getTripStatusBadge = (st) => {
     switch (st) {
       case 'بالطريق':
         return <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-[11px] font-bold animate-pulse">🚍 بالطريق</span>;
@@ -231,7 +199,7 @@ export default function TransportDashboard() {
   };
 
   // ----------------------------------------------------
-  // إدارة المشتركين
+  // إدارة المشتركين (إضافة / تعديل / حذف)
   // ----------------------------------------------------
   const openAddModal = () => {
     setIsEditing(false);
@@ -245,7 +213,7 @@ export default function TransportDashboard() {
     setShowModal(true);
   };
 
-  const openEditModal = (student: Student) => {
+  const openEditModal = (student) => {
     setIsEditing(true);
     setEditingStudentId(student.id);
     setName(student.name || '');
@@ -257,7 +225,7 @@ export default function TransportDashboard() {
     setShowModal(true);
   };
 
-  const handleSaveStudent = async (e: React.FormEvent) => {
+  const handleSaveStudent = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     const payload = { name, phone, university, driver_id: driverId ? driverId : null, price, status };
@@ -278,7 +246,7 @@ export default function TransportDashboard() {
     }
   };
 
-  const handleDeleteStudent = async (id: string | number, studentName: string) => {
+  const handleDeleteStudent = async (id, studentName) => {
     if (!confirm(`هل أنت تأكد من حذف المشترك "${studentName}"؟`)) return;
     try {
       const { error } = await supabase.from('students').delete().eq('id', id);
@@ -290,7 +258,7 @@ export default function TransportDashboard() {
   };
 
   // ----------------------------------------------------
-  // إدارة السائقين
+  // إدارة السائقين (إضافة / تعديل / حذف)
   // ----------------------------------------------------
   const openAddDriverModal = () => {
     setIsEditingDriver(false);
@@ -305,7 +273,7 @@ export default function TransportDashboard() {
     setShowDriverModal(true);
   };
 
-  const openEditDriverModal = (driver: Driver) => {
+  const openEditDriverModal = (driver) => {
     setIsEditingDriver(true);
     setEditingDriverId(driver.id);
     setDriverName(driver.name || '');
@@ -318,7 +286,7 @@ export default function TransportDashboard() {
     setShowDriverModal(true);
   };
 
-  const handleSaveDriver = async (e: React.FormEvent) => {
+  const handleSaveDriver = async (e) => {
     e.preventDefault();
     setSubmittingDriver(true);
     const payload = { name: driverName, phone: driverPhone, car_type: carType, car_number: carNumber, route, capacity, status: driverStatus };
@@ -339,7 +307,7 @@ export default function TransportDashboard() {
     }
   };
 
-  const handleDeleteDriver = async (id: string | number, dName: string) => {
+  const handleDeleteDriver = async (id, dName) => {
     if (!confirm(`هل أنت تأكد من حذف السائق "${dName}"؟`)) return;
     try {
       const { error } = await supabase.from('drivers').delete().eq('id', id);
@@ -351,7 +319,7 @@ export default function TransportDashboard() {
   };
 
   // ----------------------------------------------------
-  // إدارة الرحلات
+  // إدارة الرحلات (إضافة / تعديل / حذف)
   // ----------------------------------------------------
   const openAddTripModal = () => {
     setIsEditingTrip(false);
@@ -365,7 +333,7 @@ export default function TransportDashboard() {
     setShowTripModal(true);
   };
 
-  const openEditTripModal = (trip: Trip) => {
+  const openEditTripModal = (trip) => {
     setIsEditingTrip(true);
     setEditingTripId(trip.id);
     setTripName(trip.trip_name || '');
@@ -377,7 +345,7 @@ export default function TransportDashboard() {
     setShowTripModal(true);
   };
 
-  const handleSaveTrip = async (e: React.FormEvent) => {
+  const handleSaveTrip = async (e) => {
     e.preventDefault();
     setSubmittingTrip(true);
     const payload = {
@@ -406,7 +374,7 @@ export default function TransportDashboard() {
     }
   };
 
-  const handleDeleteTrip = async (id: string | number, nameStr: string) => {
+  const handleDeleteTrip = async (id, nameStr) => {
     if (!confirm(`هل أنت تأكد من حذف "${nameStr}"؟`)) return;
     try {
       const { error } = await supabase.from('trips').delete().eq('id', id);
@@ -470,7 +438,7 @@ export default function TransportDashboard() {
     XLSX.writeFile(workbook, `جدول_الرحلات_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  const handlePrintDriverManifest = (driver: Driver) => {
+  const handlePrintDriverManifest = (driver) => {
     const assignedStudents = students.filter(s => String(s.driver_id) === String(driver.id));
     const printWin = window.open('', '_blank');
     if (!printWin) return alert('يرجى السماح بالنوَافذ المنبثقة للطباعة');
@@ -486,7 +454,7 @@ export default function TransportDashboard() {
           .header { text-align: center; border-bottom: 2px solid #ea580c; padding-bottom: 12px; margin-bottom: 20px; }
           .title { font-size: 22px; font-weight: bold; color: #ea580c; }
           .subtitle { font-size: 14px; color: #64748b; margin-top: 4px; }
-          .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; p: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+          .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; }
           th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: right; font-size: 13px; }
           th { background-color: #f1f5f9; font-weight: bold; }
@@ -774,7 +742,7 @@ export default function TransportDashboard() {
             </div>
           )}
 
-          {/* تبويب الرحلات المكتمل والفعال */}
+          {/* تبويب الرحلات والتحركات */}
           {activeTab === 'trips' && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -819,7 +787,7 @@ export default function TransportDashboard() {
                       <tr>
                         <th className="p-3">#</th>
                         <th className="p-3">عنوان الرحلة</th>
-                        <th className="p-3">السائق الحافلة</th>
+                        <th className="p-3">السائق والحافلة</th>
                         <th className="p-3">خط السير / الوجهة</th>
                         <th className="p-3">تاريخ ووقت الانطلاق</th>
                         <th className="p-3 text-center">حالة الرحلة</th>
@@ -832,7 +800,7 @@ export default function TransportDashboard() {
                           <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
                           <td className="p-3 font-bold text-slate-800">🚌 {trip.trip_name}</td>
                           <td className="p-3">{getDriverName(trip.driver_id)}</td>
-                          <td className="p-3 font-medium text-orange-600">{trip.route || 'غير حدد'}</td>
+                          <td className="p-3 font-medium text-orange-600">{trip.route || 'غير محدد'}</td>
                           <td className="p-3 text-slate-600">
                             <span className="font-bold text-slate-700">{trip.date}</span> ({trip.start_time})
                           </td>
@@ -855,7 +823,7 @@ export default function TransportDashboard() {
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">📊</div>
               <h3 className="font-bold text-slate-800">التقارير الحسابية والمالية</h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية المستحصلة: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
             </div>
           )}
 
@@ -1012,7 +980,9 @@ export default function TransportDashboard() {
               </div>
               <div className="pt-3 flex justify-end gap-2 border-t">
                 <button type="button" onClick={() => setShowTripModal(false)} className="px-4 py-2 text-slate-600 font-bold">إلغاء</button>
-                <button type="submit" disabled={submittingTrip} className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600">{submittingTrip ? 'حفظ...' : 'حفظ الرحلة'}</button>
+                <button type="submit" disabled={submittingTrip} className="px-5 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600">
+                  {submittingTrip ? 'جاري الحفظ...' : 'حفظ الرحلة'}
+                </button>
               </div>
             </form>
           </div>
