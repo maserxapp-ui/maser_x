@@ -72,7 +72,7 @@ export default function App() {
       setName('');
       setPhone('');
       setShowAddModal(false);
-      fetchStudents(); // إعادة جلب القائمة المحدثة
+      fetchStudents();
     }
   }
 
@@ -98,7 +98,7 @@ export default function App() {
     student.phone?.includes(searchTerm)
   );
 
-  // حساب الإحصائيات الحقيقية المباشرة من السيرفر
+  // حساب الإحصائيات الحقيقية
   const totalSubscribers = students.length;
   const paidCount = students.filter(s => s.status === 'مدفوع' || !s.status).length;
   const lateCount = students.filter(s => s.status === 'متأخر').length;
@@ -119,14 +119,23 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
-      {/* القائمة الجانبية (Sidebar) */}
+      {/* القائمة الجانبية (Sidebar) مع الشعار الجديد */}
       <aside className="w-64 bg-[#0e1e38] text-slate-300 flex flex-col justify-between shadow-xl z-20">
         <div>
-          <div className="p-5 flex flex-col items-center border-b border-slate-700/50">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black tracking-wider text-white">MASAR <span className="text-orange-500">X</span></span>
+          {/* قسم الشعار (Logo Section) */}
+          <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
+            <div className="bg-white p-2 rounded-2xl shadow-md flex items-center justify-center w-28 h-20 mb-2">
+              <img 
+                src="/logo.png" 
+                alt="شعار مسار إكس" 
+                className="max-h-full max-w-full object-contain"
+                onError={(e) => {
+                  // في حال عدم توفر الصورة يظهر اسم مسار إكس
+                  e.target.style.display = 'none';
+                }}
+              />
             </div>
-            <span className="text-xs text-orange-400 font-medium mt-1">مسار إكس</span>
+            <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
           </div>
 
           <nav className="p-3 space-y-1">
@@ -173,7 +182,7 @@ export default function App() {
         <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
           <div>
             <h1 className="text-xl font-bold text-slate-900">لوحة التحكم السحابية</h1>
-            <p className="text-xs text-slate-500 mt-0.5">مربوط بمباشر مع قاعدة بيانات Supabase</p>
+            <p className="text-xs text-slate-500 mt-0.5">منصة مسار إكس - إدارة الخطوط والاشتراكات</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -186,7 +195,7 @@ export default function App() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold text-slate-800">مدير النظام</p>
-                <p className="text-xs text-emerald-600 font-semibold">● سيرفر متصل</p>
+                <p className="text-xs text-emerald-600 font-semibold">● متصل الآن</p>
               </div>
             </div>
           </div>
@@ -236,7 +245,7 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-base font-bold text-slate-800">قائمة المشتركين الحقيقية</h2>
-                  <p className="text-xs text-slate-400">يتم جلب البيانات وتحديثها مباشره من قاعدة البيانات</p>
+                  <p className="text-xs text-slate-400">يتم جلب البيانات وتحديثها مباشرة من قاعدة البيانات</p>
                 </div>
                 
                 <div className="flex items-center gap-3">
@@ -265,7 +274,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* حالة التحميل أو عرض البيانات */}
+              {/* جدول البيانات */}
               {loading ? (
                 <div className="p-12 text-center text-slate-400 font-medium text-sm">
                   جاري جلب البيانات من السيرفر... ⏳
@@ -331,7 +340,7 @@ export default function App() {
                 <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">ملخص الحسابات الفعلي</h3>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600">إجمالي المشتركين السحابي</span>
+                    <span className="text-slate-600">إجمالي المشتركين</span>
                     <span className="font-bold text-slate-900">{totalSubscribers}</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -356,7 +365,7 @@ export default function App() {
 
       </div>
 
-      {/* النافذة المنبثقة لإضافة مشترك جديد لسيرفر Supabase */}
+      {/* النافذة المنبثقة لإضافة مشترك جديد */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
