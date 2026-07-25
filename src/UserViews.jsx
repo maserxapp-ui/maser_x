@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logoImg from './logo.png.jpg'; // أو مسار مشابه
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [phone, setPhone] = useState('');
