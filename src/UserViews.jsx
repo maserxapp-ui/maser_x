@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-
 export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -104,8 +103,11 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     );
   }
 
-  // 2️⃣ شاشة القفل (إذا كان الحساب غير مدفوع 🔴)
-  if (user.status !== 'مدفوع' && user.status !== 'paid') {
+  // 🔴 الحالات المسموح لها بالدخول: (مدفوع / متاخر / paid)
+  const isAllowedStatus = ['مدفوع', 'paid', 'متاخر', 'متأخر'].includes(user.status);
+
+  // 2️⃣ شاشة القفل (تظهر فقط إذا كانت الحالة غير مدفوعة / غير مفعلة)
+  if (!isAllowedStatus && user.role === 'student') {
     return (
       <div style={{ maxWidth: '450px', margin: '50px auto', padding: '30px', textAlign: 'center', border: '2px solid #ef4444', borderRadius: '16px', backgroundColor: '#fef2f2', fontFamily: 'sans-serif' }}>
         <h1 style={{ fontSize: '50px', margin: '0' }}>🛑</h1>
@@ -122,16 +124,23 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     );
   }
 
-  // 3️⃣ واجهة الطالب المفعل 🟢
+  // 3️⃣ واجهة الطالب المفعل (مدفوع 🟢 أو متأخر 🟡)
   if (user.role === 'student') {
+    const isLate = user.status === 'متاخر' || user.status === 'متأخر';
+
     return (
-      <div style={{ maxWidth: '500px', margin: '40px auto', padding: '25px', border: '1px solid #22c55e', borderRadius: '16px', fontFamily: 'sans-serif', backgroundColor: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+      <div style={{ maxWidth: '500px', margin: '40px auto', padding: '25px', border: `1px solid ${isLate ? '#f59e0b' : '#22c55e'}`, borderRadius: '16px', fontFamily: 'sans-serif', backgroundColor: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, color: '#15803d' }}>🎓 واجهة الطالب: {user.name}</h3>
+          <h3 style={{ margin: 0, color: isLate ? '#d97706' : '#15803d' }}>🎓 واجهة الطالب: {user.name}</h3>
           <button onClick={handleLogout} style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', color: '#475569' }}>خروج</button>
         </div>
         <hr style={{ margin: '15px 0', border: '0.5px solid #e2e8f0' }} />
-        <p><b>حالة الاشتراك:</b> <span style={{ color: '#16a34a', fontWeight: 'bold' }}>مفعل (مدفوع) 🟢</span></p>
+        <p>
+          <b>حالة الاشتراك:</b>{' '}
+          <span style={{ color: isLate ? '#d97706' : '#16a34a', fontWeight: 'bold' }}>
+            {isLate ? 'مكتمل (متأخر بالدفع) 🟡' : 'مفعل (مدفوع) 🟢'}
+          </span>
+        </p>
         <p><b>خط السير / الجامعة:</b> {user.university || 'غير محدد'}</p>
         <p><b>اسم السائق:</b> {user.driver_name || 'قيد التعيين'}</p>
       </div>
