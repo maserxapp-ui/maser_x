@@ -5,7 +5,23 @@ import UserViews from './UserViews';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
-  const [viewMode, setViewMode] = useState('admin');
+
+  // 🟢 1. جعل شاشة دخول الطلاب والسائقين هي الافتراضية
+  const [viewMode, setViewMode] = useState('user');
+
+  // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
+  const ADMIN_PASSWORD = '1234'; 
+
+  // 🟢 3. دالة حماية لوحة المدير بكلمة سر
+  const handleAdminAccess = () => {
+    const enteredPassword = prompt('🔒 أدخل كلمة سر المدير للدخول للوحة التحكم:');
+    if (enteredPassword === ADMIN_PASSWORD) {
+      setViewMode('admin');
+    } else if (enteredPassword !== null) {
+      alert('❌ كلمة السر غير صحيحة!');
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [driverSearchTerm, setDriverSearchTerm] = useState('');
   
