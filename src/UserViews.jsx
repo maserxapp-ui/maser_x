@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import logoImg from '../logo.png.jpg'; // 🟢 استيراد الشعار من المجلد الرئيسي
 
-export default function UserViews({ supabase, onBackToAdmin }) {
+export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
