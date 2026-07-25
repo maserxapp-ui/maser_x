@@ -66,7 +66,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
         {/* 🖼️ عرض الشعار هنا */}
         <div style={{ marginBottom: '15px' }}>
           <img 
-            src="/logo.png.jpg"
+            src="/logo.png"
             alt="شعار مسار إكس" 
             style={{ width: '130px', height: 'auto', maxHeight: '90px', objectFit: 'contain', margin: '0 auto' }} 
           />
