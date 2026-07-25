@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import logoImg from '../logo.png';
+import logoImg = '/logo.png';
 import UserViews from './UserViews';
 
 export default function App() {
