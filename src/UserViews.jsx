@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logoImg from '../logo.png.jpg'; // أو مسار مشابه
+
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [phone, setPhone] = useState('');
@@ -66,7 +66,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
         {/* 🖼️ عرض الشعار هنا */}
         <div style={{ marginBottom: '15px' }}>
           <img 
-            src={logoImg} 
+            src="/logo.png.jpg"
             alt="شعار مسار إكس" 
             style={{ width: '130px', height: 'auto', maxHeight: '90px', objectFit: 'contain', margin: '0 auto' }} 
           />
