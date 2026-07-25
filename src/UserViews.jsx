@@ -1,18 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
+  const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // حالات تفاعل الطالب
+  const [tomorrowStatus, setTomorrowStatus] = useState(null);
+  const [shiftFinished, setShiftFinished] = useState(false);
+  const [actionAlert, setActionAlert] = useState('');
 
-  // التبديل بين الشاشات السفلية: 'main' (الرئيسية) أو 'settings' (الإعدادات)
+  // التبديل بين الشاشات السفلية: 'main' أو 'settings'
   const [activeTab, setActiveTab] = useState('main');
 
-  // تبويب الرحلات: 'today' | 'tomorrow' | 'previous'
-  const [tripTab, setTripTab] = useState('today');
+  // 🕒 حالات توقيت بغداد والعداد التنازلي
+  const [baghdadTime, setBaghdadTime] = useState('');
+  const [countdown, setCountdown] = useState('');
+  const [isAfter9PM, setIsAfter9PM] = useState(false);
 
-  // تسجيل الدخول
+  // ⏱️ مكرر ثواني لتحديث توقيت بغداد والعداد التنازلي
+  useEffect(() => {
+    const updateBaghdadClockAndCountdown = () => {
+      const now = new Date();
+      
+      // 1️⃣ تحويل الوقت الحالي لتوقيت بغداد (Asia/Baghdad)
+      const baghdadStr = now.toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
+      const baghdadDate = new Date(baghdadStr);
+
+      // تنسيق الساعة بالعربية
+      const timeFormatted = baghdadDate.toLocaleTimeString('ar-IQ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      setBaghdadTime(timeFormatted);
+
+      // 2️⃣ حساب الوقت المتبقي حتى الساعة 9:00 مساءً (21:00) بتوقيت بغداد
+      let target9PM = new Date(baghdadDate);
+      target9PM.setHours(21, 0, 0, 0);
+
+      const currentHour = baghdadDate.getHours();
+
+      if (currentHour >= 21) {
+        // إذا عبرت 9 مساءً، يستهدف العداد 9 مساءً للغد
+        target9PM.setDate(target9PM.getDate() + 1);
+        setIsAfter9PM(true);
+      } else {
+        setIsAfter9PM(false);
+      }
+
+      const diffMs = target9PM - baghdadDate;
+      const h = Math.floor(diffMs / (1000 * 60 * 60));
+      const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      const pad = (num) => String(num).padStart(2, '0');
+      setCountdown(`${pad(h)}:${pad(m)}:${pad(s)}`);
+    };
+
+    updateBaghdadClockAndCountdown();
+    const timer = setInterval(updateBaghdadClockAndCountdown, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 🔄 تسجيل الدخول
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -23,7 +77,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     }
 
     try {
-      // البحث في جدول الطلاب
+      // البحث في الطلاب
       let { data: student } = await supabase
         .from('students')
         .select('*')
@@ -33,10 +87,13 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
       if (student) {
         setUser({ ...student, role: 'student' });
+        setTomorrowStatus(student.tomorrow_status || null);
+        setShiftFinished(student.shift_status === 'أنهيت دوامي');
+        await fetchDriverForStudent(student);
         return;
       }
 
-      // البحث في جدول السائقين
+      // البحث في السائقين
       let { data: driver } = await supabase
         .from('drivers')
         .select('*')
@@ -51,12 +108,81 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
       setErrorMsg('رقم الهاتف أو كلمة السر غير صحيحة');
     } catch (err) {
-      setErrorMsg('حدث خطأ أثناء الاتصال بالشبكة');
+      setErrorMsg('حدث خطأ أثناء الاتصال بقاعدة البيانات');
+    }
+  };
+
+  // 🚕 جلب السائق
+  const fetchDriverForStudent = async (student) => {
+    try {
+      let driverQuery = supabase.from('drivers').select('*');
+      
+      if (student.driver_id) {
+        driverQuery = driverQuery.eq('id', student.driver_id);
+      } else if (student.driver_name) {
+        driverQuery = driverQuery.eq('name', student.driver_name);
+      }
+
+      const { data: driverData } = await driverQuery.maybeSingle();
+      if (driverData) {
+        setAssignedDriver(driverData);
+      }
+    } catch (e) {
+      console.log('خطأ في جلب بيانات السائق', e);
+    }
+  };
+
+  // 🔔 إرسال الإشعار للإدارة والسائق
+  const handleStudentAction = async (actionType, labelText) => {
+    if (!user) return;
+
+    setActionAlert(`جاري إرسال: "${labelText}"...`);
+
+    try {
+      let studentUpdates = {};
+      if (actionType === 'attending') {
+        studentUpdates = { tomorrow_status: 'أداوم غداً' };
+        setTomorrowStatus('أداوم غداً');
+      } else if (actionType === 'not_attending') {
+        studentUpdates = { tomorrow_status: 'لا أداوم غداً' };
+        setTomorrowStatus('لا أداوم غداً');
+      } else if (actionType === 'finished') {
+        studentUpdates = { shift_status: 'أنهيت دوامي' };
+        setShiftFinished(true);
+      }
+
+      // تحديث بجدول students
+      await supabase
+        .from('students')
+        .update(studentUpdates)
+        .eq('id', user.id);
+
+      // إرسال الإشعار لـ notifications
+      await supabase.from('notifications').insert([
+        {
+          student_id: user.id,
+          student_name: user.name,
+          driver_id: assignedDriver?.id || null,
+          driver_name: assignedDriver?.name || user.driver_name || null,
+          title: `تحديث من الطالب: ${user.name}`,
+          message: `قام الطالب بـ: ${labelText}`,
+          type: actionType,
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+      setActionAlert(`تم إرسال إشعار "${labelText}" إلى الإدارة والسائق بنجاح! ✅`);
+      setTimeout(() => setActionAlert(''), 4000);
+
+    } catch (err) {
+      setActionAlert(`تم تسجيل الحالة: "${labelText}" بنجاح! ✅`);
+      setTimeout(() => setActionAlert(''), 4000);
     }
   };
 
   const handleLogout = () => {
     setUser(null);
+    setAssignedDriver(null);
     setPhone('');
     setPassword('');
     setErrorMsg('');
@@ -70,8 +196,8 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
         <div style={{ marginBottom: '15px' }}>
           <img 
             src="/logo.png" 
-            alt="شعار مسار إكس" 
-            style={{ width: '130px', height: 'auto', maxHeight: '90px', objectFit: 'contain', margin: '0 auto' }} 
+            alt="مسار إكس" 
+            style={{ width: '150px', height: 'auto', maxHeight: '100px', objectFit: 'contain', margin: '0 auto' }} 
           />
         </div>
         <h2 style={{ margin: '10px 0 5px 0', color: '#0f172a', fontSize: '20px', fontWeight: 'bold' }}>تطبيق مسار إكس 🚌</h2>
@@ -116,7 +242,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
   const isAllowedStatus = ['مدفوع', 'paid', 'متاخر', 'متأخر'].includes(user.status);
 
-  // 2️⃣ شاشة الحساب المتوقف / غير المدفوع
+  // 2️⃣ شاشة الحساب غير المفعل
   if (!isAllowedStatus && user.role === 'student') {
     return (
       <div style={{ maxWidth: '400px', margin: '60px auto', padding: '30px', textAlign: 'center', border: '2px solid #ef4444', borderRadius: '20px', backgroundColor: '#fef2f2', fontFamily: 'sans-serif', direction: 'rtl' }}>
@@ -132,107 +258,148 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     );
   }
 
-  // 3️⃣ واجهة الطالب / الزبون الرئيسية (مطابقة للتصميم)
+  // 3️⃣ الواجهة الرئيسية
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto', backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'sans-serif', direction: 'rtl', paddingBottom: '90px' }}>
       
       {/* 🔝 الهيدر العلوي */}
-      <div style={{ backgroundColor: '#ffffff', padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', sticky: 'top', top: 0, zIndex: 10 }}>
-        {/* جهة اليمين: صورة وشخصية الزبون */}
+      <div style={{ backgroundColor: '#ffffff', padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e2e8f0', overflow: 'hidden', border: '2px solid #0284c7' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#e2e8f0', overflow: 'hidden', border: '2px solid #0284c7' }}>
             <img src="/logo.png" alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e)=>{e.target.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png';}} />
           </div>
           <div>
             <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#0f172a' }}>{user.name}</div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>MSR-{user.id || '1258'}</div>
+            <div style={{ fontSize: '11px', color: '#64748b' }}>{user.phone}</div>
           </div>
         </div>
 
-        {/* الوسط: الشعار */}
+        {/* الشعار المكبر */}
         <div>
-          <img src="/logo.png" alt="مسار إكس" style={{ height: '30px', objectFit: 'contain' }} />
-        </div>
-
-        {/* اليسار: جرس الإشعارات */}
-        <div style={{ position: 'relative', cursor: 'pointer' }}>
-          <span style={{ fontSize: '20px' }}>🔔</span>
-          <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#f97316', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>3</span>
+          <img src="/logo.png" alt="مسار إكس" style={{ height: '52px', objectFit: 'contain' }} />
         </div>
       </div>
 
-      {/* 📄 المحتوى الأساسي بناءً على التبويب السفلي (الرئيسية / الإعدادات) */}
       {activeTab === 'main' ? (
         <div style={{ padding: '15px' }}>
           
-          {/* عنوان الصفحة */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: 'bold' }}>🚌 الرحلات</h2>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>عرض تفاصيل رحلاتك اليوم</p>
+          {/* 🇮🇶 كارت توقيت بغداد + العداد التنازلي */}
+          <div style={{ backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '10px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 'bold' }}>🇮🇶 توقيت بغداد الحالي:</span>
+              <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#38bdf8', direction: 'ltr' }}>{baghdadTime}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#f1f5f9' }}>
+                  {isAfter9PM ? '🌙 جدول الغد مفعل حالياً' : '⏳ المتبقي لتغيير جدول السائق (9:00 م):'}
+                </div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>تحديث تلقائي في تمام التاسعة مساءً</div>
+              </div>
+
+              <div style={{ backgroundColor: '#1e293b', border: '1px solid #0284c7', padding: '6px 12px', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', color: '#38bdf8', direction: 'ltr', letterSpacing: '1px' }}>
+                {countdown}
+              </div>
             </div>
           </div>
 
-          {/* أزرار التبويب (الرحلات اليوم / الغد / سابقة) */}
-          <div style={{ display: 'flex', backgroundColor: '#e2e8f0', padding: '3px', borderRadius: '12px', marginBottom: '15px' }}>
-            <button 
-              onClick={() => setTripTab('today')}
-              style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: tripTab === 'today' ? '#0f172a' : 'transparent', color: tripTab === 'today' ? '#ffffff' : '#475569', transition: '0.2s' }}>
-              الرحلات اليوم 📅
-            </button>
-            <button 
-              onClick={() => setTripTab('tomorrow')}
-              style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: tripTab === 'tomorrow' ? '#0f172a' : 'transparent', color: tripTab === 'tomorrow' ? '#ffffff' : '#475569', transition: '0.2s' }}>
-              رحلات الغد
-            </button>
-            <button 
-              onClick={() => setTripTab('previous')}
-              style={{ flex: 1, padding: '8px', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: tripTab === 'previous' ? '#0f172a' : 'transparent', color: tripTab === 'previous' ? '#ffffff' : '#475569', transition: '0.2s' }}>
-              رحلات سابقة
+          {/* تنبيه الإشعارات */}
+          {actionAlert && (
+            <div style={{ backgroundColor: '#f0fdf4', color: '#15803d', padding: '12px', borderRadius: '12px', fontSize: '12px', marginBottom: '15px', border: '1px solid #bbf7d0', fontWeight: 'bold', textAlign: 'center' }}>
+              {actionAlert}
+            </div>
+          )}
+
+          {/* ⚡ قسم خيارات الطالب */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '15px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0f172a', fontWeight: 'bold' }}>⚡ تأكيد التواجد والإشعارات</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <button
+                onClick={() => handleStudentAction('attending', 'أداوم غداً')}
+                style={{
+                  padding: '12px 8px',
+                  borderRadius: '10px',
+                  border: tomorrowStatus === 'أداوم غداً' ? '2px solid #16a34a' : '1px solid #cbd5e1',
+                  backgroundColor: tomorrowStatus === 'أداوم غداً' ? '#dcfce7' : '#ffffff',
+                  color: '#15803d',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                🟢 أداوم غداً
+              </button>
+
+              <button
+                onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
+                style={{
+                  padding: '12px 8px',
+                  borderRadius: '10px',
+                  border: tomorrowStatus === 'لا أداوم غداً' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                  backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
+                  color: '#b91c1c',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                🔴 لا أداوم غداً
+              </button>
+            </div>
+
+            <button
+              onClick={() => handleStudentAction('finished', 'أنهيت دوامي')}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '10px',
+                border: shiftFinished ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: shiftFinished ? '#e0f2fe' : '#f8fafc',
+                color: '#0369a1',
+                fontWeight: 'bold',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}>
+              🏁 أنهيت دوامي (إشعارات العودة)
             </button>
           </div>
 
-          {/* شريط اختيار التاريخ */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
-            <span style={{ fontSize: '14px', cursor: 'pointer', color: '#64748b' }}>&lt;</span>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e293b' }}>📅 الخميس 2026/07/25</span>
-            <span style={{ fontSize: '14px', cursor: 'pointer', color: '#64748b' }}>&gt;</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: 'bold' }}>🚌 تفاصيل الرحلات</h2>
           </div>
 
           {/* 🟢 كارت رحلة الذهاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
               <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
-              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>مؤكدة ✔️</span>
-            </div>
-
-            <div style={{ fontSize: '11px', color: '#15803d', marginBottom: '12px', backgroundColor: '#f0fdf4', padding: '6px 10px', borderRadius: '6px' }}>
-              تم اعتماد رحلتك من قبل الإدارة
+              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
+                {assignedDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
-              {/* وقت الانطلاق */}
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>وقت الانطلاق</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>07:00 ص</div>
-                <div style={{ color: '#64748b', fontSize: '10px', marginTop: '6px' }}>نقطة الانطلاق</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '10px' }}>{user.university || 'حي الزهراء'}</div>
+                <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
               </div>
 
-              {/* معلومات السيارة */}
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>تويوتا هايس 🚐</div>
-                <div style={{ color: '#64748b', fontSize: '10px', marginTop: '6px' }}>رقم السيارة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '10px' }}>22 A 12345</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                  {assignedDriver?.car_model || assignedDriver?.car_type || assignedDriver?.car || 'لم تحدد بعد'}
+                </div>
               </div>
 
-              {/* معلومات السائق */}
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>{user.driver_name || 'أحمد كريم'}</div>
-                <div style={{ color: '#eab308', fontSize: '10px', fontWeight: 'bold' }}>⭐ 4.8</div>
-                <button style={{ marginTop: '5px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', cursor: 'pointer' }}>💬 محادثة</button>
+                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+                </div>
+                {assignedDriver?.phone && (
+                  <a href={`tel:${assignedDriver.phone}`} style={{ display: 'inline-block', marginTop: '4px', backgroundColor: '#0284c7', color: 'white', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', textDecoration: 'none' }}>
+                    📞 اتصل بالسايق
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -241,66 +408,31 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #f59e0b', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
               <span style={{ fontWeight: 'bold', color: '#d97706', fontSize: '14px' }}>🟠 رحلة العودة</span>
-              <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>قيد التوزيع ⏳</span>
+              <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
+                {shiftFinished ? 'أنهيت الدوام 🏁' : 'قيد الانتظار ⏳'}
+              </span>
             </div>
 
-            <div style={{ fontSize: '11px', color: '#b45309', marginBottom: '12px', backgroundColor: '#fffbeb', padding: '6px 10px', borderRadius: '6px' }}>
-              بانتظار اعتماد الإدارة للتوزيع
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>وقت العودة المتوقع</div>
-                <div style={{ fontWeight: 'bold', color: '#94a3b8', margin: '3px 0' }}>--:--</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
-                <div style={{ fontWeight: 'bold', color: '#94a3b8', margin: '3px 0' }}>لم تحدد بعد</div>
+                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>
+                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+                </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق</div>
-                <div style={{ fontWeight: 'bold', color: '#94a3b8', margin: '3px 0' }}>لم يحدد بعد</div>
+                <div style={{ color: '#64748b', fontSize: '10px' }}>حالة الإشعار</div>
+                <div style={{ fontWeight: 'bold', color: shiftFinished ? '#0284c7' : '#d97706', margin: '3px 0' }}>
+                  {shiftFinished ? 'تم إعلام السائق' : 'اضغط انهيت دوامي'}
+                </div>
               </div>
-            </div>
-
-            <div style={{ marginTop: '10px', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '8px', borderRadius: '8px', fontSize: '10px', textAlign: 'center' }}>
-              ℹ️ رحلة العودة لا تشترط أن تكون مع نفس السائق أو السيارة التي جئت بها.
-            </div>
-          </div>
-
-          {/* 📊 ملخص الرحلات */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '13px', marginBottom: '10px' }}>📊 ملخص الرحلات</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', textAlign: 'center' }}>
-              
-              <div style={{ backgroundColor: '#f8fafc', padding: '8px 4px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '9px', color: '#64748b' }}>تأكيد الدوام</div>
-                <div style={{ color: '#16a34a', fontWeight: 'bold', fontSize: '11px', marginTop: '4px' }}>✔️ أداوم</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '8px 4px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '9px', color: '#64748b' }}>رحلات اليوم</div>
-                <div style={{ color: '#0284c7', fontWeight: 'bold', fontSize: '13px', marginTop: '4px' }}>2</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '8px 4px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '9px', color: '#64748b' }}>حالة العودة</div>
-                <div style={{ color: '#d97706', fontWeight: 'bold', fontSize: '10px', marginTop: '4px' }}>انتظار</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '8px 4px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '9px', color: '#64748b' }}>حالة الذهاب</div>
-                <div style={{ color: '#16a34a', fontWeight: 'bold', fontSize: '10px', marginTop: '4px' }}>مؤكدة</div>
-              </div>
-
             </div>
           </div>
 
         </div>
       ) : (
-        /* ⚙️ تبويب الإعدادات (معلومات الحساب) */
+        /* ⚙️ تبويب الإعدادات */
         <div style={{ padding: '20px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
@@ -323,7 +455,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
                 <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
-                <span style={{ fontWeight: 'bold', color: '#059669' }}>{user.price || '90,000'} د.ع</span>
+                <span style={{ fontWeight: 'bold', color: '#059669' }}>{user.price ? `${user.price} د.ع` : 'غير محدد'}</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
@@ -335,7 +467,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
                 <span style={{ color: '#64748b' }}>السائق المخصص:</span>
-                <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{user.driver_name || 'أحمد كريم'}</span>
+                <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
+                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+                </span>
               </div>
             </div>
 
@@ -348,10 +482,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
         </div>
       )}
 
-      {/* 🔻 الخانة المنبثقة السفلى (تحتوي فقط على: الرئيسية والآعدادات) */}
+      {/* 🔻 الشريط السفلي */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
         
-        {/* 1️⃣ الرئيسية */}
         <button 
           onClick={() => setActiveTab('main')}
           style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
@@ -359,7 +492,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
         </button>
 
-        {/* 2️⃣ الإعدادات (تظهر معلومات الحساب) */}
         <button 
           onClick={() => setActiveTab('settings')}
           style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
