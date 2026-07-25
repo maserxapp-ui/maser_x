@@ -500,7 +500,7 @@ export default function App() {
     }
   };
 if (viewMode === 'user') {
-    return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} />;
+    return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} />;
   }
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
