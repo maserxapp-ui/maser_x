@@ -346,7 +346,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           const tomorrowName = days[tomorrowIndex];
 
           // فحص هل اليوم ضمن أيام الدوام المسجلة للطالبة
-          const isWorkDay = currentStudent?.work_days ? currentStudent.work_days.includes(tomorrowName) : true;
+          const isWorkDay = user?.work_days ? user.work_days.includes(tomorrowName) : true;
 
           if (isWorkDay) {
             return (
