@@ -72,7 +72,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     setErrorMsg('');
 
     if (!phone || !password) {
-      setErrorMsg('يرجى إدخال رقم الهاتف وكلمة السر');
+      setErrorMsg('يرجى إدخل رقم الهاتف وكلمة السر');
       return;
     }
 
@@ -213,7 +213,17 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
               placeholder="0770XXXXXXX"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                outline: 'none',
+                fontSize: '14px',
+                color: '#000000',
+                backgroundColor: '#ffffff',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
 
@@ -224,7 +234,17 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                outline: 'none',
+                fontSize: '14px',
+                color: '#000000',
+                backgroundColor: '#ffffff',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
 
