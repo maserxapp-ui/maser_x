@@ -336,6 +336,17 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
             <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0f172a', fontWeight: 'bold' }}>⚡ تأكيد التواجد والإشعارات</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+       {/* فحص هل يوم غد يقع ضمن أيام دوام الطالبة أم يحتاج استثناء امتحان */}
+        {(() => {
+          const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+          const tomorrowIndex = (new Date().getDay() + 1) % 7;
+          const tomorrowName = days[tomorrowIndex];
+
+          // فحص هل اليوم ضمن أيام الدوام المسجلة للطالبة
+          const isWorkDay = currentStudent?.work_days ? currentStudent.work_days.includes(tomorrowName) : true;
+
+          if (isWorkDay) {
+            return (
               <button
                 onClick={() => handleStudentAction('attending', 'أداوم غداً')}
                 style={{
@@ -350,6 +361,31 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
                 }}>
                 🟢 أداوم غداً
               </button>
+            );
+          } else {
+            return (
+              <button
+                onClick={async () => {
+                  const examDetails = prompt(`⚠️ يوم غد (${tomorrowName}) ليس ضمن أيام دوامك المسجلة.\nيرجى كتابة موعد الامتحان لطلب استثناء:`);
+                  if (examDetails) {
+                    handleStudentAction('exam_exception', `طلب استثناء امتحان: ${examDetails}`);
+                  }
+                }}
+                style={{
+                  padding: '12px 8px',
+                  borderRadius: '10px',
+                  border: '2px solid #e11d48',
+                  backgroundColor: '#ffe4e6',
+                  color: '#be123c',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}>
+                📝 طلب استثناء (امتحان)
+              </button>
+            );
+          }
+        })()}
 
               <button
                 onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
