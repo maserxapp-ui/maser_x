@@ -167,7 +167,10 @@ export default function App() {
 
   // --- طباعة كشف الركاب للسائق (PDF / Print) ---
   const handlePrintDriverManifest = (driver) => {
-    const driverStudents = students.filter(s => s.driver_id === driver.id && (s.status === 'أداوم غداً' || s.status?.includes('امتحان')));
+    const driverStudents = students.filter(s => 
+  String(s.driver_id) === String(driver.id) && 
+  (s.status === 'أداوم غداً' || s.status?.includes('أداوم') || s.status?.includes('امتحان'))
+);
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
