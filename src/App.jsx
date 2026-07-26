@@ -6,6 +6,7 @@ import Admin from './admin/Admin.jsx';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
+  const [selectedWorkDays, setSelectedWorkDays] = useState(['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
 
   // 🟢 1. جعل شاشة دخول الطلاب والسائقين هي الافتراضية
   const [viewMode, setViewMode] = useState('user');
@@ -257,6 +258,7 @@ export default function App() {
     setPrice('90,000');
     setStatus('مدفوع');
     setDriverId('');
+    setSelectedWorkDays(['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
     setShowModal(true);
   };
 
@@ -268,6 +270,7 @@ export default function App() {
     setUniversity(student.university || 'جامعة ميسان');
     setPrice(student.price || '90,000');
     setStatus(student.status || 'مدفوع');
+    setSelectedWorkDays(student.work_days || ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
     setDriverId(student.driver_id ? student.driver_id.toString() : '');
     setShowModal(true);
   };
@@ -504,14 +507,6 @@ export default function App() {
 if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} />;
   }
-  if (viewMode === 'admin') {
-    return (
-      <Admin 
-        supabase={supabase} 
-        onGoToUserView={() => setViewMode('user')} 
-      />
-    );
-  }
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
@@ -710,6 +705,7 @@ if (viewMode === 'user') {
                           <th className="p-3">الجامعة / الجهة</th>
                           <th className="p-3">السائق المخصص</th>
                           <th className="p-3">قيمة الاشتراك</th>
+                          <th className="p-3">أيام الدوام</th> {
                           <th className="p-3 text-center">الحالة</th>
                           <th className="p-3 text-center">الإجراءات</th>
                         </tr>
@@ -723,6 +719,11 @@ if (viewMode === 'user') {
                             <td className="p-3 text-slate-600">{student.university || 'جامعة ميسان'}</td>
                             <td className="p-3">{getDriverName(student.driver_id)}</td>
                             <td className="p-3 font-bold text-slate-800">{student.price || '90,000'} د.ع</td>
+                            <td className="p-3 font-medium text-slate-600">
+  {student.work_days && student.work_days.length > 0 
+    ? student.work_days.join(' ، ') 
+    : 'كل الأيام'}
+</td>
                             <td className="p-3 text-center">{getStatusBadge(student.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
                               <button 
