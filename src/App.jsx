@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
-import Admin from './admin/Admin.jsx';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
