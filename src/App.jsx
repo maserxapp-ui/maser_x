@@ -681,21 +681,161 @@ if (viewMode === 'user') {
                     </button>
                   </div>
                 </div>
-{/* 🚨 شريط تنبيهات الامتحانات للطلاب */}
-        {students.filter(s => s.status?.includes('امتحان')).length > 0 && (
-          <div className="bg-rose-50 border border-rose-300 p-3 rounded-xl mb-4">
-            <h4 className="text-rose-700 text-xs font-bold mb-2 flex items-center gap-1">
-              📝 طلبات استثناء للامتحانات غداً ({students.filter(s => s.status?.includes('امتحان')).length}):
-            </h4>
-            <div className="flex flex-col gap-1.5">
-              {students.filter(s => s.status?.includes('امتحان')).map(student => (
-                <div key={student.id} className="text-xs text-rose-900 bg-white p-2 rounded-lg border border-rose-200">
-                  • <strong className="font-bold">{student.name}</strong> ({student.university || 'غير محدد'}): <span className="text-rose-600 font-bold">{student.status}</span>
-                </div>
-              ))}
+{/* 🚌 لوحة الرحلات والتواجد اليومي (تحديث تلقائي الساعة 9 مساءً) */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                🚌 لوحة الرحلات والتواجد اليومي
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                ⏱️ تتحدث قائمة الرحلات تلقائياً يومياً عند الساعة <span className="font-bold text-slate-700">9:00 مساءً</span> للتحضير لليوم التالي.
+              </p>
             </div>
           </div>
-        )}
+
+          {(() => {
+            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            const now = new Date();
+            const isPast9PM = now.getHours() >= 21;
+            const targetIndex = (now.getDay() + (isPast9PM ? 1 : 1)) % 7; 
+            const targetDayName = days[targetIndex];
+
+            const examStudents = [];
+            const attendingStudents = [];
+            const absentStudents = [];
+
+            students.forEach(s => {
+              const driver = drivers.find(d => String(d.id) === String(s.driver_id ?? s.driverId));
+              const driverName = driver ? driver.name : 'غير محدد';
+              const studentData = { ...s, driverName };
+
+              const st = String(s.status || '').toLowerCase();
+              const isOfficialWorkDay = Array.isArray(s.work_days) && s.work_days.length > 0
+                ? s.work_days.includes(targetDayName)
+                : true;
+
+              if (st.includes('امتحان') || st.includes('استثناء') || st.includes('exam') || st.includes('exception')) {
+                examStudents.push(studentData);
+              } else if (st.includes('لا أداوم') || st.includes('غائب') || st.includes('not_attending') || st.includes('اعتذار')) {
+                absentStudents.push(studentData);
+              } else if (st.includes('أداوم') || st.includes('attending') || st.includes('حاضر')) {
+                attendingStudents.push(studentData);
+              } else if (isOfficialWorkDay) {
+                attendingStudents.push(studentData);
+              } else {
+                absentStudents.push(studentData);
+              }
+            });
+
+            return (
+              <div>
+                <div className="bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl text-xs text-indigo-900 font-bold mb-4 flex items-center justify-between">
+                  <span>📅 جدول رحلات يوم: <span className="text-indigo-600 font-extrabold">{targetDayName}</span></span>
+                  <span className="text-[11px] font-normal text-indigo-700">مجموع الطلاب: {students.length}</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  {/* 1. طلبات استثناء الامتحانات 📝 */}
+                  <div className="bg-rose-50/80 border border-rose-200 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-rose-800 text-xs flex items-center gap-1.5">
+                        📝 استثناءات الامتحانات
+                      </h3>
+                      <span className="bg-rose-200 text-rose-800 text-xs px-2 py-0.5 rounded-full font-bold">
+                        {examStudents.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-80 overflow-y-auto pl-1">
+                      {examStudents.length === 0 ? (
+                        <p className="text-xs text-rose-400 text-center py-6 font-medium">لا توجد طلبات استثناء امتحان</p>
+                      ) : (
+                        examStudents.map(s => (
+                          <div key={s.id} className="bg-white p-3 rounded-xl border border-rose-200 shadow-sm text-xs">
+                            <div className="flex justify-between items-center font-bold text-slate-800 mb-1">
+                              <span>{s.name}</span>
+                              <span className="bg-rose-500 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
+                                استثناء
+                              </span>
+                            </div>
+                            <div className="text-slate-500 text-[11px] mb-1">🏛️ الجامعة: {s.university || 'غير محدد'}</div>
+                            <div className="text-indigo-600 font-bold text-[11px] mb-1">🚌 السائق: {s.driverName}</div>
+                            <div className="text-rose-700 bg-rose-50 p-2 rounded-lg font-medium border border-rose-100 mt-1 font-bold">
+                              💬 {s.status}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. الطلاب الحاضرون (يداومون) 🟢 */}
+                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-emerald-800 text-xs flex items-center gap-1.5">
+                        🟢 الطلاب المداومون
+                      </h3>
+                      <span className="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-bold">
+                        {attendingStudents.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-80 overflow-y-auto pl-1">
+                      {attendingStudents.length === 0 ? (
+                        <p className="text-xs text-emerald-500 text-center py-6 font-medium">لا يوجد طلاب يداومون</p>
+                      ) : (
+                        attendingStudents.map(s => (
+                          <div key={s.id} className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-sm text-xs flex justify-between items-center">
+                            <div>
+                              <div className="font-bold text-slate-800">{s.name}</div>
+                              <div className="text-slate-500 text-[11px]">🚌 السائق: <span className="text-indigo-600 font-semibold">{s.driverName}</span></div>
+                            </div>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-bold">
+                              {s.status?.includes('أداوم') ? 'مؤكد' : 'جدول رسمي'}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. الطلاب الغائبون (لا يداومون) 🔴 */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-slate-700 text-xs flex items-center gap-1.5">
+                        🔴 الطلاب الغائبون
+                      </h3>
+                      <span className="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                        {absentStudents.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-80 overflow-y-auto pl-1">
+                      {absentStudents.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-6 font-medium">جميع الطلاب يداومون</p>
+                      ) : (
+                        absentStudents.map(s => (
+                          <div key={s.id} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs flex justify-between items-center opacity-75">
+                            <div>
+                              <div className="font-semibold text-slate-700">{s.name}</div>
+                              <div className="text-slate-400 text-[11px]">🚌 السائق: {s.driverName}</div>
+                            </div>
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                              {s.status?.includes('لا أداوم') ? 'اعتذار' : 'عطلة رسمية'}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            );
+          })()}
+        </div>
                 {/* 🚌 لوحة الرحلات والتواجد اليومي (تحديث تلقائي الساعة 9 مساءً) */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 border-b border-slate-100 pb-4">
