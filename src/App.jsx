@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
+import Admin from './admin/Admin.jsx';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
@@ -502,6 +503,14 @@ export default function App() {
   };
 if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} />;
+  }
+  if (viewMode === 'admin') {
+    return (
+      <Admin 
+        supabase={supabase} 
+        onGoToUserView={() => setViewMode('user')} 
+      />
+    );
   }
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
