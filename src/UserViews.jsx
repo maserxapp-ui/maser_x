@@ -149,6 +149,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
       } else if (actionType === 'finished') {
         studentUpdates = { shift_status: 'أنهيت دوامي' };
         setShiftFinished(true);
+        } else if (actionType === 'exam_exception') {
+  studentUpdates = { tomorrow_status: labelText };
+  setTomorrowStatus(labelText);
       }
 
       // تحديث بجدول students
