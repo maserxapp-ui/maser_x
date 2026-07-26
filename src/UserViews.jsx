@@ -337,7 +337,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           {/* ⚡ قسم خيارات الطالب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '15px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0f172a', fontWeight: 'bold' }}>⚡ تأكيد التواجد والإشعارات</h3>
-            {/* كارت عرض أيام دوام الطالبة المسجلة */}
+         {/* كارت عرض أيام دوام الطالبة المسجلة */}
         <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>📌 أيام دوامك المسجلة: </span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', justifyContent: 'flex-start' }}>
@@ -348,56 +348,85 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
             ))}
           </div>
         </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-       {/* فحص هل يوم غد يقع ضمن أيام دوام الطالبة أم يحتاج استثناء امتحان */}
+
+        {/* فحص اليوم والغد ومطابقتها مع الجدول */}
         {(() => {
           const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
           const tomorrowIndex = (new Date().getDay() + 1) % 7;
           const tomorrowName = days[tomorrowIndex];
 
-          // فحص هل اليوم ضمن أيام الدوام المسجلة للطالبة
-          const isWorkDay = user?.work_days ? user.work_days.includes(tomorrowName) : true;
+          // هل يوم غد متاح في دوام الطالب؟
+          const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
+            ? user.work_days.includes(tomorrowName)
+            : true;
 
-          if (isWorkDay) {
-            return (
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              
+              {/* زر أداوم غداً */}
               <button
-                onClick={() => handleStudentAction('attending', 'أداوم غداً')}
+                onClick={() => {
+                  if (!isWorkDay) {
+                    alert(`⚠️ ليس لديك دوام غداً (${tomorrowName}) في النظام!`);
+                  } else {
+                    handleStudentAction('attending', 'أداوم غداً');
+                  }
+                }}
                 style={{
                   padding: '12px 8px',
                   borderRadius: '10px',
                   border: tomorrowStatus === 'أداوم غداً' ? '2px solid #16a34a' : '1px solid #cbd5e1',
-                  backgroundColor: tomorrowStatus === 'أداوم غداً' ? '#dcfce7' : '#ffffff',
-                  color: '#15803d',
+                  backgroundColor: tomorrowStatus === 'أداوم غداً' ? '#dcfce7' : (isWorkDay ? '#ffffff' : '#f1f5f9'),
+                  color: isWorkDay ? '#15803d' : '#94a3b8',
                   fontWeight: 'bold',
                   fontSize: '12px',
                   cursor: 'pointer'
                 }}>
                 🟢 أداوم غداً
               </button>
-            );
-          } else {
-            return (
+
+              {/* زر لا أداوم غداً */}
               <button
-                onClick={async () => {
-                  const examDetails = prompt(`⚠️ يوم غد (${tomorrowName}) ليس ضمن أيام دوامك المسجلة.\nيرجى كتابة موعد الامتحان لطلب استثناء:`);
-                  if (examDetails) {
-                    handleStudentAction('exam_exception', `طلب استثناء امتحان: ${examDetails}`);
-                  }
-                }}
+                onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
                 style={{
                   padding: '12px 8px',
                   borderRadius: '10px',
-                  border: '2px solid #e11d48',
-                  backgroundColor: '#ffe4e6',
-                  color: '#be123c',
+                  border: tomorrowStatus === 'لا أداوم غداً' ? '2px solid #dc2626' : '1px solid #cbd5e1',
+                  backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
+                  color: '#b91c1c',
                   fontWeight: 'bold',
                   fontSize: '12px',
                   cursor: 'pointer'
                 }}>
-                📝 طلب استثناء (امتحان)
+                🔴 لا أداوم غداً
               </button>
-            );
-          }
+
+              {/* زر لدي امتحان (يظهر خيار الاستثناء إذا لم يكن غداً يوم دوام) */}
+              {!isWorkDay && (
+                <button
+                  onClick={async () => {
+                    const examTime = prompt(`📝 غداً (${tomorrowName}) ليس ضمن دوامك الرسمي.\nيرجى تحديد وقت الامتحان (مثال: من الساعة 8:00 صباحاً إلى 11:30 صباحاً):`);
+                    if (examTime) {
+                      handleStudentAction('exam_exception', `لدي امتحان غداً (${examTime})`);
+                    }
+                  }}
+                  style={{
+                    gridColumn: 'span 2',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '2px solid #e11d48',
+                    backgroundColor: '#ffe4e6',
+                    color: '#be123c',
+                    fontWeight: 'bold',
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  }}>
+                  📝 لدي امتحان غداً (طلب استثناء)
+                </button>
+              )}
+
+            </div>
+          );
         })()}
 
               <button
