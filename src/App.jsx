@@ -682,7 +682,7 @@ if (viewMode === 'user') {
                   </div>
                 </div>
 
-              {/* 🚌 لوحة الرحلات والتواجد اليومي (تفعيل الاستثناءات عند طلب الطالبة فقط) */}
+            {/* 🚌 لوحة الرحلات والتواجد اليومي (الربط المباشر مع زر exam_exception) */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 border-b border-slate-100 pb-4">
             <div>
@@ -711,37 +711,47 @@ if (viewMode === 'user') {
               const driver = (drivers || []).find(d => String(d.id) === String(s.driver_id ?? s.driverId));
               const driverName = driver ? driver.name : 'غير محدد';
 
-              const statusText = String(
-                s.attendance_status || 
-                s.daily_status || 
-                s.attendance || 
-                s.exam_status || 
-                s.status || ''
+              // دمج كافة الحقول الممكنة للبحث عن حالة الطلب
+              const fullStatusText = (
+                String(s.attendance_status || '') + ' ' +
+                String(s.status || '') + ' ' +
+                String(s.daily_status || '') + ' ' +
+                String(s.action_type || '') + ' ' +
+                String(s.notes || '')
               ).toLowerCase();
 
               const isOfficialWorkDay = Array.isArray(s.work_days) && s.work_days.length > 0
                 ? s.work_days.some(w => String(w).includes(targetDayName) || targetDayName.includes(String(w)))
                 : true;
 
-              // فحص صريح: هل ضغطت الطالبة زر الاستثناء أو الامتحان؟
-              const isExplicitException = statusText.includes('استثناء') || statusText.includes('امتحان') || statusText.includes('exam') || statusText.includes('exception');
-              const confirmedAttending = statusText.includes('أداوم') || statusText.includes('حاضر') || statusText.includes('attending');
-              const confirmedAbsent = statusText.includes('لا أداوم') || statusText.includes('غائب') || statusText.includes('not_attending') || statusText.includes('اعتذار');
+              // الفحص الدقيق لحالة exam_exception المطابقة لزر الطالبة
+              const isExplicitException = 
+                fullStatusText.includes('exam_exception') || 
+                fullStatusText.includes('استثناء') || 
+                fullStatusText.includes('امتحان') || 
+                fullStatusText.includes('exam') || 
+                fullStatusText.includes('exception');
+
+              const confirmedAttending = fullStatusText.includes('أداوم') || fullStatusText.includes('حاضر') || fullStatusText.includes('attending') || fullStatusText.includes('finished');
+              const confirmedAbsent = fullStatusText.includes('لا أداوم') || fullStatusText.includes('غائب') || fullStatusText.includes('not_attending') || fullStatusText.includes('اعتذار');
 
               const studentData = { ...s, driverName };
 
-              // 1. خانة الاستثناءات: تظهر فقط في حال ضغطت الطالبة على زر الاستثناء 📝
+              // 1. قسم الاستثناءات 📝
               if (isExplicitException) {
+                let note = s.attendance_status || s.status || s.notes || 'لدي امتحان غداً (طلب استثناء)';
+                if (note.includes('exam_exception')) note = 'لدي امتحان غداً (طلب استثناء)';
+
                 examStudents.push({
                   ...studentData,
-                  displayText: s.attendance_status || s.status || 'غداً تداوم ولديها استثناء'
+                  displayText: note
                 });
               } 
-              // 2. المداومون (الدوام الطبيعي أو تأكيد الدوام) 🟢
+              // 2. قسم المداومين 🟢
               else if (confirmedAttending || (isOfficialWorkDay && !confirmedAbsent)) {
                 attendingStudents.push(studentData);
               } 
-              // 3. الغائبون (العطل الرسمية والاعتذارات) 🔴
+              // 3. قسم الغائبين 🔴
               else {
                 absentStudents.push(studentData);
               }
@@ -760,7 +770,7 @@ if (viewMode === 'user') {
                   <div className="bg-rose-50/80 border border-rose-200 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-bold text-rose-800 text-xs flex items-center gap-1.5">
-                        📝 الاستثناءات
+                        📝 الاستثناءات (الامتحانات)
                       </h3>
                       <span className="bg-rose-200 text-rose-800 text-xs px-2 py-0.5 rounded-full font-bold">
                         {examStudents.length}
@@ -769,7 +779,7 @@ if (viewMode === 'user') {
 
                     <div className="space-y-2.5 max-h-80 overflow-y-auto pl-1">
                       {examStudents.length === 0 ? (
-                        <p className="text-xs text-rose-400 text-center py-6 font-medium">لا توجد استثناءات حالياً</p>
+                        <p className="text-xs text-rose-400 text-center py-6 font-medium">لا توجد طلبات استثناء حالياً</p>
                       ) : (
                         examStudents.map(s => (
                           <div key={s.id} className="bg-white p-3 rounded-xl border border-rose-200 shadow-sm text-xs">
@@ -842,7 +852,7 @@ if (viewMode === 'user') {
                               <div className="text-slate-400 text-[11px]">🚌 السائق: {s.driverName}</div>
                             </div>
                             <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                              {String(s.attendance_status || s.status || '').includes('لا أداوم') ? 'اعتذار' : 'عطلة رسمية'}
+                              عطلة رسمية / اعتذار
                             </span>
                           </div>
                         ))
