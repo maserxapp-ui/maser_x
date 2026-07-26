@@ -76,6 +76,11 @@ export default function Admin({ supabase, onGoToUserView }) {
       return;
     }
 
+    if (selectedWorkDays.length === 0) {
+      alert('يرجى تحديد يوم دوام واحد على الأقل للطالبة!');
+      return;
+    }
+
     const assignedDr = drivers.find(d => String(d.id) === String(selectedDriverId));
 
     try {
@@ -95,7 +100,7 @@ export default function Admin({ supabase, onGoToUserView }) {
 
       if (error) throw error;
 
-      alert('تمت إضافة الطالبة بنجاح! ✅');
+      alert('تمت إضافة الطالبة وتحديد أيام دوامها بنجاح! ✅');
       setStudentName('');
       setStudentPhone('');
       setStudentPassword('');
@@ -142,7 +147,7 @@ export default function Admin({ supabase, onGoToUserView }) {
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif', direction: 'rtl', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* الهيدر */}
+      {/* الهيدر الرئيسي */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '15px 20px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>🛠️ لوحة إشراف تطبيق مسار إكس</h1>
@@ -155,7 +160,7 @@ export default function Admin({ supabase, onGoToUserView }) {
         )}
       </div>
 
-      {/* أزرار التنقل */}
+      {/* أزرار التنقل بين الأقسام */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <button
           onClick={() => setActiveTab('students')}
@@ -176,11 +181,11 @@ export default function Admin({ supabase, onGoToUserView }) {
         </button>
       </div>
 
-      {/* 1️⃣ الطلاب */}
+      {/* 1️⃣ تبويب إدارة الطلاب */}
       {activeTab === 'students' && (
         <div>
           <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '16px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0f172a' }}>➕ إضافة مشتركة / طالب جديدة</h3>
+            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0f172a' }}>➕ إضافة مشتركة / طالبة جديدة</h3>
             
             <form onSubmit={handleAddStudent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
@@ -221,7 +226,7 @@ export default function Admin({ supabase, onGoToUserView }) {
               {/* 🗓️ أيام الدوام */}
               <div style={{ gridColumn: 'span 2', backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '10px', marginTop: '5px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a', display: 'block', marginBottom: '8px' }}>
-                  🗓️ أيام الدوام الأسبوعية للطلاب (حدد الأيام التي تداوم بها الطالبة):
+                  🗓️ أيام الدوام الأسبوعية (حدد الأيام التي تداوم بها الطالبة):
                 </label>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   {WEEK_DAYS.map(day => (
@@ -243,6 +248,7 @@ export default function Admin({ supabase, onGoToUserView }) {
             </form>
           </div>
 
+          {/* جدول عرض الطلاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ margin: '0 0 10px 0', fontSize: '15px' }}>📋 قائمة الطلاب المسجلين</h3>
             
@@ -282,7 +288,7 @@ export default function Admin({ supabase, onGoToUserView }) {
         </div>
       )}
 
-      {/* 2️⃣ السائقين */}
+      {/* 2️⃣ تبويب إضافة وتصفح السائقين */}
       {activeTab === 'drivers' && (
         <div>
           <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '16px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
@@ -329,7 +335,7 @@ export default function Admin({ supabase, onGoToUserView }) {
         </div>
       )}
 
-      {/* 3️⃣ الاستثناءات */}
+      {/* 3️⃣ تبويب الاستثناءات والإشعارات */}
       {activeTab === 'exceptions' && (
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #fecaca' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid #fee2e2', paddingBottom: '10px' }}>
