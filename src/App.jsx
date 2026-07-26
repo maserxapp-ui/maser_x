@@ -290,6 +290,7 @@ export default function App() {
       price,
       status,
       driver_id: driverId ? parseInt(driverId, 10) : null
+      work_days: selectedWorkDays
     };
 
     if (isEditing) {
