@@ -960,6 +960,36 @@ if (viewMode === 'user') {
                 />
               </div>
 
+              {/* خانة اختيار أيام الدوام */}
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">📅 أيام الدوام الأسبوعية:</label>
+                    <div className="flex flex-wrap gap-1.5 justify-start">
+                      {['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'].map((day) => {
+                        const isSelected = selectedWorkDays.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedWorkDays(selectedWorkDays.filter(d => d !== day));
+                              } else {
+                                setSelectedWorkDays([...selectedWorkDays, day]);
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {day} {isSelected ? '✓' : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
               <div>
                 <label className="block text-slate-600 font-bold mb-1">رقم الهاتف *</label>
                 <input 
