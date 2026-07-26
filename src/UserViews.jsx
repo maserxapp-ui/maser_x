@@ -429,43 +429,24 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           );
         })()}
 
+        {/* زر أنهيت دوامي */}
+        <button
+          onClick={() => handleStudentAction('finished', 'أنهيت دوامي')}
+          style={{
+            width: '100%',
+            padding: '12px',
+            borderRadius: '10px',
+            border: shiftFinished ? '2px solid #0284c7' : '1px solid #cbd5e1',
+            backgroundColor: shiftFinished ? '#e0f2fe' : '#f8fafc',
+            color: '#0369a1',
+            fontWeight: 'bold',
+            fontSize: '13px',
+            cursor: 'pointer'
+          }}>
+          🏁 أنهيت دوامي (إشعارات العودة)
+        </button>
+
       </div>
-              <button
-                onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
-                style={{
-                  padding: '12px 8px',
-                  borderRadius: '10px',
-                  border: tomorrowStatus === 'لا أداوم غداً' ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                  backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
-                  color: '#b91c1c',
-                  fontWeight: 'bold',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}>
-                🔴 لا أداوم غداً
-              </button>
-            </div>
-
-            <button
-              onClick={() => handleStudentAction('finished', 'أنهيت دوامي')}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '10px',
-                border: shiftFinished ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                backgroundColor: shiftFinished ? '#e0f2fe' : '#f8fafc',
-                color: '#0369a1',
-                fontWeight: 'bold',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}>
-              🏁 أنهيت دوامي (إشعارات العودة)
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: 'bold' }}>🚌 تفاصيل الرحلات</h2>
-          </div>
 
           {/* 🟢 كارت رحلة الذهاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
