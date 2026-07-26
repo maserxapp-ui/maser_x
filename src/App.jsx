@@ -678,7 +678,21 @@ if (viewMode === 'user') {
                     </button>
                   </div>
                 </div>
-
+{/* 🚨 شريط تنبيهات الامتحانات للطلاب */}
+        {students.filter(s => s.status?.includes('امتحان')).length > 0 && (
+          <div className="bg-rose-50 border border-rose-300 p-3 rounded-xl mb-4">
+            <h4 className="text-rose-700 text-xs font-bold mb-2 flex items-center gap-1">
+              📝 طلبات استثناء للامتحانات غداً ({students.filter(s => s.status?.includes('امتحان')).length}):
+            </h4>
+            <div className="flex flex-col gap-1.5">
+              {students.filter(s => s.status?.includes('امتحان')).map(student => (
+                <div key={student.id} className="text-xs text-rose-900 bg-white p-2 rounded-lg border border-rose-200">
+                  • <strong className="font-bold">{student.name}</strong> ({student.university || 'غير محدد'}): <span className="text-rose-600 font-bold">{student.status}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
                 {/* جدول المشتركين */}
                 {loading ? (
                   <div className="p-12 text-center text-slate-400 font-medium text-sm">
