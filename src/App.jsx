@@ -165,13 +165,24 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  // --- طباعة كشف الركاب للسائق (PDF / Print) ---
+// --- طباعة كشف الركاب للسائق ---
   const handlePrintDriverManifest = (driver) => {
-    const driverStudents = students.filter(s => 
-  String(s.driver_id) === String(driver.id) && 
-  (s.status === 'أداوم غداً' || s.status?.includes('أداوم') || s.status?.includes('امتحان'))
-);
-    
+    // 1. جلب جميع طلاب هذا السائق وتجاوز فروقات أنواع البيانات ومسميات الحقول
+    const driverStudents = students.filter(s => {
+      const studentDriverId = s.driver_id ?? s.driverId;
+      return String(studentDriverId) === String(driver.id);
+    });
+
+    // 2. فلترة الطلاب الذين يداومون أو لديهم امتحان (وتقبل جميع الصيغ العربي/الإنكليزي)
+    const attendingStudents = driverStudents.filter(s => {
+      if (!s.status) return false;
+      const st = String(s.status).toLowerCase();
+      return st.includes('أداوم') || st.includes('امتحان') || st.includes('attending') || st.includes('exam');
+    });
+
+    // إذا لم يحدد أي طالب التواجد بعد، يتم عرض جميع طلاب السائق حتى لا تظهر الصفحة فارغة
+    const studentsToPrint = attendingStudents.length > 0 ? attendingStudents : driverStudents;
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -183,63 +194,52 @@ export default function App() {
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
           .header h2 { margin: 0; color: #0f172a; font-size: 22px; }
           .header p { margin: 5px 0 0 0; color: #64748b; font-size: 13px; }
-          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; }
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 14px; }
           table { width: 100%; border-collapse: collapse; margin-top: 15px; }
           th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-size: 13px; }
           th { background-color: #f1f5f9; font-weight: bold; color: #0f172a; }
-          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
-          @media print {
-            body { padding: 0; }
-          }
+          .status-tag { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h2>منصة مسار إكس - كشف خطوط النقل والطلاب</h2>
-          <p>تاريخ إصدار الكشف: ${new Date().toLocaleDateString('ar-IQ')} | الوقت: ${new Date().toLocaleTimeString('ar-IQ')}</p>
-        </div>
-        
-        <div class="info-grid">
-          <div><strong>اسم السائق:</strong> ${driver.name}</div>
-          <div><strong>رقم الهاتف:</strong> ${driver.phone}</div>
-          <div><strong>السيارة / اللوحة:</strong> ${driver.car_type || ''} (${driver.car_number || 'بدون رقم'})</div>
-          <div><strong>الخط / المسار:</strong> ${driver.route || 'عام'}</div>
-          <div><strong>عدد الطلاب المسجلين:</strong> ${driverStudents.length} / ${driver.capacity || 0} طالب</div>
-          <div><strong>حالة الحافلة:</strong> ${driver.status || 'نشط'}</div>
+          <h2>🚌 كشف ركاب الحافلة</h2>
+          <p>شركة مسار X لنقل الطلاب</p>
         </div>
 
-        <h3 style="margin-bottom: 5px; font-size: 16px;">قائمة الركاب والطلاب المسجلين:</h3>
+        <div class="info-grid">
+          <div><strong>اسم السائق:</strong> ${driver.name}</div>
+          <div><strong>رقم الهاتف:</strong> ${driver.phone || 'غير محدد'}</div>
+          <div><strong>عدد الركاب في الكشف:</strong> ${studentsToPrint.length} طالب/طالبة</div>
+          <div><strong>تاريخ الكشف:</strong> ${new Date().toLocaleDateString('ar-IQ')}</div>
+        </div>
+
         <table>
           <thead>
             <tr>
-              <th style="width: 40px;">#</th>
-              <th>اسم الطالب / المشترك</th>
+              <th style="width: 40px; text-align: center;">#</th>
+              <th>اسم المشترك</th>
               <th>رقم الهاتف</th>
-              <th>الجامعة / الكلية</th>
-              <th>حالة الدفع</th>
-              <th style="width: 120px;">ملاحظات / الحضور</th>
+              <th>الجامعة / الجهة</th>
+              <th>حالة التواجد</th>
             </tr>
           </thead>
           <tbody>
-            ${driverStudents.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #94a3b8;">لا يوجد طلاب مخصصين لهذا السائق حتى الآن</td></tr>' : 
-              driverStudents.map((st, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td><strong>${st.name}</strong></td>
-                  <td dir="ltr" style="text-align:right;">${st.phone}</td>
-                  <td>${st.university || 'جامعة ميسان'}</td>
-                  <td>${st.status || 'مدفوع'}</td>
-                  <td></td>
-                </tr>
-              `).join('')
-            }
+            ${studentsToPrint.length === 0 ? `
+              <tr>
+                <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">لا يوجد طلاب مسجلين مع هذا السائق حالياً</td>
+              </tr>
+            ` : studentsToPrint.map((s, idx) => `
+              <tr>
+                <td style="text-align: center;">${idx + 1}</td>
+                <td><strong>${s.name}</strong></td>
+                <td>${s.phone || '-'}</td>
+                <td>${s.university || '-'}</td>
+                <td>${s.status || 'لم يحدد بعد'}</td>
+              </tr>
+            `).join('')}
           </tbody>
         </table>
-
-        <div class="footer">
-          <div>توقيع السائق: ............................</div>
-          <div>توقيع إدارة مسار إكس: ............................</div>
-        </div>
 
         <script>
           window.onload = function() { window.print(); }
