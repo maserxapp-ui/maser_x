@@ -705,7 +705,7 @@ if (viewMode === 'user') {
                           <th className="p-3">الجامعة / الجهة</th>
                           <th className="p-3">السائق المخصص</th>
                           <th className="p-3">قيمة الاشتراك</th>
-                          <th className="p-3">أيام الدوام</th> {
+                          <th className="p-3">أيام الدوام</th> 
                           <th className="p-3 text-center">الحالة</th>
                           <th className="p-3 text-center">الإجراءات</th>
                         </tr>
