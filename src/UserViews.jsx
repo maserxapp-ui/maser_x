@@ -334,10 +334,11 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
             </div>
           )}
 
-          {/* ⚡ قسم خيارات الطالب */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '15px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0f172a', fontWeight: 'bold' }}>⚡ تأكيد التواجد والإشعارات</h3>
-         {/* كارت عرض أيام دوام الطالبة المسجلة */}
+         {/* قسم خيارات الطالب ⚡ */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '15px', border: '1px solid #e2e8f0' }}>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0f172a', fontWeight: 'bold' }}>⚡ تأكيد التواجد والإشعارات</h3>
+
+        {/* كارت عرض أيام دوام الطالبة المسجلة */}
         <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>📌 أيام دوامك المسجلة: </span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', justifyContent: 'flex-start' }}>
@@ -349,13 +350,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           </div>
         </div>
 
-        {/* فحص اليوم والغد ومطابقتها مع الجدول */}
+        {/* أزرار التواجد والامتحان */}
         {(() => {
           const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
           const tomorrowIndex = (new Date().getDay() + 1) % 7;
           const tomorrowName = days[tomorrowIndex];
 
-          // هل يوم غد متاح في دوام الطالب؟
           const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
             ? user.work_days.includes(tomorrowName)
             : true;
@@ -401,7 +401,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
                 🔴 لا أداوم غداً
               </button>
 
-              {/* زر لدي امتحان (يظهر خيار الاستثناء إذا لم يكن غداً يوم دوام) */}
+              {/* زر لدي امتحان */}
               {!isWorkDay && (
                 <button
                   onClick={async () => {
@@ -429,6 +429,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
           );
         })()}
 
+      </div>
               <button
                 onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
                 style={{
