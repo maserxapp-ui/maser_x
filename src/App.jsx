@@ -25,6 +25,8 @@ export default function App() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [driverSearchTerm, setDriverSearchTerm] = useState('');
+
+  const [newStudentLocation, setNewStudentLocation] = useState('');
   
   // بيانات المشتركين والسائقين
   const [students, setStudents] = useState([]);
@@ -257,6 +259,7 @@ export default function App() {
     setName('');
     setPhone('');
     setUniversity('جامعة ميسان');
+    setNewStudentLocation('');
     setPrice('90,000');
     setStatus('مدفوع');
     setDriverId('');
@@ -270,6 +273,7 @@ export default function App() {
     setName(student.name || '');
     setPhone(student.phone || '');
     setUniversity(student.university || 'جامعة ميسان');
+    setNewStudentLocation(student.location || '');
     setPrice(student.price || '90,000');
     setStatus(student.status || 'مدفوع');
     setSelectedWorkDays(student.work_days || ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
@@ -290,6 +294,7 @@ export default function App() {
       name,
       phone,
       university,
+      location: newStudentLocation,
       price,
       status,
       driver_id: driverId ? parseInt(driverId, 10) : null,
@@ -803,6 +808,7 @@ if (viewMode === 'user') {
                               </span>
                             </div>
                             <div className="text-slate-500 text-[11px] mb-1">🏛️ الجامعة: {s.university || 'غير محدد'}</div>
+                            <div className="text-slate-500 text-[11px] mb-1">📍 المنطقة: {s.location || 'غير محدد'}</div>
                             <div className="text-indigo-600 font-bold text-[11px] mb-1">🚌 السائق: {s.driverName}</div>
                             <div className="text-rose-700 bg-rose-50 p-2 rounded-lg font-bold border border-rose-100 mt-1">
                               💬 {s.displayText}
@@ -1221,6 +1227,16 @@ if (viewMode === 'user') {
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
                   value={university}
                   onChange={(e) => setUniversity(e.target.value)}
+                />
+              </div>
+          <div>
+                <label className="block text-slate-600 font-bold mb-1">📍 المنطقة / موقع السكن</label>
+                <input
+                  type="text"
+                  placeholder="مثال: الحي العصري / شارع بغداد"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                  value={newStudentLocation}
+                  onChange={(e) => setNewStudentLocation(e.target.value)}
                 />
               </div>
 
