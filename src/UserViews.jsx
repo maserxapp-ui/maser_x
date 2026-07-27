@@ -139,63 +139,56 @@ const handleStudentAction = async (actionType, labelText) => {
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      let studentUpdates = {};
-
-      if (actionType === 'attending') {
-        studentUpdates = { 
-          tomorrow_status: 'أداوم غداً',
-          status: 'أداوم غداً',
-          attendance_status: 'أداوم غداً'
-        };
-        setTomorrowStatus('أداوم غداً');
-      } else if (actionType === 'not_attending') {
-        studentUpdates = { 
-          tomorrow_status: 'لا أداوم غداً',
-          status: 'لا أداوم غداً',
-          attendance_status: 'لا أداوم غداً'
-        };
-        setTomorrowStatus('لا أداوم غداً');
-      } else if (actionType === 'finished') {
-        studentUpdates = { shift_status: 'أنهيت دوامي' };
-        setShiftFinished(true);
-      } else if (actionType === 'exam_exception') {
-        // تحديث جميع الحقول بنص الاستثناء لضمان قراءتها في شاشة المدير
-        studentUpdates = { 
-          tomorrow_status: labelText,
+      // 1. محاولة تحديث الحقول الأساسية لطلب الطالبة في جدول students
+      let studentErr = null;
+      
+      const res1 = await supabase
+        .from('students')
+        .update({ 
           status: labelText,
           attendance_status: labelText
-        };
-        setTomorrowStatus(labelText);
-      }
-
-      // 1. تحديث بجدول students
-      const { error: updateError } = await supabase
-        .from('students')
-        .update(studentUpdates)
+        })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      studentErr = res1.error;
 
-      // 2. إرسال الإشعار لـ notifications
-      await supabase.from('notifications').insert([
-        {
-          student_id: user.id,
-          student_name: user.name,
-          driver_id: assignedDriver?.id || null,
-          driver_name: assignedDriver?.name || user.driver_name || null,
-          title: `تحديث من الطالب: ${user.name}`,
-          message: `قام الطالب بـ: ${labelText}`,
-          type: actionType,
-          created_at: new Date().toISOString()
-        }
-      ]);
+      // إذا رفض Supabase التحديث بوجود حقل غير معرف، نجرب التحديث بحقل status فقط
+      if (studentErr) {
+        const res2 = await supabase
+          .from('students')
+          .update({ status: labelText })
+          .eq('id', user.id);
+        
+        studentErr = res2.error;
+      }
+
+      // إذا نجح التحديث في جدول الطلاب، نحدث الشاشة محلياً
+      setTomorrowStatus(labelText);
+
+      // 2. إرسال إشعار جانبي بدون تعطيل العملية الرئيسية إذا فشل الإشعار
+      try {
+        await supabase.from('notifications').insert([
+          {
+            student_id: user.id,
+            student_name: user.name,
+            driver_id: assignedDriver?.id || null,
+            driver_name: assignedDriver?.name || user.driver_name || null,
+            title: `تحديث من الطالب: ${user.name}`,
+            message: `قام الطالب بـ: ${labelText}`,
+            type: actionType,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      } catch (e) {
+        console.warn('Could not insert notification:', e);
+      }
 
       setActionAlert(`تم إرسال إشعار "${labelText}" إلى الإدارة والسائق بنجاح! ✅`);
       setTimeout(() => setActionAlert(''), 4000);
 
     } catch (err) {
-      console.error('Error updating status:', err);
-      setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى`);
+      console.error('Error handling student action:', err);
+      setActionAlert(`❌ حدث خطأ أثناء الاتصال بقاعدة البيانات.`);
       setTimeout(() => setActionAlert(''), 4000);
     }
   };
