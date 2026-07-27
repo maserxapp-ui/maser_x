@@ -144,24 +144,22 @@ const handleStudentAction = async (actionType, labelText) => {
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // تحديث العمود الجديد exam_note
+      // تحديث عمود exam_note المخصص فقط
       const { error: updateError } = await supabase
         .from('students')
         .update({ 
-          exam_note: labelText,
-          attendance_status: 'استثناء'
+          exam_note: labelText 
         })
         .eq('id', user.id);
 
-      // إذا رفض Supabase، سيظهر لنا سبب الرفض بالضبط في نافذة
       if (updateError) {
-        alert(`⚠️ سبب رفض Supabase:\n${updateError.message}`);
+        alert(`⚠️ خطأ من Supabase:\n${updateError.message}`);
         throw updateError;
       }
 
       setTomorrowStatus(labelText);
 
-      // إرسال الإشعار
+      // إرسال الإشعار لجدول الإشعارات
       try {
         await supabase.from('notifications').insert([
           {
@@ -184,7 +182,7 @@ const handleStudentAction = async (actionType, labelText) => {
 
     } catch (err) {
       console.error('Error:', err);
-      setActionAlert(`❌ فشل: ${err.message || 'حدث خطأ أثناء الاتصال'}`);
+      setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب`);
       setTimeout(() => setActionAlert(''), 4000);
     }
   };
