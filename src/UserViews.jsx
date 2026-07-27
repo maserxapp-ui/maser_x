@@ -144,11 +144,21 @@ const handleStudentAction = async (actionType, labelText) => {
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // نحدّث عمود exam_note المخصص والظاهر في الجدول فقط
+      // تحديد النص الذي سيُحفظ بناءً على نوع الزر
+      let noteValue = null;
+
+      if (actionType === 'exam_exception') {
+        noteValue = labelText; // نص الاستثناء والوقت
+      } else if (actionType === 'absent' || labelText.includes('لا أداوم')) {
+        noteValue = 'لا أداوم غداً'; // علامة الغياب
+      } else {
+        noteValue = null; // أداوم غداً (تفريغ الخيار وعودة للدوام الطبيعي)
+      }
+
       const { error: updateError } = await supabase
         .from('students')
         .update({ 
-          exam_note: labelText 
+          exam_note: noteValue 
         })
         .eq('id', user.id);
 
@@ -159,7 +169,7 @@ const handleStudentAction = async (actionType, labelText) => {
 
       setTomorrowStatus(labelText);
 
-      // إرسال الإشعار لجدول الإشعارات
+      // إرسال الإشعار
       try {
         await supabase.from('notifications').insert([
           {
