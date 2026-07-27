@@ -133,34 +133,50 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   };
 
   // 🔔 إرسال الإشعار للإدارة والسائق
-  const handleStudentAction = async (actionType, labelText) => {
+const handleStudentAction = async (actionType, labelText) => {
     if (!user) return;
 
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
       let studentUpdates = {};
+
       if (actionType === 'attending') {
-        studentUpdates = { tomorrow_status: 'أداوم غداً' };
+        studentUpdates = { 
+          tomorrow_status: 'أداوم غداً',
+          status: 'أداوم غداً',
+          attendance_status: 'أداوم غداً'
+        };
         setTomorrowStatus('أداوم غداً');
       } else if (actionType === 'not_attending') {
-        studentUpdates = { tomorrow_status: 'لا أداوم غداً' };
+        studentUpdates = { 
+          tomorrow_status: 'لا أداوم غداً',
+          status: 'لا أداوم غداً',
+          attendance_status: 'لا أداوم غداً'
+        };
         setTomorrowStatus('لا أداوم غداً');
       } else if (actionType === 'finished') {
         studentUpdates = { shift_status: 'أنهيت دوامي' };
         setShiftFinished(true);
-        } else if (actionType === 'exam_exception') {
-  studentUpdates = { tomorrow_status: labelText };
-  setTomorrowStatus(labelText);
+      } else if (actionType === 'exam_exception') {
+        // تحديث جميع الحقول بنص الاستثناء لضمان قراءتها في شاشة المدير
+        studentUpdates = { 
+          tomorrow_status: labelText,
+          status: labelText,
+          attendance_status: labelText
+        };
+        setTomorrowStatus(labelText);
       }
 
-      // تحديث بجدول students
-      await supabase
+      // 1. تحديث بجدول students
+      const { error: updateError } = await supabase
         .from('students')
         .update(studentUpdates)
         .eq('id', user.id);
 
-      // إرسال الإشعار لـ notifications
+      if (updateError) throw updateError;
+
+      // 2. إرسال الإشعار لـ notifications
       await supabase.from('notifications').insert([
         {
           student_id: user.id,
@@ -178,7 +194,8 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
       setTimeout(() => setActionAlert(''), 4000);
 
     } catch (err) {
-      setActionAlert(`تم تسجيل الحالة: "${labelText}" بنجاح! ✅`);
+      console.error('Error updating status:', err);
+      setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى`);
       setTimeout(() => setActionAlert(''), 4000);
     }
   };
@@ -191,7 +208,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     setErrorMsg('');
     setActiveTab('main');
   };
-
   // 1️⃣ شاشة تسجيل الدخول
   if (!user) {
     return (
