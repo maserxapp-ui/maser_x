@@ -739,8 +739,9 @@ if (viewMode === 'user') {
 
               // 1. قسم الاستثناءات 📝
               // 1. قسم الاستثناءات 📝
+           // 1. قسم الاستثناءات 📝
             if (isExplicitException) {
-              const exactStudentText = s.status || s.attendance_status || s.notes || 'طلب استثناء';
+              const exactStudentText = s.exam_note || s.attendance_status || s.notes || 'طلب استثناء';
 
               examStudents.push({
                 ...studentData,
