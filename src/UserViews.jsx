@@ -12,6 +12,11 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
 
+  // 📅 حساب اسم يوم الغد تلقائياً بحسب تاريخ اليوم الحالي
+  const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const tomorrowIndex = (new Date().getDay() + 1) % 7;
+  const tomorrowName = daysOfWeek[tomorrowIndex];
+
   // التبديل بين الشاشات السفلية: 'main' أو 'settings'
   const [activeTab, setActiveTab] = useState('main');
 
