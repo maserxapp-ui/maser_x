@@ -738,15 +738,15 @@ if (viewMode === 'user') {
               const studentData = { ...s, driverName };
 
               // 1. قسم الاستثناءات 📝
-              if (isExplicitException) {
-                let note = s.attendance_status || s.status || s.notes || 'لدي امتحان غداً (طلب استثناء)';
-                if (note.includes('exam_exception')) note = 'لدي امتحان غداً (طلب استثناء)';
+              // 1. قسم الاستثناءات 📝
+            if (isExplicitException) {
+              const exactStudentText = s.status || s.attendance_status || s.notes || 'طلب استثناء';
 
-                examStudents.push({
-                  ...studentData,
-                  displayText: note
-                });
-              } 
+              examStudents.push({
+                ...studentData,
+                displayText: exactStudentText
+              });
+            }
               // 2. قسم المداومين 🟢
               else if (confirmedAttending || (isOfficialWorkDay && !confirmedAbsent)) {
                 attendingStudents.push(studentData);
