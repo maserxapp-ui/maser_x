@@ -737,14 +737,14 @@ if (viewMode === 'user') {
 
               const studentData = { ...s, driverName };
 
-           // 1. قراءة الملاحظة المكتوبة للطالب
+          // 1. قراءة الملاحظة المكتوبة للطالب
             const note = s.exam_note ? String(s.exam_note).trim() : '';
 
-            // 2. تمييز نوع الخيار (هل هو غياب أم امتحان؟)
-            const isAbsentChoice = note.includes('لا أداوم') || note.includes('غائب');
+            // 2. تمييز نوع الخيار
+            const isAbsentChoice = note.includes('لا أداوم') || note.includes('غائب') || confirmedAbsent;
             const isExamException = note !== '' && !isAbsentChoice;
 
-            // --- الفرز داخل لوحة المدير ---
+            // --- الفرز الصحيح داخل لوحة المدير ---
 
             // 🔴 إذا اختار "لا أداوم غداً": يذهب فوراً لخانة الغائبين
             if (isAbsentChoice) {
@@ -760,11 +760,11 @@ if (viewMode === 'user') {
                 displayText: s.exam_note
               });
             } 
-            // 🟢 إذا كان غداً يوم دوام رسمي ولم يطلب غياباً: يذهب لخانة المداومين
-            else if (isTomorrowWorkDay) {
+            // 🟢 إذا أكّد دوامه أو غداً يوم دوامه الرسمي: يذهب لخانة المداومين
+            else if (confirmedAttending || (isOfficialWorkDay && !confirmedAbsent)) {
               attendingStudents.push(studentData);
             } 
-            // ⚪ إذا كان غداً ليس يوم دوامه الرسمي: يذهب للغائبين
+            // ⚪ إذا كان ليس يوم دوامه الرسمي: يذهب للغائبين
             else {
               absentStudents.push(studentData);
             }
