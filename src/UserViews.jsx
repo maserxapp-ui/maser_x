@@ -144,12 +144,12 @@ const handleStudentAction = async (actionType, labelText) => {
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // تحديث حالة الحضور فقط (attendance_status) وعدم المساس بحقل status الخاص بتفعيل الحساب
+      // حفظ الملاحظة ووقت الامتحان في العمود الجديد exam_note حصراً
       const { error: updateError } = await supabase
         .from('students')
         .update({ 
-          attendance_status: labelText,
-          tomorrow_status: labelText
+          exam_note: labelText,
+          attendance_status: 'استثناء'
         })
         .eq('id', user.id);
 
