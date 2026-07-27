@@ -134,65 +134,36 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
-    if (!user) return;
+    if (!user) {
+      alert("❌ خطأ: لم يتم التعرف على حساب الطالب الحالي!");
+      return;
+    }
 
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // 1. محاولة تحديث الحقول الأساسية لطلب الطالبة في جدول students
-      let studentErr = null;
-      
-      const res1 = await supabase
+      // 1. نحاول التحديث مع التقاط نص الخطأ بالضبط
+      const { error: updateError } = await supabase
         .from('students')
-        .update({ 
-          status: labelText,
-          attendance_status: labelText
-        })
+        .update({ status: labelText })
         .eq('id', user.id);
 
-      studentErr = res1.error;
-
-      // إذا رفض Supabase التحديث بوجود حقل غير معرف، نجرب التحديث بحقل status فقط
-      if (studentErr) {
-        const res2 = await supabase
-          .from('students')
-          .update({ status: labelText })
-          .eq('id', user.id);
-        
-        studentErr = res2.error;
+      // إذا حدث خطأ، سنعرض رسالة الخطأ الأصلية القادمة من Supabase
+      if (updateError) {
+        alert(`⚠️ سبب رفض Supabase:\n${updateError.message}`);
+        throw updateError;
       }
 
-      // إذا نجح التحديث في جدول الطلاب، نحدث الشاشة محلياً
       setTomorrowStatus(labelText);
-
-      // 2. إرسال إشعار جانبي بدون تعطيل العملية الرئيسية إذا فشل الإشعار
-      try {
-        await supabase.from('notifications').insert([
-          {
-            student_id: user.id,
-            student_name: user.name,
-            driver_id: assignedDriver?.id || null,
-            driver_name: assignedDriver?.name || user.driver_name || null,
-            title: `تحديث من الطالب: ${user.name}`,
-            message: `قام الطالب بـ: ${labelText}`,
-            type: actionType,
-            created_at: new Date().toISOString()
-          }
-        ]);
-      } catch (e) {
-        console.warn('Could not insert notification:', e);
-      }
-
-      setActionAlert(`تم إرسال إشعار "${labelText}" إلى الإدارة والسائق بنجاح! ✅`);
+      setActionAlert(`تم إرسال إشعار "${labelText}" بنجاح! ✅`);
       setTimeout(() => setActionAlert(''), 4000);
 
     } catch (err) {
-      console.error('Error handling student action:', err);
-      setActionAlert(`❌ حدث خطأ أثناء الاتصال بقاعدة البيانات.`);
+      console.error('Error:', err);
+      setActionAlert(`❌ فشل الحفظ: ${err.message}`);
       setTimeout(() => setActionAlert(''), 4000);
     }
   };
-
   const handleLogout = () => {
     setUser(null);
     setAssignedDriver(null);
