@@ -144,7 +144,7 @@ const handleStudentAction = async (actionType, labelText) => {
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // تحديث عمود exam_note المخصص فقط
+      // نحدّث عمود exam_note المخصص والظاهر في الجدول فقط
       const { error: updateError } = await supabase
         .from('students')
         .update({ 
