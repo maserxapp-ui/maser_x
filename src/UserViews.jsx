@@ -139,33 +139,48 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
 
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
-    if (!user) {
-      alert("❌ خطأ: لم يتم التعرف على حساب الطالب الحالي!");
-      return;
-    }
+    if (!user) return;
 
     setActionAlert(`جاري إرسال: "${labelText}"...`);
 
     try {
-      // 1. نحاول التحديث مع التقاط نص الخطأ بالضبط
+      // تحديث حالة الحضور فقط (attendance_status) وعدم المساس بحقل status الخاص بتفعيل الحساب
       const { error: updateError } = await supabase
         .from('students')
-        .update({ status: labelText })
+        .update({ 
+          attendance_status: labelText,
+          tomorrow_status: labelText
+        })
         .eq('id', user.id);
 
-      // إذا حدث خطأ، سنعرض رسالة الخطأ الأصلية القادمة من Supabase
-      if (updateError) {
-        alert(`⚠️ سبب رفض Supabase:\n${updateError.message}`);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
       setTomorrowStatus(labelText);
+
+      // إرسال الإشعار
+      try {
+        await supabase.from('notifications').insert([
+          {
+            student_id: user.id,
+            student_name: user.name,
+            driver_id: assignedDriver?.id || null,
+            driver_name: assignedDriver?.name || user.driver_name || null,
+            title: `تحديث من الطالب: ${user.name}`,
+            message: `قام الطالب بـ: ${labelText}`,
+            type: actionType,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      } catch (e) {
+        console.warn('Could not insert notification:', e);
+      }
+
       setActionAlert(`تم إرسال إشعار "${labelText}" بنجاح! ✅`);
       setTimeout(() => setActionAlert(''), 4000);
 
     } catch (err) {
       console.error('Error:', err);
-      setActionAlert(`❌ فشل الحفظ: ${err.message}`);
+      setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب`);
       setTimeout(() => setActionAlert(''), 4000);
     }
   };
