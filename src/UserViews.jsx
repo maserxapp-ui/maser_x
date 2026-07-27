@@ -474,7 +474,10 @@ const handleStudentAction = async (actionType, labelText) => {
                 <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
               </div>
-
+<div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+            <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
+            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
+          </div>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
