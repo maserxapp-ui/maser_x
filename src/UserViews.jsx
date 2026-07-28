@@ -71,7 +71,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(timer);
   }, []);
 
-  // 🔑 تسجيل الدخول (من السطر 75 إلى 118)
+ // 🔑 تسجيل الدخول (سائق وطالب - كود كامل ومحمي)
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -83,7 +83,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     try {
       if (loginRole === 'driver') {
-        // 🚗 البحث في السائقين
+        // 🚗 البحث في السائقين فقط
         let { data: driver } = await supabase
           .from('drivers')
           .select('*')
@@ -97,7 +97,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         }
         setErrorMsg('بيانات دخول السائق غير صحيحة');
       } else {
-        // 🎓 البحث في الطلاب
+        // 🎓 البحث في الطلاب فقط (كود الطالب كاملاً بدون أي تغيير)
         let { data: student } = await supabase
           .from('students')
           .select('*')
