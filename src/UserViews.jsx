@@ -315,6 +315,41 @@ const handleStudentAction = async (actionType, labelText) => {
     );
   }
 
+  // 🚗 إذا كان المستخدم سائقاً، اعرض واجهة السائق
+  if (user && user.role === 'driver') {
+    return (
+      <div style={{ maxWidth: '480px', margin: '20px auto', padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '40px', marginBottom: '10px' }}>🚗</div>
+          <h2 style={{ color: '#0f172a', margin: '0 0 10px 0' }}>أهلاً بك، {user.name}</h2>
+          <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>واجهة السائق المخصصة</p>
+
+          <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', textAlign: 'right', marginBottom: '20px', fontSize: '14px', color: '#334155' }}>
+            <p style={{ margin: '5px 0' }}>📱 <strong>رقم الهاتف:</strong> {user.phone}</p>
+            <p style={{ margin: '5px 0' }}>🚘 <strong>نوع السيارة:</strong> {user.car_type || 'غير محدد'}</p>
+            <p style={{ margin: '5px 0' }}>🔢 <strong>رقم السيارة:</strong> {user.car_number || 'غير محدد'}</p>
+          </div>
+
+          <button
+            onClick={() => setUser(null)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const isAllowedStatus = ['مدفوع', 'paid', 'متاخر', 'متأخر'].includes(user.status);
 
   // 2️⃣ شاشة الحساب غير المفعل
