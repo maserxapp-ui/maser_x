@@ -9,6 +9,7 @@ export default function App() {
 
   // 🟢 1. جعل شاشة دخول الطلاب والسائقين هي الافتراضية
   const [viewMode, setViewMode] = useState('user');
+  const [loginRole, setLoginRole] = useState('student');
 
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
@@ -522,7 +523,7 @@ export default function App() {
     }
   };
 if (viewMode === 'user') {
-    return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} />;
+    return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} loginRole={loginRole} setLoginRole={setLoginRole} />;
   }
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
