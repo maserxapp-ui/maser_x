@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
+export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
@@ -71,52 +71,54 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg }) {
     return () => clearInterval(timer);
   }, []);
 
-  // 🔄 تسجيل الدخول
+  // 🔑 تسجيل الدخول (من السطر 75 إلى 118)
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!phone || !password) {
-      setErrorMsg('يرجى إدخل رقم الهاتف وكلمة السر');
+      setErrorMsg('يرجى إدخال رقم الهاتف وكلمة السر');
       return;
     }
 
     try {
-      // البحث في الطلاب
-      let { data: student } = await supabase
-        .from('students')
-        .select('*')
-        .eq('phone', phone.trim())
-        .eq('password', password.trim())
-        .maybeSingle();
+      if (loginRole === 'driver') {
+        // 🚗 البحث في السائقين
+        let { data: driver } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('phone', phone.trim())
+          .eq('password', password.trim())
+          .maybeSingle();
 
-      if (student) {
-        setUser({ ...student, role: 'student' });
-        setTomorrowStatus(student.tomorrow_status || null);
-        setShiftFinished(student.shift_status === 'أنهيت دوامي');
-        await fetchDriverForStudent(student);
-        return;
+        if (driver) {
+          setUser({ ...driver, role: 'driver' });
+          return;
+        }
+        setErrorMsg('بيانات دخول السائق غير صحيحة');
+      } else {
+        // 🎓 البحث في الطلاب
+        let { data: student } = await supabase
+          .from('students')
+          .select('*')
+          .eq('phone', phone.trim())
+          .eq('password', password.trim())
+          .maybeSingle();
+
+        if (student) {
+          setUser({ ...student, role: 'student' });
+          setTomorrowStatus(student.tomorrow_status || null);
+          setShiftFinished(student.shift_status === 'أنهيت دوامي');
+          await fetchDriverForStudent(student);
+          return;
+        }
+        setErrorMsg('رقم الهاتف أو كلمة السر غير صحيحة');
       }
-
-      // البحث في السائقين
-      let { data: driver } = await supabase
-        .from('drivers')
-        .select('*')
-        .eq('phone', phone.trim())
-        .eq('password', password.trim())
-        .maybeSingle();
-
-      if (driver) {
-        setUser({ ...driver, role: 'driver' });
-        return;
-      }
-
-      setErrorMsg('رقم الهاتف أو كلمة السر غير صحيحة');
     } catch (err) {
       setErrorMsg('حدث خطأ أثناء الاتصال بقاعدة البيانات');
     }
   };
-
+  
   // 🚕 جلب السائق
   const fetchDriverForStudent = async (student) => {
     try {
@@ -266,6 +268,40 @@ const handleStudentAction = async (actionType, labelText) => {
           <button type="submit" style={{ padding: '14px', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px', marginTop: '10px' }}>
             تسجيل الدخول
           </button>
+          {/* زر التبديل بين دخول الطالب ودخول السائق */}
+        <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+            {loginRole === 'student' ? 'هل أنت سائق في الشفرة؟' : 'هل أنت طالب أو مشترك؟'}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setLoginRole(loginRole === 'student' ? 'driver' : 'student')}
+            style={{
+              width: '100%',
+              padding: '10px 15px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              backgroundColor: loginRole === 'student' ? '#1e293b' : '#fff7ed',
+              color: loginRole === 'student' ? '#ffffff' : '#ea580c',
+              border: loginRole === 'student' ? 'none' : '1px solid #ffedd5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>{loginRole === 'student' ? '🚗' : '🎓'}</span>
+            <span>
+              {loginRole === 'student'
+                ? 'تسجيل الدخول كـ سائق'
+                : 'العودة لتسجيل دخول الطالب'}
+            </span>
+          </button>
+        </div>
         </form>
 
         <button onClick={onBackToAdmin} style={{ marginTop: '25px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '12px' }}>
