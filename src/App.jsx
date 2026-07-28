@@ -10,7 +10,7 @@ export default function App() {
   // 🟢 1. جعل شاشة دخول الطلاب والسائقين هي الافتراضية
   const [viewMode, setViewMode] = useState('user');
   const [loginRole, setLoginRole] = useState('student');
-
+const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
 
@@ -425,6 +425,7 @@ export default function App() {
         .from('drivers')
         .insert([{ 
           ...driverPayload,
+          password: driverPassword,
           created_at: new Date().toISOString().split('T')[0]
         }]);
 
@@ -1382,6 +1383,19 @@ if (viewMode === 'user') {
                   onChange={(e) => setDriverName(e.target.value)}
                 />
               </div>
+
+              {/* حقل كلمة السر للسائق */}
+<div>
+  <label className="block text-slate-600 font-bold mb-1">* كلمة سر السائق (للدخول)</label>
+  <input
+    type="text"
+    required
+    placeholder="أدخل كلمة سر لحساب السائق"
+    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+    value={driverPassword}
+    onChange={(e) => setDriverPassword(e.target.value)}
+  />
+</div>
 
               <div>
                 <label className="block text-slate-600 font-bold mb-1">رقم الهاتف *</label>
