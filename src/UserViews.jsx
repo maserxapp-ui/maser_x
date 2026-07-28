@@ -217,8 +217,12 @@ const handleStudentAction = async (actionType, labelText) => {
             style={{ width: '150px', height: 'auto', maxHeight: '100px', objectFit: 'contain', margin: '0 auto' }} 
           />
         </div>
-        <h2 style={{ margin: '10px 0 5px 0', color: '#0f172a', fontSize: '20px', fontWeight: 'bold' }}>تطبيق مسار إكس 🚌</h2>
-        <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '25px' }}>أدخل رقم الهاتف وكلمة السر للدخول إلى حسابك</p>
+        <h2 style={{ margin: '10px 0 5px 0', color: '#0f172a', fontSize: '20px', fontWeight: 'bold' }}>
+  {loginRole === 'student' ? 'تطبيق مسار إكس 🚌' : 'واجهة السائق 🚗'}
+</h2>
+<p style={{ color: '#64748b', fontSize: '13px', marginBottom: '25px' }}>
+  {loginRole === 'student' ? 'أدخل رقم الهاتف وكلمة السر للدخول إلى حسابك' : 'تسجيل دخول السائقين المقيدين بالنظام'}
+</p>
 
         {errorMsg && <div style={{ color: '#ef4444', marginBottom: '15px', fontSize: '13px', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '8px', border: '1px solid #fecaca' }}>{errorMsg}</div>}
 
