@@ -33,6 +33,9 @@ export default function App() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingDrivers, setLoadingDrivers] = useState(true);
+
+  const [gender, setGender] = useState('ذكر');
+  const [district, setDistrict] = useState('');
   
   // نافذة المشتركين (إضافة وتعديل)
   const [showModal, setShowModal] = useState(false);
@@ -259,6 +262,8 @@ export default function App() {
     setName('');
     setPhone('');
     setUniversity('جامعة ميسان');
+    setGender('ذكر');
+    setDistrict('');
     setNewStudentLocation('');
     setPrice('90,000');
     setStatus('مدفوع');
@@ -273,6 +278,8 @@ export default function App() {
     setName(student.name || '');
     setPhone(student.phone || '');
     setUniversity(student.university || 'جامعة ميسان');
+    setGender(student.gender || 'ذكر');
+    setDistrict(student.district || '');
     setNewStudentLocation(student.location || '');
     setPrice(student.price || '90,000');
     setStatus(student.status || 'مدفوع');
@@ -294,6 +301,8 @@ export default function App() {
       name,
       phone,
       university,
+      gender,    // 👈 أضف الجنس هنا
+      district,
       location: newStudentLocation,
       price,
       status,
@@ -809,6 +818,10 @@ if (viewMode === 'user') {
                             </div>
                             <div className="text-slate-500 text-[11px] mb-1">🏛️ الجامعة: {s.university || 'غير محدد'}</div>
                             <div className="text-slate-500 text-[11px] mb-1">📍 المنطقة: {s.location || 'غير محدد'}</div>
+                            {/* عرض الجنس والقضاء في كارت المشترك */}
+<div className="text-slate-500 text-[11px] mb-1">
+  👤 الجنس: <span className="font-bold text-slate-700">{s.gender || 'غير محدد'}</span> | 🏛️ القضاء: <span className="font-bold text-slate-700">{s.district || 'غير محدد'}</span>
+</div>
                             <div className="text-indigo-600 font-bold text-[11px] mb-1">🚌 السائق: {s.driverName}</div>
                             <div className="text-rose-700 bg-rose-50 p-2 rounded-lg font-bold border border-rose-100 mt-1">
                               💬 {s.displayText}
@@ -1240,6 +1253,47 @@ if (viewMode === 'user') {
                 />
               </div>
 
+              {/* حقل اختيار الجنس - أزرار ذكر / أنثى */}
+<div className="mb-3 text-right">
+  <label className="block text-slate-600 font-bold mb-1">👤 الجنس</label>
+  <div className="flex gap-2">
+    <button
+      type="button"
+      onClick={() => setGender('ذكر')}
+      className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm border transition-all ${
+        gender === 'ذكر'
+          ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
+          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      👨 ذكر
+    </button>
+    <button
+      type="button"
+      onClick={() => setGender('أنثى')}
+      className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm border transition-all ${
+        gender === 'أنثى'
+          ? 'bg-pink-500 text-white border-pink-500 shadow-sm'
+          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+      }`}
+    >
+      👩 أنثى
+    </button>
+  </div>
+</div>
+
+{/* حقل كتابة القضاء */}
+<div className="mb-3 text-right">
+  <label className="block text-slate-600 font-bold mb-1">🏛️ القضاء</label>
+  <input
+    type="text"
+    placeholder="مثال: قضاء الكحلاء / قضاء الميمونة"
+    value={district}
+    onChange={(e) => setDistrict(e.target.value)}
+    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500 text-sm"
+  />
+</div>
+              
               {/* اختيار السائق المخصص */}
               <div>
                 <label className="block text-slate-600 font-bold mb-1">تحديد السائق / الحافلة المخصصة</label>
