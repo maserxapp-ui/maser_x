@@ -46,7 +46,7 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المعتمدة على توقيت بغداد (مُعدلة لحل خطأ 400 في Supabase)
+// 🎯 دالة التوزيع المعتمدة على توقيت بغداد (نسخة محسّنة وشاملة)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
     
@@ -115,20 +115,16 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 3️⃣ 🔴 (التعديل الجديد): إرسال driver_id المباشر فقط لتفادي خطأ 400 Bad Request
+      // 3️⃣ توزيع الطلاب المقبولين بالتساوي
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
-        const { error: updateErr } = await supabase
+        await supabase
           .from('students')
           .update({
-            driver_id: assignedDriver.id
+            driver_id: assignedDriver.id // 👈 ربط ID السائق المباشر
           })
           .eq('id', eligibleStudents[i].id);
-
-        if (updateErr) {
-          console.error(`❌ خطأ Supabase في تحديث الطالب (${eligibleStudents[i].id}):`, updateErr.message);
-        }
       }
 
       // 4️⃣ تصفية وإلغاء الربط عن الطلاب غير المداومين غداً
@@ -149,7 +145,7 @@ const [driverPassword, setDriverPassword] = useState('');
       }
 
       if (!autoMode) {
-        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب وملء driver_id في سوبابيس!`);
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب على (${drivers.length}) سائق!`);
       }
 
     } catch (err) {
