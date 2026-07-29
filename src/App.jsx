@@ -65,18 +65,28 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 2️⃣ تصفية الطلاب: استبعاد الـ 4 الغائبين فقط والإبقاء على الـ 7 المداومين والاستثناءات
+     // 🎯 تصفية دقيقة جداً: (7 طلاب فقط: 6 مداومين + 1 استثناء)
       const eligibleStudents = students.filter(student => {
-        const status = student.tomorrow_status || student.attendance_status || student.status || '';
-        
-        // استبعاد أي طالب غائب أو معتذر
-        const isAbsent = 
-          status === 'غائب' || 
-          status === 'أعتذر غداً' || 
-          status.includes('اعتذار') || 
-          status.includes('عطلة');
+        const tStatus = String(student.tomorrow_status || '');
+        const aStatus = String(student.attendance_status || '');
+        const sStatus = String(student.status || '');
 
-        return !isAbsent;
+        // 🛑 1. استبعاد أي طالب معتذر أو غائب أو في عطلة
+        const isAbsent = 
+          tStatus.includes('اعتذار') || tStatus.includes('عطلة') || tStatus.includes('غائب') ||
+          aStatus.includes('اعتذار') || aStatus.includes('عطلة') || aStatus.includes('غائب') ||
+          sStatus.includes('اعتذار') || sStatus.includes('عطلة') || sStatus.includes('غائب');
+
+        if (isAbsent) return false;
+
+        // ✅ 2. شمول من لديه (جدول رسمي / مداوم / استثناء / امتحان)
+        const isAttendingOrException = 
+          tStatus.includes('جدول') || tStatus.includes('مداوم') || tStatus.includes('استثناء') ||
+          aStatus.includes('جدول') || aStatus.includes('مداوم') || aStatus.includes('استثناء') ||
+          sStatus.includes('جدول') || sStatus.includes('مداوم') || sStatus.includes('استثناء') ||
+          student.exam_note || student.has_exception;
+
+        return isAttendingOrException;
       });
 
       if (eligibleStudents.length === 0) {
@@ -84,7 +94,7 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 3️⃣ توزيع الـ 7 طلاب المستحقين بالتساوي على السائقين
+     // 🎯 توزيع الـ 7 طلاب المستحقين وتحديث كامل أعمدة السائق
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -92,11 +102,13 @@ const [driverPassword, setDriverPassword] = useState('');
           .from('students')
           .update({
             driver_name: assignedDriver.name,
-            driver_phone: assignedDriver.phone
+            driver_phone: assignedDriver.phone,
+            assigned_driver: assignedDriver.name,
+            driver_id: assignedDriver.id
           })
           .eq('id', eligibleStudents[i].id);
       }
-
+      
       if (!autoMode) {
         alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (استثناء ومداوم) بالتساوي على (${drivers.length}) سائق!`);
       }
