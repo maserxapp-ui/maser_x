@@ -138,7 +138,26 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       console.log('خطأ في جلب بيانات السائق', e);
     }
   };
+// 👨‍🎓 جلب الطلاب المخصصين لهذا السائق
+  const fetchStudentsForDriver = async (driver) => {
+    try {
+      if (!driver) return;
+      let query = supabase.from('students').select('*');
+      
+      if (driver.phone) {
+        query = query.eq('driver_phone', driver.phone);
+      } else if (driver.name) {
+        query = query.eq('driver_name', driver.name);
+      }
 
+      const { data: studentsData, error } = await query;
+      if (!error && studentsData) {
+        setDriverStudents(studentsData); // أو اسم المتغير المعتمد عندك للطلاب
+      }
+    } catch (e) {
+      console.error('خطأ في جلب طلاب السائق:', e);
+    }
+  };
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
     if (!user) return;
@@ -770,40 +789,22 @@ function DriverView({ user, setUser }) {
               <p className="text-xs">لا يوجد طلاب مسجلين على خطك حالياً</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {students.map((student) => {
-                const isAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
-                return (
-                  <div key={student.id} className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-100 transition">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-black text-xs flex items-center justify-center shadow-sm">
-                        {student.name ? student.name.charAt(0) : 'ط'}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-xs text-slate-800">{student.name}</h4>
-                        <p className="text-[10px] text-slate-500 mt-0.5">📍 {student.area || 'المنطقة غير محددة'}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 text-[10px] rounded-lg font-bold ${
-                        isAttending ? 'bg-emerald-100/80 text-emerald-800' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {student.tomorrow_status || 'غير محدد'}
-                      </span>
-                      {student.phone && (
-                        <a
-                          href={`tel:${student.phone}`}
-                          className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-xs shadow-sm hover:bg-slate-200 transition"
-                          title="اتصال للطالب"
-                        >
-                          📞
-                        </a>
-                      )}
-                    </div>
+          <div className="space-y-2">
+              {students.map((student, index) => (
+                <div 
+                  key={student.id || index} 
+                  className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">
+                      {index + 1}
+                    </span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {student.name}
+                    </span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
