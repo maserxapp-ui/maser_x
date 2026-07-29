@@ -45,25 +45,49 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المعتمدة على توقيت بغداد ليوم غد وحقل work_day + الاستثناءات
+// 🔄 دالة التوزيع المعتمدة
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
-    
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين ليوم غد والأستثناءات) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب على السائقين؟')) return;
     }
 
     try {
-      const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
+      setLoading(true);
+      const { data: driversList, error: dErr } = await supabase.from('drivers').select('*');
       const { data: studentsData, error: sErr } = await supabase.from('students').select('*');
 
-      if (dErr || sErr || !drivers || drivers.length === 0) {
+      if (dErr || sErr || !driversList || driversList.length === 0) {
         if (!autoMode) alert('⚠️ لا يوجد سائقون أو حدث خطأ في جلب البيانات!');
         return;
       }
 
+      // إجراء التوزيع
+      const updates = studentsData.map((student, index) => {
+        const assignedDriver = driversList[index % driversList.length];
+        return {
+          id: student.id,
+          driver_id: assignedDriver.id,
+          driver_name: assignedDriver.name,
+          driver_phone: assignedDriver.phone,
+          assigned_driver: assignedDriver.name,
+        };
+      });
+
+      for (const item of updates) {
+        await supabase.from('students').update(item).eq('id', item.id);
+      }
+
+      alert('🎉 تم التوزيع بنجاح!');
+      if (typeof fetchStudents === 'function') fetchStudents();
+    } catch (err) {
+      console.error('خطأ بالتوزيع:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
       // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد بغض النظر عن ساعة الهاتف/الابتوب
       const getTomorrowArabicInBaghdad = () => {
         // جلب الوقت الحالي بتوقيت بغداد
