@@ -46,7 +46,7 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المعتمدة على توقيت بغداد ليوم غد وحقل work_day + الاستثناءات
+// 🎯 دالة التوزيع المعتمدة على توقيت بغداد ليوم غد وحقل work_day + الاستثناءات (مُصححة 100%)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
     
@@ -65,12 +65,11 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد بغض النظر عن ساعة الهاتف/الابتوب
+      // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد بغض النظر عن ساعة الجهاز
       const getTomorrowArabicInBaghdad = () => {
-        // جلب الوقت الحالي بتوقيت بغداد
         const baghdadNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
         const baghdadTomorrow = new Date(baghdadNowStr);
-        baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1); // إضافة يوم ليصبح غداً
+        baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1);
 
         const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         return daysArabic[baghdadTomorrow.getDay()];
@@ -78,11 +77,11 @@ const [driverPassword, setDriverPassword] = useState('');
 
       const tomorrowDay = getTomorrowArabicInBaghdad(); // اسم يوم غد بتوقيت بغداد
 
-   // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء (تحديث دقيق)
+      // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء
       const eligibleStudents = studentsData.filter(student => {
         const fullStudentText = Object.values(student).map(v => String(v || '')).join(' ');
 
-        // 🛑 أ. استبعاد الغائبين أولاً (إذا ضغط لا أداوم غداً أو كتبها بالـ exam_note)
+        // 🛑 أ. استبعاد الغائبين أولاً
         const isExplicitAbsent = 
           student.is_absent === true ||
           student.tomorrow_status === 'لا أداوم غداً' ||
@@ -91,17 +90,16 @@ const [driverPassword, setDriverPassword] = useState('');
           fullStudentText.includes('أعتذر') || 
           fullStudentText.includes('غائب');
 
-        // إذا أرسل اعتذار أو غياب -> يُستثنى فوراً ولن يوزع على أي سائق
         if (isExplicitAbsent) return false;
 
-        // 📅 ب. فحص هل غداً يوم دوامه الرسمي؟
-        const workDays = String(student.work_day || student.work_days || '');
-        const normalizeText = (text) => text.replace(/أ|إ|آ/g, 'ا').trim();
-        const isTomorrowInWorkDays = normalizeText(workDays).includes(normalizeText(tomorrowDay));
+        // 📅 ب. فحص هل غداً يوم دوامه الرسمي؟ (دعم حقول work_days, days, work_day بجميع صيغها)
+        const rawDays = JSON.stringify(student.work_days || student.days || student.work_day || '');
+        const normalizeText = (text) => text.replace(/[\[\]"']/g, '').replace(/أ|إ|آ/g, 'ا').trim();
+        
+        const isTomorrowInWorkDays = normalizeText(rawDays).includes(normalizeText(tomorrowDay));
         const isExplicitAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
 
         // 📝 ج. فحص طلب الامتحان (الاستثناء)
-        // الشرط: ما عنده دوام رسمي غداً + كاتب طلب امتحان بـ exam_note (وليس لا أداوم غداً)
         const hasExamNote = 
           student.exam_note && 
           String(student.exam_note).trim() !== '' && 
@@ -112,7 +110,6 @@ const [driverPassword, setDriverPassword] = useState('');
         // 🟢 الدوام الاعتيادي
         const isRegularAttending = isTomorrowInWorkDays || isExplicitAttending;
 
-        // 🎯 المقبول للتوزيع: من لديه دوام رسمي غداً أو لديه استثناء امتحان (في يوم عطلته)
         return isRegularAttending || isExamException;
       });
 
@@ -121,13 +118,14 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 3️⃣ توزيع الطلاب المقبولين بالتساوي على السائقين
+      // 3️⃣ توزيع الطلاب المقبولين بالتساوي وتمرير driver_id
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
         await supabase
           .from('students')
           .update({
+            driver_id: assignedDriver.id,         // 🔑 إدخال الـ ID لكي لا يظهر NULL
             driver_name: assignedDriver.name,
             driver_phone: assignedDriver.phone,
             assigned_driver: assignedDriver.name
@@ -135,14 +133,30 @@ const [driverPassword, setDriverPassword] = useState('');
           .eq('id', eligibleStudents[i].id);
       }
 
-      // 4️⃣ تحديث الشاشة فوراً بالبيانات الجديدة
+      // 4️⃣ إلغاء التوزيع وتصفير السائق للطلاب غير المداومين غداً
+      const eligibleIds = eligibleStudents.map(s => s.id);
+      const nonEligibleStudents = studentsData.filter(s => !eligibleIds.includes(s.id));
+
+      for (const student of nonEligibleStudents) {
+        await supabase
+          .from('students')
+          .update({
+            driver_id: null,
+            driver_name: null,
+            driver_phone: null,
+            assigned_driver: null
+          })
+          .eq('id', student.id);
+      }
+
+      // 5️⃣ تحديث الشاشة فوراً بالبيانات الجديدة
       const { data: refreshedStudents } = await supabase.from('students').select('*');
       if (refreshedStudents && typeof setStudents === 'function') {
         setStudents(refreshedStudents);
       }
 
       if (!autoMode) {
-        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (المداومين ليوم غد: ${tomorrowDay} + الاستثناءات) على (${drivers.length}) سائق!`);
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب وملء driver_id على (${drivers.length}) سائق!`);
       }
 
     } catch (err) {
