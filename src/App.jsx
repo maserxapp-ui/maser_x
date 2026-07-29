@@ -65,7 +65,7 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 🎯 التصفية حسب الخانات الثلاث الظاهرة بالواجهة:
+     // 🎯 التصفية المعتمدة: أي طالب ليس غائباً (رمادي) يُعتبر مداوماً أو استثناءً ويُوزّع فوراً
       const eligibleStudents = studentsData.filter(student => {
         const statusText = `
           ${student.tomorrow_status || ''} 
@@ -73,21 +73,18 @@ const [driverPassword, setDriverPassword] = useState('');
           ${student.status || ''}
         `.trim();
 
-        // 🛑 1. إذا كان الطالب ينتمي لخانة "الطلاب الغائبون" (العلبة الرمادية): يُستبعد فوراً!
-        const isInGreyBox = 
+        // 🛑 فحص الاستبعاد: هل الطالب في خانة "الطلاب الغائبون"؟
+        const isAbsent = 
+          student.is_absent === true ||
           statusText.includes('عطلة') || 
           statusText.includes('اعتذار') || 
           statusText.includes('غائب') || 
           statusText.includes('أعتذر') ||
-          student.is_absent === true;
+          statusText.includes('ما يداوم') ||
+          statusText.includes('لا يداوم');
 
-        if (isInGreyBox) return false;
-
-        // ✅ 2. الشمول فقط لمن ينتمي لـ "الطلاب المداومون" (أخضر) أو "الاستثناءات" (وردي)
-        const isInGreenBox = statusText.includes('جدول') || statusText.includes('مداوم') || student.is_attending === true;
-        const isInPinkBox = statusText.includes('استثناء') || Boolean(student.exam_note) || student.has_exception === true;
-
-        return isInGreenBox || isInPinkBox;
+        // ✅ إذا لم يكن غائباً، يقرأه النظام فوراً (سواء كان طالباً قدامى أو جديد تم إضافته للتو!)
+        return !isAbsent;
       });
 
       if (eligibleStudents.length === 0) {
