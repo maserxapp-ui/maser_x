@@ -663,26 +663,39 @@ if (user && user.role === 'driver') {
     </div>
   );
 }
-// 🚗 مكون واجهة السائق المطور والمرتبط بقاعدة البيانات
+// 🚗 مكون واجهة السائق الشامل والمصحح
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  // 🔄 جلب الطلاب الحقيقيين المخصصين لهذا السائق من Supabase
+  // 🔄 جلب الطلاب المرتبطين بالسائق مع فحص شامل لجميع الاحتمالات
   const fetchStudents = async () => {
     if (!user || !supabase) return;
     setLoading(true);
     try {
-      // البحث عن الطلاب المربوطين برقم هاتف السائق أو اسمه
+      const cleanPhone = user.phone ? String(user.phone).trim() : '';
+      const phoneWithoutZero = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone;
+      const phoneWithZero = cleanPhone.startsWith('0') ? cleanPhone : '0' + cleanPhone;
+
+      // البحث بجميع الحقول والاحتمالات الممكنة لتوزيع الطلاب
+      const queryConditions = [
+        `driver_phone.eq.${cleanPhone}`,
+        `driver_phone.eq.${phoneWithZero}`,
+        `driver_phone.eq.${phoneWithoutZero}`,
+        `driver_name.eq.${user.name}`,
+        `assigned_driver.eq.${user.name}`,
+        `driver_id.eq.${user.id || 0}`
+      ].join(',');
+
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .or(`driver_phone.eq.${user.phone},driver_name.eq.${user.name},assigned_driver.eq.${user.name}`);
+        .or(queryConditions);
 
       if (!error && data) {
         setStudents(data);
       } else if (error) {
-        console.error('خطأ Supabase:', error);
+        console.error('خطأ في استعلام الطلاب:', error);
       }
     } catch (err) {
       console.error('خطأ في جلب الطلاب:', err);
@@ -695,7 +708,7 @@ function DriverView({ user, setUser, supabase }) {
     fetchStudents();
   }, [user]);
 
-  // 📊 تصفية الطلاب الحقيقيين وحساب الإحصائيات
+  // 📊 تصنيف الطلاب (مداومين وغائبين)
   const absentStudentsList = students.filter(s => 
     s.is_absent === true || 
     s.tomorrow_status === 'لا أداوم غداً' || 
@@ -710,7 +723,7 @@ function DriverView({ user, setUser, supabase }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
-      {/* 1. الشريط العلوي (Header) */}
+      {/* 1. الشريط العلوي */}
       <div className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40 border-b border-slate-800">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -731,13 +744,14 @@ function DriverView({ user, setUser, supabase }) {
           <div className="flex gap-2">
             <button
               onClick={fetchStudents}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl transition font-bold"
+              title="تحديث القائمة"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl transition font-bold"
             >
-              🔄
+              🔄 تحديث
             </button>
             <button
               onClick={() => setUser(null)}
-              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-1.5 rounded-xl transition font-bold flex items-center gap-1"
+              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
             >
               <span>خروج</span>
               <span>🚪</span>
@@ -748,110 +762,100 @@ function DriverView({ user, setUser, supabase }) {
 
       <div className="max-w-md mx-auto p-4 space-y-4">
 
-        {/* 2. بطاقات الإحصائيات الحقيقية */}
+        {/* 2. بطاقات الإحصائيات */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-slate-800">{totalStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">إجمالي المخصصين</span>
+            <span className="text-[11px] text-slate-500 font-medium">إجمالي الطلاب</span>
           </div>
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-emerald-600">{attendingStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">مداومين / استثناء</span>
+            <span className="text-[11px] text-slate-500 font-medium">المداومين</span>
           </div>
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-red-500">{absentStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">غائبين / اعتذار</span>
+            <span className="text-[11px] text-slate-500 font-medium">غير المداومين</span>
           </div>
         </div>
 
-        {/* 3. لوحة التحكم بالرحلات */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-            <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              حالة رحلة اليوم
-            </span>
-            <span className="px-2.5 py-1 text-[11px] rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-              جاهز للانطلاق
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-3 px-2 rounded-xl text-xs shadow-md shadow-orange-500/10 transition active:scale-[0.98] flex flex-col items-center justify-center gap-1">
-              <span className="text-sm">🌅 بدء رحلة الذهاب</span>
-              <span className="text-[10px] opacity-90 font-normal">(الصباحية)</span>
-            </button>
-
-            <button className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-2 rounded-xl text-xs shadow-md transition active:scale-[0.98] flex flex-col items-center justify-center gap-1">
-              <span className="text-sm">🌆 بدء رحلة العودة</span>
-              <span className="text-[10px] opacity-80 font-normal">(المسائية)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4. قائمة طلاب خط السائق (الركاب المداومين فقط) */}
+        {/* 3. قائمة الطلاب */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
-              <span className="text-base">🎓</span> الطلاب المداومين ليوم غد
+              <span className="text-base">🎓</span> طلاب خط السائق
             </h3>
             <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-              {attendingStudentsList.length} طالب
+              {students.length} مسجلين
             </span>
           </div>
 
           {loading ? (
-            <p className="text-center text-xs text-slate-400 py-4">جاري تحميل قائمة الطلاب...</p>
-          ) : attendingStudentsList.length === 0 ? (
-            <div className="text-center py-6 text-slate-400">
-              <p className="text-2xl mb-1">📭</p>
-              <p className="text-xs">لا يوجد طلاب مداومين على خطك ليوم غد</p>
+            <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
+          ) : students.length === 0 ? (
+            /* 🔍 كارت التنبيه والمساعدة عند عدم وجود طلاب */
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
+              <p className="text-2xl">📭</p>
+              <p className="text-xs font-bold">لم يتم العثور على طلاب مسجلين لهذا السائق!</p>
+              <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
+                <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
+                <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
+                <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
+              </div>
+              <p className="text-[10px] text-amber-700">
+                تأكد من أن كود زر "التوزيع" يقوم بتحديث حقل <code className="bg-amber-100 px-1 rounded">driver_name</code> أو <code className="bg-amber-100 px-1 rounded">driver_phone</code> في جدول <code className="bg-amber-100 px-1 rounded">students</code> لنفس الاسم والرقم أعلاه.
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {attendingStudentsList.map((student, index) => (
-                <div 
-                  key={student.id || index} 
-                  className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <span className="font-bold text-slate-800 text-xs block">
-                        {student.name || student.full_name}
+              {students.map((student, index) => {
+                const isAbsent = absentStudentsList.includes(student);
+                return (
+                  <div 
+                    key={student.id || index} 
+                    className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
+                      isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                      }`}>
+                        {index + 1}
                       </span>
-                      <span className="text-[10px] text-slate-500 block">
-                        {student.university || student.college || student.location || 'غير محدد'}
-                      </span>
-                      {/* 📝 عرض ملاحظة الامتحان الاستثنائي */}
-                      {student.exam_note && !student.exam_note.includes('لا أداوم غداً') && (
-                        <span className="inline-block mt-1 bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-md font-bold">
-                          📝 امتحان: {student.exam_note}
+                      <div>
+                        <span className="font-bold text-slate-800 text-xs block">
+                          {student.name || student.full_name}
                         </span>
-                      )}
+                        <span className="text-[10px] text-slate-500 block">
+                          📍 {student.university || student.location || 'غير محدد'}
+                        </span>
+                        {isAbsent && (
+                          <span className="inline-block mt-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded font-bold">
+                            🔴 غير مداوم
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {student.phone && (
-                    <a
-                      href={`tel:${student.phone}`}
-                      className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition flex items-center gap-1"
-                    >
-                      📞 اتصال
-                    </a>
-                  )}
-                </div>
-              ))}
+                    {student.phone && (
+                      <a
+                        href={`tel:${student.phone}`}
+                        className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition flex items-center gap-1"
+                      >
+                        📞 اتصال
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* 5. بطاقة البيانات الخاصة بالسائق */}
+        {/* 4. بيانات السائق */}
         <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
           <h4 className="font-bold text-xs text-orange-400 mb-2.5 flex items-center gap-1.5">
-            <span>📋</span> بيانات التواصل والسيارة
+            <span>📋</span> بيانات الحساب والسيارة
           </h4>
           <div className="text-xs text-slate-300 space-y-1.5">
             <p className="flex justify-between border-b border-slate-800 pb-1">
