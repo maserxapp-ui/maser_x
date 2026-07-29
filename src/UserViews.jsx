@@ -336,7 +336,7 @@ const handleStudentAction = async (actionType, labelText) => {
 
 // 🚗 استدعاء واجهة السائق الحقيقية
 if (user && user.role === 'driver') {
-  return <DriverView user={user} setUser={setUser} />;
+  return <DriverView user={user} setUser={setUser} supabase={supabase} />;
 }
 
   const isAllowedStatus = ['مدفوع', 'paid', 'متاخر', 'متأخر'].includes(user.status);
@@ -663,39 +663,50 @@ if (user && user.role === 'driver') {
     </div>
   );
 }
-// 🚗 مكون واجهة السائق الحقيقية المرتبطة بقاعدة البيانات
-function DriverView({ user, setUser }) {
+// 🚗 مكون واجهة السائق المطور والمرتبط بقاعدة البيانات
+function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  // جلب الطلاب الحقيقيين الخاصين بهذا السائق من Supabase
-  React.useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true);
-      try {
-        // البحث عن الطلاب المربوطين برقم هاتف السائق أو اسمه
-        const { data, error } = await supabase
-          .from('students')
-          .select('*')
-          .or(`driver_phone.eq.${user.phone},driver_name.eq.${user.name}`);
+  // 🔄 جلب الطلاب الحقيقيين المخصصين لهذا السائق من Supabase
+  const fetchStudents = async () => {
+    if (!user || !supabase) return;
+    setLoading(true);
+    try {
+      // البحث عن الطلاب المربوطين برقم هاتف السائق أو اسمه
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .or(`driver_phone.eq.${user.phone},driver_name.eq.${user.name},assigned_driver.eq.${user.name}`);
 
-        if (!error && data) {
-          setStudents(data);
-        }
-      } catch (err) {
-        console.error('خطأ في جلب الطلاب:', err);
-      } finally {
-        setLoading(false);
+      if (!error && data) {
+        setStudents(data);
+      } else if (error) {
+        console.error('خطأ Supabase:', error);
       }
-    };
+    } catch (err) {
+      console.error('خطأ في جلب الطلاب:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (user) fetchStudents();
+  React.useEffect(() => {
+    fetchStudents();
   }, [user]);
 
-  // حساب الإحصائيات الحقيقية
+  // 📊 تصفية الطلاب الحقيقيين وحساب الإحصائيات
+  const absentStudentsList = students.filter(s => 
+    s.is_absent === true || 
+    s.tomorrow_status === 'لا أداوم غداً' || 
+    (s.exam_note && String(s.exam_note).includes('لا أداوم غداً'))
+  );
+
+  const attendingStudentsList = students.filter(s => !absentStudentsList.includes(s));
+
   const totalStudents = students.length;
-  const attendingStudents = students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'مداوم').length;
-  const absentStudents = students.filter(s => s.tomorrow_status === 'لا أداوم غداً' || s.tomorrow_status === 'مجاز').length;
+  const attendingStudents = attendingStudentsList.length;
+  const absentStudents = absentStudentsList.length;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
@@ -712,18 +723,26 @@ function DriverView({ user, setUser }) {
                 <span className="px-2 py-0.5 text-[10px] bg-orange-500/20 text-orange-400 rounded-full border border-orange-500/30">سائق</span>
               </h1>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {user.car_type || 'نوع المركبة غير محدد'} • <span className="font-mono">{user.car_number || '---'}</span>
+                {user.car_type || user.car_model || 'نوع المركبة غير محدد'} • <span className="font-mono">{user.car_number || '---'}</span>
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setUser(null)}
-            className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
-          >
-            <span>خروج</span>
-            <span>🚪</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={fetchStudents}
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-xl transition font-bold"
+            >
+              🔄
+            </button>
+            <button
+              onClick={() => setUser(null)}
+              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-1.5 rounded-xl transition font-bold flex items-center gap-1"
+            >
+              <span>خروج</span>
+              <span>🚪</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -733,15 +752,15 @@ function DriverView({ user, setUser }) {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-slate-800">{totalStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">الطلاب المسجلين</span>
+            <span className="text-[11px] text-slate-500 font-medium">إجمالي المخصصين</span>
           </div>
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-emerald-600">{attendingStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">حضور اليوم</span>
+            <span className="text-[11px] text-slate-500 font-medium">مداومين / استثناء</span>
           </div>
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
             <span className="block text-xl font-black text-red-500">{absentStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">غائبين / مجازين</span>
+            <span className="text-[11px] text-slate-500 font-medium">غائبين / اعتذار</span>
           </div>
         </div>
 
@@ -770,27 +789,27 @@ function DriverView({ user, setUser }) {
           </div>
         </div>
 
-        {/* 4. قائمة طلاب خط السائق (البيانات الحقيقية) */}
+        {/* 4. قائمة طلاب خط السائق (الركاب المداومين فقط) */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
-              <span className="text-base">🎓</span> طلاب الخط المخصصين
+              <span className="text-base">🎓</span> الطلاب المداومين ليوم غد
             </h3>
             <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-              جدول اليوم
+              {attendingStudentsList.length} طالب
             </span>
           </div>
 
           {loading ? (
             <p className="text-center text-xs text-slate-400 py-4">جاري تحميل قائمة الطلاب...</p>
-          ) : students.length === 0 ? (
+          ) : attendingStudentsList.length === 0 ? (
             <div className="text-center py-6 text-slate-400">
               <p className="text-2xl mb-1">📭</p>
-              <p className="text-xs">لا يوجد طلاب مسجلين على خطك حالياً</p>
+              <p className="text-xs">لا يوجد طلاب مداومين على خطك ليوم غد</p>
             </div>
           ) : (
-          <div className="space-y-2">
-              {students.map((student, index) => (
+            <div className="space-y-2">
+              {attendingStudentsList.map((student, index) => (
                 <div 
                   key={student.id || index} 
                   className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between shadow-sm"
@@ -799,10 +818,30 @@ function DriverView({ user, setUser }) {
                     <span className="w-7 h-7 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">
                       {index + 1}
                     </span>
-                    <span className="font-bold text-slate-800 text-xs">
-                      {student.name}
-                    </span>
+                    <div>
+                      <span className="font-bold text-slate-800 text-xs block">
+                        {student.name || student.full_name}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">
+                        {student.university || student.college || student.location || 'غير محدد'}
+                      </span>
+                      {/* 📝 عرض ملاحظة الامتحان الاستثنائي */}
+                      {student.exam_note && !student.exam_note.includes('لا أداوم غداً') && (
+                        <span className="inline-block mt-1 bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-md font-bold">
+                          📝 امتحان: {student.exam_note}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {student.phone && (
+                    <a
+                      href={`tel:${student.phone}`}
+                      className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition flex items-center gap-1"
+                    >
+                      📞 اتصال
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -821,7 +860,7 @@ function DriverView({ user, setUser }) {
             </p>
             <p className="flex justify-between border-b border-slate-800 pb-1">
               <span className="text-slate-400">نوع المركبة:</span>
-              <span className="text-white">{user.car_type || 'غير محدد'}</span>
+              <span className="text-white">{user.car_type || user.car_model || 'غير محدد'}</span>
             </p>
             <p className="flex justify-between">
               <span className="text-slate-400">رقم اللوحة:</span>
