@@ -65,25 +65,25 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-     // 🎯 التصفية المعتمدة: أي طالب ليس غائباً (رمادي) يُعتبر مداوماً أو استثناءً ويُوزّع فوراً
+    // 🎯 تصفية قاطعة: فحص كامل بيانات الطالب في Supabase واستبعاد الغائبين تماماً
       const eligibleStudents = studentsData.filter(student => {
-        const statusText = `
-          ${student.tomorrow_status || ''} 
-          ${student.attendance_status || ''} 
-          ${student.status || ''}
-        `.trim();
+        // تحويل كافة حقول الطالب لنص واحد لضمان قراءة جميع الأعمدة
+        const fullStudentData = JSON.stringify(student);
 
-        // 🛑 فحص الاستبعاد: هل الطالب في خانة "الطلاب الغائبون"؟
+        // 🛑 فحص الشامل للغياب والعطلات والاعتذارات
         const isAbsent = 
           student.is_absent === true ||
-          statusText.includes('عطلة') || 
-          statusText.includes('اعتذار') || 
-          statusText.includes('غائب') || 
-          statusText.includes('أعتذر') ||
-          statusText.includes('ما يداوم') ||
-          statusText.includes('لا يداوم');
+          student.absent === true ||
+          student.is_attending === false ||
+          fullStudentData.includes('عطلة') || 
+          fullStudentData.includes('اعتذار') || 
+          fullStudentData.includes('غائب') || 
+          fullStudentData.includes('غياب') || 
+          fullStudentData.includes('أعتذر') ||
+          fullStudentData.includes('ما يداوم') ||
+          fullStudentData.includes('لا يداوم');
 
-        // ✅ إذا لم يكن غائباً، يقرأه النظام فوراً (سواء كان طالباً قدامى أو جديد تم إضافته للتو!)
+        // ✅ استبعاد الغائب والاحتفاظ بالمداومين والاستثناءات فقط
         return !isAbsent;
       });
 
