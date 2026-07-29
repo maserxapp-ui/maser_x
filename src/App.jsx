@@ -65,18 +65,18 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 🎯 تصفية الطلاب: المداومون أو أصحاب الاستثناء فقط (واستبعاد الغائبين)
+    // 🎯 تصفية الطلاب: جميع الطلاب المداومين والأستثناءات (واستبعاد الغائبين فقط)
       const eligibleStudents = students.filter(student => {
-        // إذا كان الطالب غائباً نستبعده مباشرة
-        if (student.attendance_status === 'غائب' || student.status === 'غائب') {
-          return false;
-        }
+        // استبعاد الطلاب الغائبين بأي صيغة كانت
+        const isAbsent = 
+          student.attendance_status === 'غائب' || 
+          student.status === 'غائب' || 
+          student.tomorrow_status === 'أعتذر غداً' ||
+          student.tomorrow_status === 'عطلة رسمية / اعتذار' ||
+          student.tomorrow_status === 'غائب';
 
-        const hasException = student.has_exception === true || student.is_excepted === true || student.status === 'استثناء' || student.exam_note;
-        const isAttending = student.is_attending === true || student.attendance_status === 'مداوم' || student.is_active === true || student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
-        
-        // 💡 التعديل هنا: نأخذ الطالب إذا كان مداوماً أو لديه استثناء
-        return hasException || isAttending;
+        // أي طالب غير غائب سيتم شموله بالتوزيع فوراً
+        return !isAbsent;
       });
 
       if (eligibleStudents.length === 0) {
