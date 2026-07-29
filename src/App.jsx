@@ -77,36 +77,42 @@ const [driverPassword, setDriverPassword] = useState('');
 
       const tomorrowDay = getTomorrowArabicInBaghdad(); // اسم يوم غد بتوقيت بغداد
 
-      // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء
+   // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء (تحديث دقيق)
       const eligibleStudents = studentsData.filter(student => {
         const fullStudentText = Object.values(student).map(v => String(v || '')).join(' ');
 
-        // 🛑 أ. استبعاد من أرسل اعتذاراً صريحاً أو مسجل كغائب
+        // 🛑 أ. استبعاد الغائبين أولاً (إذا ضغط لا أداوم غداً أو كتبها بالـ exam_note)
         const isExplicitAbsent = 
           student.is_absent === true ||
+          student.tomorrow_status === 'لا أداوم غداً' ||
+          (student.exam_note && String(student.exam_note).includes('لا أداوم غداً')) ||
           fullStudentText.includes('اعتذار') || 
           fullStudentText.includes('أعتذر') || 
           fullStudentText.includes('غائب');
 
+        // إذا أرسل اعتذار أو غياب -> يُستثنى فوراً ولن يوزع على أي سائق
         if (isExplicitAbsent) return false;
 
-        // 🌸 ب. شمول أي طالب في "خانة الاستثناء" فوراً مع المداومين
-        const isException = 
-          student.has_exception === true || 
-          Boolean(student.exam_note) || 
-          fullStudentText.includes('استثناء') || 
-          fullStudentText.includes('امتحان');
-
-        if (isException) return true; // ينزل مباشرة مع المداومين
-
-        // 🟢 ج. فحص أيام الدوام في حقل work_day / work_days ومطابقتها مع يوم غد
+        // 📅 ب. فحص هل غداً يوم دوامه الرسمي؟
         const workDays = String(student.work_day || student.work_days || '');
-
-        // مطابقة مرنة للنص مع مراعاة الهمزات (مثل الاثنين / الإثنين)
         const normalizeText = (text) => text.replace(/أ|إ|آ/g, 'ا').trim();
         const isTomorrowInWorkDays = normalizeText(workDays).includes(normalizeText(tomorrowDay));
+        const isExplicitAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
 
-        return isTomorrowInWorkDays;
+        // 📝 ج. فحص طلب الامتحان (الاستثناء)
+        // الشرط: ما عنده دوام رسمي غداً + كاتب طلب امتحان بـ exam_note (وليس لا أداوم غداً)
+        const hasExamNote = 
+          student.exam_note && 
+          String(student.exam_note).trim() !== '' && 
+          !String(student.exam_note).includes('لا أداوم غداً');
+
+        const isExamException = (!isTomorrowInWorkDays && hasExamNote) || student.has_exception === true;
+
+        // 🟢 الدوام الاعتيادي
+        const isRegularAttending = isTomorrowInWorkDays || isExplicitAttending;
+
+        // 🎯 المقبول للتوزيع: من لديه دوام رسمي غداً أو لديه استثناء امتحان (في يوم عطلته)
+        return isRegularAttending || isExamException;
       });
 
       if (eligibleStudents.length === 0) {
