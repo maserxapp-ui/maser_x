@@ -45,49 +45,25 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🔄 دالة التوزيع المعتمدة
+// 🎯 دالة التوزيع المعتمدة على توقيت بغداد ليوم غد وحقل work_day + الاستثناءات
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
+    
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين ليوم غد والأستثناءات) على السائقين؟')) return;
     }
 
     try {
-      setLoading(true);
-      const { data: driversList, error: dErr } = await supabase.from('drivers').select('*');
+      const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
       const { data: studentsData, error: sErr } = await supabase.from('students').select('*');
 
-      if (dErr || sErr || !driversList || driversList.length === 0) {
+      if (dErr || sErr || !drivers || drivers.length === 0) {
         if (!autoMode) alert('⚠️ لا يوجد سائقون أو حدث خطأ في جلب البيانات!');
         return;
       }
 
-      // إجراء التوزيع
-      const updates = studentsData.map((student, index) => {
-        const assignedDriver = driversList[index % driversList.length];
-        return {
-          id: student.id,
-          driver_id: assignedDriver.id,
-          driver_name: assignedDriver.name,
-          driver_phone: assignedDriver.phone,
-          assigned_driver: assignedDriver.name,
-        };
-      });
-
-      for (const item of updates) {
-        await supabase.from('students').update(item).eq('id', item.id);
-      }
-
-      alert('🎉 تم التوزيع بنجاح!');
-      if (typeof fetchStudents === 'function') fetchStudents();
-    } catch (err) {
-      console.error('خطأ بالتوزيع:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
       // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد بغض النظر عن ساعة الهاتف/الابتوب
       const getTomorrowArabicInBaghdad = () => {
         // جلب الوقت الحالي بتوقيت بغداد
@@ -672,10 +648,6 @@ const [driverPassword, setDriverPassword] = useState('');
         return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">متوقف</span>;
     }
   };
- 
-  
-  return <span className="font-bold text-slate-700">🚗 {driverId}</span>;
-};
 if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} loginRole={loginRole} setLoginRole={setLoginRole} />;
   }
@@ -1311,8 +1283,7 @@ if (viewMode === 'user') {
           {(activeTab === 'expenses' || activeTab === 'reports') && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">📊</div>
-              <h3 className="font-bold t
-                ext-slate-800">التقارير الحسابية والمصروفات</h3>
+              <h3 className="font-bold text-slate-800">التقارير الحسابية والمصروفات</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
             </div>
           )}
