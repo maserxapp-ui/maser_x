@@ -119,32 +119,39 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
   
-  // 🚕 جلب السائق
+ // 1️⃣ جلب بيانات السائق الخاص بالطالب
   const fetchDriverForStudent = async (student) => {
     try {
+      if (!student) return;
       let driverQuery = supabase.from('drivers').select('*');
       
       if (student.driver_id) {
         driverQuery = driverQuery.eq('id', student.driver_id);
       } else if (student.driver_name) {
         driverQuery = driverQuery.eq('name', student.driver_name);
+      } else {
+        return;
       }
 
       const { data: driverData } = await driverQuery.maybeSingle();
-      if (driverData) {
+      if (driverData && typeof setAssignedDriver === 'function') {
         setAssignedDriver(driverData);
       }
     } catch (e) {
-      console.log('خطأ في جلب بيانات السائق', e);
+      console.log('خطأ في جلب بيانات السائق:', e);
     }
   };
-// 👨‍🎓 جلب الطلاب المخصصين لهذا السائق
+
+  // 2️⃣ 👨‍🎓 جلب الطلاب المخصصين لهذا السائق (مُصححة للبحث بـ driver_id)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
       let query = supabase.from('students').select('*');
       
-      if (driver.phone) {
+      // 🟢 البحث الرئيسي بـ driver_id لضمان ظهور كافة الطلاب المتوزعين
+      if (driver.id) {
+        query = query.or(`driver_id.eq.${driver.id},driver_phone.eq.${driver.phone || driver.id},driver_name.eq.${driver.name || ''}`);
+      } else if (driver.phone) {
         query = query.eq('driver_phone', driver.phone);
       } else if (driver.name) {
         query = query.eq('driver_name', driver.name);
@@ -152,12 +159,15 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
       const { data: studentsData, error } = await query;
       if (!error && studentsData) {
-        setDriverStudents(studentsData); // أو اسم المتغير المعتمد عندك للطلاب
+        setDriverStudents(studentsData);
+      } else if (error) {
+        console.error('خطأ في جلب طلاب السائق:', error.message);
       }
     } catch (e) {
       console.error('خطأ في جلب طلاب السائق:', e);
     }
   };
+  
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
     if (!user) return;
