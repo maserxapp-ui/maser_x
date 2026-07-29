@@ -23,30 +23,63 @@ const [driverPassword, setDriverPassword] = useState('');
       alert('❌ كلمة السر غير صحيحة!');
     }
   };
-// 🔄 دالة توزيع الطلاب بالتساوي على السائقين
-  const handleAutoDistribute = async () => {
-    if (!window.confirm('هل أنت متأكد من إعادة توزيع جميع الطلاب بالتساوي على كافة السائقين؟')) return;
+// ⏰ 1. فحص الوقت والتوزيع التلقائي الساعة 9:00 مساءً (الساعة 21)
+  useEffect(() => {
+    const checkTimeAndDistribute = () => {
+      const now = new Date();
+      const hours = now.getHours(); // 21 تعني الساعة 9 مساءً
+      const todayStr = now.toISOString().split('T')[0];
+
+      const lastDistributed = localStorage.getItem('last_auto_distribute_date');
+
+      // إذا كانت الساعة 9 مساءً ولم يتم التوزيع اليوم بعد
+      if (hours === 21 && lastDistributed !== todayStr) {
+        handleAutoDistribute(true); // توزيع تلقائي
+        localStorage.setItem('last_auto_distribute_date', todayStr);
+      }
+    };
+
+    const interval = setInterval(checkTimeAndDistribute, 30000); // يفحص كل 30 ثانية
+    checkTimeAndDistribute();
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🔄 2. دالة توزيع الطلاب (المداومين + الاستثناء) بالتساوي على السائقين
+  const handleAutoDistribute = async (isAutomatic = false) => {
+    if (!isAutomatic) {
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين وأصحاب الاستثناء) على السائقين؟')) return;
+    }
 
     try {
       const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
       const { data: students, error: sErr } = await supabase.from('students').select('*');
 
       if (dErr || sErr) {
-        alert('حدث خطأ في جلب البيانات من قاعدة البيانات');
+        if (!isAutomatic) alert('حدث خطأ في جلب البيانات من قاعدة البيانات');
         return;
       }
 
       if (!drivers || drivers.length === 0) {
-        alert('⚠️ لا يوجد سائقون مسجلون في النظام للتوزيع عليهم!');
+        if (!isAutomatic) alert('⚠️ لا يوجد سائقون مسجلون في النظام!');
         return;
       }
 
-      if (!students || students.length === 0) {
-        alert('⚠️ لا يوجد طلاب مسجلون حالياً!');
+      // 🎯 تصفية الطلاب: فقط من لديهم (استثناء + مداومين اليوم)
+      const eligibleStudents = students.filter(student => {
+        const hasException = student.has_exception === true || student.is_excepted === true || student.status === 'استثناء' || student.exam_note;
+        const isAttending = student.is_attending === true || student.attendance_status === 'مداوم' || student.is_active === true;
+        
+        return hasException && isAttending;
+      });
+
+      if (eligibleStudents.length === 0) {
+        if (!isAutomatic) alert('⚠️ لا يوجد طلاب ينطبق عليهم الشرط (مداوم + استثناء)!');
         return;
       }
 
-      for (let i = 0; i < students.length; i++) {
+      // 🔄 توزيع الطلاب المستحقين بالتساوي على السائقين
+      for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
         await supabase
@@ -55,15 +88,18 @@ const [driverPassword, setDriverPassword] = useState('');
             driver_phone: assignedDriver.phone,
             driver_name: assignedDriver.name
           })
-          .eq('id', students[i].id);
+          .eq('id', eligibleStudents[i].id);
       }
 
-      alert(`🎉 تم بنجاح توزيع (${students.length}) طالب بالتساوي على (${drivers.length}) سائق!`);
+      if (!isAutomatic) {
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (استثناء ومداوم) بالتساوي على (${drivers.length}) سائق!`);
+      }
+      
       window.location.reload();
 
     } catch (err) {
       console.error(err);
-      alert('حدث خطأ أثناء عملية التوزيع');
+      if (!isAutomatic) alert('حدث خطأ أثناء عملية التوزيع');
     }
   };
   const [searchTerm, setSearchTerm] = useState('');
@@ -958,13 +994,16 @@ if (viewMode === 'user') {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <button
-  onClick={handleAutoDistribute}
-  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md flex items-center gap-2 transition active:scale-95 my-2"
->
-  <span>🔄</span>
-  <span>توزيع الطلاب بالتساوي على السائقين</span>
-</button>
+               {/* زر توزيع الطلاب (المداومين + الاستثناء) */}
+        <div className="p-3 flex justify-end">
+          <button
+            onClick={() => handleAutoDistribute(false)}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md flex items-center gap-2 transition active:scale-95"
+          >
+            <span>🔄</span>
+            <span>توزيع الطلاب (المداومين + الاستثناء) بالتساوي</span>
+          </button>
+        </div>
                     <table className="w-full text-right text-xs">
                       <thead className="bg-slate-50 text-slate-500 border-y border-slate-200">
                         <tr>
