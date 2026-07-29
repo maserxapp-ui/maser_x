@@ -785,7 +785,49 @@ if (viewMode === 'user') {
               absentStudents.push(studentData);
             }
             });
+            // 🔄 دالة توزيع الطلاب بالتساوي على السائقين
+  const handleAutoDistribute = async () => {
+    if (!window.confirm('هل أنت متأكد من إعادة توزيع جميع الطلاب بالتساوي على كافة السائقين؟')) return;
 
+    try {
+      const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
+      const { data: students, error: sErr } = await supabase.from('students').select('*');
+
+      if (dErr || sErr) {
+        alert('حدث خطأ في جلب البيانات من قاعدة البيانات');
+        return;
+      }
+
+      if (!drivers || drivers.length === 0) {
+        alert('⚠️ لا يوجد سائقون مسجلون في النظام للتوزيع عليهم!');
+        return;
+      }
+
+      if (!students || students.length === 0) {
+        alert('⚠️ لا يوجد طلاب مسجلون حالياً!');
+        return;
+      }
+
+      for (let i = 0; i < students.length; i++) {
+        const assignedDriver = drivers[i % drivers.length];
+
+        await supabase
+          .from('students')
+          .update({
+            driver_phone: assignedDriver.phone,
+            driver_name: assignedDriver.name
+          })
+          .eq('id', students[i].id);
+      }
+
+      alert(`🎉 تم بنجاح توزيع (${students.length}) طالب بالتساوي على (${drivers.length}) سائق!`);
+      window.location.reload();
+
+    } catch (err) {
+      console.error(err);
+      alert('حدث خطأ أثناء عملية التوزيع');
+    }
+  };
             return (
               <div>
                 <div className="bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl text-xs text-indigo-900 font-bold mb-4 flex items-center justify-between">
@@ -916,6 +958,13 @@ if (viewMode === 'user') {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
+                    <button
+  onClick={handleAutoDistribute}
+  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md flex items-center gap-2 transition active:scale-95 my-2"
+>
+  <span>🔄</span>
+  <span>توزيع الطلاب بالتساوي على السائقين</span>
+</button>
                     <table className="w-full text-right text-xs">
                       <thead className="bg-slate-50 text-slate-500 border-y border-slate-200">
                         <tr>
