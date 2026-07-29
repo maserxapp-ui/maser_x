@@ -46,8 +46,14 @@ const [driverPassword, setDriverPassword] = useState('');
   }, []);
 
   // 🔄 2. دالة توزيع الطلاب (المداومين + الاستثناء) بالتساوي على السائقين
-  const handleAutoDistribute = async (isAutomatic = false) => {
-    if (!isAutomatic) {
+  const handleAutoDistribute = async (e, isAutomatic = false) => {
+    // 🛑 يمنع إعادة تحميل الصفحة والخروج لشاشة الدخول
+    if (e && typeof e === 'object' && e.preventDefault) {
+      e.preventDefault();
+    }
+    const autoMode = typeof e === 'boolean' ? e : isAutomatic;
+
+    if (!autoMode) {
       if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين وأصحاب الاستثناء) على السائقين؟')) return;
     }
 
@@ -92,7 +98,8 @@ const [driverPassword, setDriverPassword] = useState('');
           .from('students')
           .update({
             driver_phone: assignedDriver.phone,
-            driver_name: assignedDriver.name
+            driver_name: assignedDriver.name,
+            driver_id: assignedDriver.id
           })
           .eq('id', eligibleStudents[i].id);
       }
@@ -100,8 +107,7 @@ const [driverPassword, setDriverPassword] = useState('');
       if (!isAutomatic) {
         alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (استثناء ومداوم) بالتساوي على (${drivers.length}) سائق!`);
       }
-      
-      window.location.reload();
+    
 
     } catch (err) {
       console.error(err);
