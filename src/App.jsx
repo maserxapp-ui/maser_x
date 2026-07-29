@@ -45,15 +45,14 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المربوطة بالخانات الثلاث (العلبة الخضراء والوردية فقط)
+// 🎯 دالة التوزيع المعتمدة على توقيت بغداد ليوم غد وحقل work_day + الاستثناءات
   const handleAutoDistribute = async (e, isAutomatic = false) => {
-    // 🛑 منع إعادة تحميل الصفحة والخروج لشاشة الدخول
     if (e && e.preventDefault) e.preventDefault();
     
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين والأستثناءات) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين ليوم غد والأستثناءات) على السائقين؟')) return;
     }
 
     try {
@@ -65,34 +64,57 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-    // 🎯 تصفية قاطعة: فحص كامل بيانات الطالب في Supabase واستبعاد الغائبين تماماً
+      // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد بغض النظر عن ساعة الهاتف/الابتوب
+      const getTomorrowArabicInBaghdad = () => {
+        // جلب الوقت الحالي بتوقيت بغداد
+        const baghdadNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
+        const baghdadTomorrow = new Date(baghdadNowStr);
+        baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1); // إضافة يوم ليصبح غداً
+
+        const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        return daysArabic[baghdadTomorrow.getDay()];
+      };
+
+      const tomorrowDay = getTomorrowArabicInBaghdad(); // اسم يوم غد بتوقيت بغداد
+
+      // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء
       const eligibleStudents = studentsData.filter(student => {
-        // تحويل كافة حقول الطالب لنص واحد لضمان قراءة جميع الأعمدة
-        const fullStudentData = JSON.stringify(student);
+        const fullStudentText = Object.values(student).map(v => String(v || '')).join(' ');
 
-        // 🛑 فحص الشامل للغياب والعطلات والاعتذارات
-        const isAbsent = 
+        // 🛑 أ. استبعاد من أرسل اعتذاراً صريحاً أو مسجل كغائب
+        const isExplicitAbsent = 
           student.is_absent === true ||
-          student.absent === true ||
-          student.is_attending === false ||
-          fullStudentData.includes('عطلة') || 
-          fullStudentData.includes('اعتذار') || 
-          fullStudentData.includes('غائب') || 
-          fullStudentData.includes('غياب') || 
-          fullStudentData.includes('أعتذر') ||
-          fullStudentData.includes('ما يداوم') ||
-          fullStudentData.includes('لا يداوم');
+          fullStudentText.includes('اعتذار') || 
+          fullStudentText.includes('أعتذر') || 
+          fullStudentText.includes('غائب');
 
-        // ✅ استبعاد الغائب والاحتفاظ بالمداومين والاستثناءات فقط
-        return !isAbsent;
+        if (isExplicitAbsent) return false;
+
+        // 🌸 ب. شمول أي طالب في "خانة الاستثناء" فوراً مع المداومين
+        const isException = 
+          student.has_exception === true || 
+          Boolean(student.exam_note) || 
+          fullStudentText.includes('استثناء') || 
+          fullStudentText.includes('امتحان');
+
+        if (isException) return true; // ينزل مباشرة مع المداومين
+
+        // 🟢 ج. فحص أيام الدوام في حقل work_day / work_days ومطابقتها مع يوم غد
+        const workDays = String(student.work_day || student.work_days || '');
+
+        // مطابقة مرنة للنص مع مراعاة الهمزات (مثل الاثنين / الإثنين)
+        const normalizeText = (text) => text.replace(/أ|إ|آ/g, 'ا').trim();
+        const isTomorrowInWorkDays = normalizeText(workDays).includes(normalizeText(tomorrowDay));
+
+        return isTomorrowInWorkDays;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert('⚠️ جميع الطلاب ينتمون لخانة الغائبين حالياً!');
+        if (!autoMode) alert(`⚠️ لا يوجد طلاب لديهم دوام ليوم غد (${tomorrowDay}) أو استثناءات!`);
         return;
       }
 
-      // 🎯 3. توزيع الطلاب المقبولين فقط على السائقين
+      // 3️⃣ توزيع الطلاب المقبولين بالتساوي على السائقين
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -106,20 +128,21 @@ const [driverPassword, setDriverPassword] = useState('');
           .eq('id', eligibleStudents[i].id);
       }
 
-      // 🎯 4. تحديث بيانات الواجهة فوراً
+      // 4️⃣ تحديث الشاشة فوراً بالبيانات الجديدة
       const { data: refreshedStudents } = await supabase.from('students').select('*');
       if (refreshedStudents && typeof setStudents === 'function') {
         setStudents(refreshedStudents);
       }
 
       if (!autoMode) {
-        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (من المداومين والاستثناءات) بالتساوي على (${drivers.length}) سائق!`);
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (المداومين ليوم غد: ${tomorrowDay} + الاستثناءات) على (${drivers.length}) سائق!`);
       }
 
     } catch (err) {
       console.error('خطأ أثناء التوزيع:', err);
     }
   };
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [driverSearchTerm, setDriverSearchTerm] = useState('');
 
