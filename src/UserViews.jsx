@@ -142,41 +142,21 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب الطلاب المخصصين لهذا السائق (حل شامل ونهائي 100%)
+// 👨‍🎓 جلب الطلاب المخصصين للسائق اعتماداً على رقم الموبايل (مُعدّلة)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      let targetDriverId = driver.id;
+      // 1️⃣ قراءة رقم موبايل السائق (أو معرّف الدخول الذي استخدمه مثل 22)
+      const driverPhone = String(driver.phone || driver.mobile || driver.username || driver.name || driver.id || '').trim();
 
-      // 1️⃣ إذا كان id السائق غير محدد، نجيبه فوراً من جدول drivers عبر رقم الهاتف أو الاسم
-      if (!targetDriverId) {
-        const { data: dData } = await supabase
-          .from('drivers')
-          .select('id')
-          .or(`phone.eq.${driver.phone || driver.name},name.eq.${driver.name || driver.phone}`)
-          .maybeSingle();
+      if (!driverPhone) return;
 
-        if (dData && dData.id) {
-          targetDriverId = dData.id;
-        }
-      }
-
-      // 2️⃣ تجميع كل القيم الاحتمالية للسائق (الـ ID الحقيقي، رقم الهاتف، والاسم)
-      const possibleIds = [
-        targetDriverId,
-        driver.id,
-        driver.phone,
-        driver.name,
-        Number(driver.phone),
-        Number(driver.name)
-      ].filter(v => v !== undefined && v !== null && v !== '' && !isNaN(v));
-
-      // 3️⃣ الاستعلام المباشر من جدول الطلاب باستخدام قائمة المعرفات
+      // 2️⃣ البحث في جدول الطلاب بـ driver_id أو driver_phone بنفس رقم الموبايل
       const { data: studentsData, error } = await supabase
         .from('students')
         .select('*')
-        .in('driver_id', possibleIds);
+        .or(`driver_id.eq.${driverPhone},driver_phone.eq.${driverPhone}`);
 
       if (!error && studentsData) {
         setDriverStudents(studentsData);
