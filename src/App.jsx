@@ -45,15 +45,13 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-  // 🎯 دالة توزيع الطلاب المحدثة (مداوم + استثناء فقط)
-  const handleAutoDistribute = async (e, isAutomatic = false) => {
-    // 1️⃣ منع إعادة تحميل الصفحة والخروج لشاشة تسجيل الدخول
+ const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
     
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين وأصحاب الاستثناء) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (غير الغائبين) على السائقين؟')) return;
     }
 
     try {
@@ -65,36 +63,27 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-     // 🎯 تصفية دقيقة جداً: (7 طلاب فقط: 6 مداومين + 1 استثناء)
+      // 🎯 تصفية الطلاب: استبعاد الغائبين وأصحاب العطلة/الاعتذار
       const eligibleStudents = students.filter(student => {
-        const tStatus = String(student.tomorrow_status || '');
-        const aStatus = String(student.attendance_status || '');
-        const sStatus = String(student.status || '');
+        const allStatus = `${student.tomorrow_status || ''} ${student.attendance_status || ''} ${student.status || ''}`;
 
-        // 🛑 1. استبعاد أي طالب معتذر أو غائب أو في عطلة
         const isAbsent = 
-          tStatus.includes('اعتذار') || tStatus.includes('عطلة') || tStatus.includes('غائب') ||
-          aStatus.includes('اعتذار') || aStatus.includes('عطلة') || aStatus.includes('غائب') ||
-          sStatus.includes('اعتذار') || sStatus.includes('عطلة') || sStatus.includes('غائب');
+          allStatus.includes('عطلة رسمية/اعتذار') ||
+          allStatus.includes('عطلة رسمية / اعتذار') ||
+          allStatus.includes('اعتذار') ||
+          allStatus.includes('عطلة') ||
+          allStatus.includes('غائب') ||
+          allStatus.includes('أعتذر');
 
-        if (isAbsent) return false;
-
-        // ✅ 2. شمول من لديه (جدول رسمي / مداوم / استثناء / امتحان)
-        const isAttendingOrException = 
-          tStatus.includes('جدول') || tStatus.includes('مداوم') || tStatus.includes('استثناء') ||
-          aStatus.includes('جدول') || aStatus.includes('مداوم') || aStatus.includes('استثناء') ||
-          sStatus.includes('جدول') || sStatus.includes('مداوم') || sStatus.includes('استثناء') ||
-          student.exam_note || student.has_exception;
-
-        return isAttendingOrException;
+        return !isAbsent;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert('⚠️ لا يوجد طلاب ينطبق عليهم الشرط!');
+        if (!autoMode) alert('⚠️ جميع الطلاب غائبون أو معتذرون!');
         return;
       }
 
-     // 🎯 توزيع الـ 7 طلاب المستحقين وتحديث كامل أعمدة السائق
+      // 🎯 توزيع الطلاب المتبقين على السائقين بالتساوي
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -102,16 +91,16 @@ const [driverPassword, setDriverPassword] = useState('');
           .from('students')
           .update({
             driver_name: assignedDriver.name,
-            driver_phone: assignedDriver.phone,
-            assigned_driver: assignedDriver.name,
-            driver_id: assignedDriver.id
+            driver_phone: assignedDriver.phone
           })
           .eq('id', eligibleStudents[i].id);
       }
-      
+
       if (!autoMode) {
-        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (استثناء ومداوم) بالتساوي على (${drivers.length}) سائق!`);
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب بالتساوي على (${drivers.length}) سائق!`);
       }
+
+      window.location.reload();
 
     } catch (err) {
       console.error('خطأ أثناء التوزيع:', err);
