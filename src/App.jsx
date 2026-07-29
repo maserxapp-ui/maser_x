@@ -122,7 +122,8 @@ const [driverPassword, setDriverPassword] = useState('');
         await supabase
           .from('students')
           .update({
-            driver_id: assignedDriver.id // 👈 ربط ID السائق المباشر
+           driver_id: assignedDriver.id // 👈 ربط ID السائق المباشر
+           driver_phone: assignedDriver.phone || assignedDriver.name
           })
           .eq('id', eligibleStudents[i].id);
       }
