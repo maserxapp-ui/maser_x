@@ -142,46 +142,38 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (الكود المباشر والدقيق 100%)
+// 👨‍🎓 جلب طلاب السائق (مُصححة 100% وحل نهائي لخطأ 400)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ معرفة النص أو الرقم الذي سجل به السائق (مثل "22")
+      // 1️⃣ أخذ رقم الموبايل أو المعرف الذي سجل به السائق الدخول (مثل "22")
       const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
       if (!loginValue) return;
 
-      let realDriverId = driver.id;
-
-      // 2️⃣ جلب الـ ID الحقيقي للسائق من جدول drivers (لأن السائق 22 يملك ID رقمي مثل 2 أو 3 أو 4)
-      const { data: driverData } = await supabase
+      // 2️⃣ جلب الـ ID الحقيقي للسائق من جدول drivers
+      const { data: driverRow } = await supabase
         .from('drivers')
         .select('id')
         .or(`phone.eq.${loginValue},name.eq.${loginValue}`)
         .maybeSingle();
 
-      if (driverData && driverData.id) {
-        realDriverId = driverData.id;
-      }
+      // المعرف الحقيقي للسائق (مثلاً 2 أو 3 أو 4)
+      const targetDriverId = driverRow?.id || (isNaN(loginValue) ? loginValue : Number(loginValue));
 
-      if (!realDriverId) {
-        console.warn('⚠️ لم يتم العثور على السائق في جدول drivers');
-        return;
-      }
-
-      // 3️⃣ البحث في جدول الطلاب بـ driver_id حصراً (بدون استخدام حقول غير موجودة)
-      const { data: studentsData, error } = await supabase
+      // 3️⃣ البحث في جدول الطلاب باستخدام driver_id فقط (بدون driver_phone المسبب للخطأ)
+      const { data: studentsData, error: studentErr } = await supabase
         .from('students')
         .select('*')
-        .eq('driver_id', realDriverId);
+        .eq('driver_id', targetDriverId);
 
-      if (error) {
-        console.error('❌ خطأ Supabase في جلب الطلاب:', error.message);
+      if (studentErr) {
+        console.error('❌ خطأ في جلب الطلاب:', studentErr.message);
       } else {
         setDriverStudents(studentsData || []);
       }
     } catch (e) {
-      console.error('حدث خطأ أثناء جلب الطلاب:', e);
+      console.error('خطأ غير متوقع:', e);
     }
   };
   
