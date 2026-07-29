@@ -45,12 +45,11 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-  // 🔄 2. دالة توزيع الطلاب (المداومين + الاستثناء) بالتساوي على السائقين
+  // 🎯 دالة توزيع الطلاب المحدثة (مداوم + استثناء فقط)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
-    // 🛑 يمنع إعادة تحميل الصفحة والخروج لشاشة الدخول
-    if (e && typeof e === 'object' && e.preventDefault) {
-      e.preventDefault();
-    }
+    // 1️⃣ منع إعادة تحميل الصفحة والخروج لشاشة تسجيل الدخول
+    if (e && e.preventDefault) e.preventDefault();
+    
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
@@ -61,57 +60,49 @@ const [driverPassword, setDriverPassword] = useState('');
       const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
       const { data: students, error: sErr } = await supabase.from('students').select('*');
 
-      if (dErr || sErr) {
-        if (!isAutomatic) alert('حدث خطأ في جلب البيانات من قاعدة البيانات');
+      if (dErr || sErr || !drivers || drivers.length === 0) {
+        if (!autoMode) alert('⚠️ لا يوجد سائقون أو حدث خطأ في جلب البيانات!');
         return;
       }
 
-      if (!drivers || drivers.length === 0) {
-        if (!isAutomatic) alert('⚠️ لا يوجد سائقون مسجلون في النظام!');
-        return;
-      }
-
-    // 🎯 تصفية الطلاب: جميع الطلاب المداومين والأستثناءات (واستبعاد الغائبين فقط)
+      // 2️⃣ تصفية الطلاب: استبعاد الـ 4 الغائبين فقط والإبقاء على الـ 7 المداومين والاستثناءات
       const eligibleStudents = students.filter(student => {
-        // استبعاد الطلاب الغائبين بأي صيغة كانت
+        const status = student.tomorrow_status || student.attendance_status || student.status || '';
+        
+        // استبعاد أي طالب غائب أو معتذر
         const isAbsent = 
-          student.attendance_status === 'غائب' || 
-          student.status === 'غائب' || 
-          student.tomorrow_status === 'أعتذر غداً' ||
-          student.tomorrow_status === 'عطلة رسمية / اعتذار' ||
-          student.tomorrow_status === 'غائب';
+          status === 'غائب' || 
+          status === 'أعتذر غداً' || 
+          status.includes('اعتذار') || 
+          status.includes('عطلة');
 
-        // أي طالب غير غائب سيتم شموله بالتوزيع فوراً
         return !isAbsent;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!isAutomatic) alert('⚠️ لا يوجد طلاب ينطبق عليهم الشرط (مداوم + استثناء)!');
+        if (!autoMode) alert('⚠️ لا يوجد طلاب ينطبق عليهم الشرط!');
         return;
       }
 
-      // 🔄 توزيع الطلاب المستحقين بالتساوي على السائقين
+      // 3️⃣ توزيع الـ 7 طلاب المستحقين بالتساوي على السائقين
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
         await supabase
           .from('students')
           .update({
-            driver_phone: assignedDriver.phone,
             driver_name: assignedDriver.name,
-            driver_id: assignedDriver.id
+            driver_phone: assignedDriver.phone
           })
           .eq('id', eligibleStudents[i].id);
       }
 
-      if (!isAutomatic) {
+      if (!autoMode) {
         alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (استثناء ومداوم) بالتساوي على (${drivers.length}) سائق!`);
       }
-    
 
     } catch (err) {
-      console.error(err);
-      if (!isAutomatic) alert('حدث خطأ أثناء عملية التوزيع');
+      console.error('خطأ أثناء التوزيع:', err);
     }
   };
   const [searchTerm, setSearchTerm] = useState('');
