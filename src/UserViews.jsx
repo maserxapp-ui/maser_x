@@ -142,38 +142,55 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (مُصححة 100% وحل نهائي لخطأ 400)
+// 👨‍🎓 جلب طلاب السائق (تصفية مباشرة ومضمونة 100% داخل المتصفح)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ أخذ رقم الموبايل أو المعرف الذي سجل به السائق الدخول (مثل "22")
+      // 1️⃣ جلب كشف الطلاب وكشف السائقين بالكامل من Supabase
+      const { data: allStudents, error: sErr } = await supabase.from('students').select('*');
+      const { data: allDrivers, error: dErr } = await supabase.from('drivers').select('*');
+
+      if (sErr || dErr) {
+        console.error('❌ خطأ في جلب البيانات من قاعدة البيانات:', sErr || dErr);
+        return;
+      }
+
+      // 2️⃣ تحديد قيمة الدخول الحالية للسائق (مثل "22")
       const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
-      if (!loginValue) return;
 
-      // 2️⃣ جلب الـ ID الحقيقي للسائق من جدول drivers
-      const { data: driverRow } = await supabase
-        .from('drivers')
-        .select('id')
-        .or(`phone.eq.${loginValue},name.eq.${loginValue}`)
-        .maybeSingle();
+      // 3️⃣ مطابقة السائق في جدول drivers لمعرفة حسابه بالكامل
+      const myDriver = (allDrivers || []).find(d => 
+        String(d.id) === loginValue ||
+        String(d.phone) === loginValue ||
+        String(d.name) === loginValue ||
+        (driver.id && String(d.id) === String(driver.id))
+      );
 
-      // المعرف الحقيقي للسائق (مثلاً 2 أو 3 أو 4)
-      const targetDriverId = driverRow?.id || (isNaN(loginValue) ? loginValue : Number(loginValue));
+      console.log('🎯 السائق الذي تم التعرف عليه:', myDriver);
 
-      // 3️⃣ البحث في جدول الطلاب باستخدام driver_id فقط (بدون driver_phone المسبب للخطأ)
-      const { data: studentsData, error: studentErr } = await supabase
-        .from('students')
-        .select('*')
-        .eq('driver_id', targetDriverId);
+      // 4️⃣ تصفية الطلاب الذين يملكون نفس driver_id بالسلسلة النصية المباشرة
+      const myStudents = (allStudents || []).filter(student => {
+        if (!student.driver_id) return false;
 
-      if (studentErr) {
-        console.error('❌ خطأ في جلب الطلاب:', studentErr.message);
-      } else {
-        setDriverStudents(studentsData || []);
+        const studentDriverId = String(student.driver_id).trim();
+
+        return (
+          (myDriver && studentDriverId === String(myDriver.id)) ||
+          studentDriverId === loginValue ||
+          (driver.id && studentDriverId === String(driver.id)) ||
+          (driver.phone && studentDriverId === String(driver.phone))
+        );
+      });
+
+      console.log('✅ قائمة الطلاب المخصصين لهذا السائق:', myStudents);
+
+      // 5️⃣ عرض الطلاب في شاشة السائق
+      if (typeof setDriverStudents === 'function') {
+        setDriverStudents(myStudents);
       }
     } catch (e) {
-      console.error('خطأ غير متوقع:', e);
+      console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
     }
   };
   
