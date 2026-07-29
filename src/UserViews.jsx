@@ -142,29 +142,49 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-  // 2️⃣ 👨‍🎓 جلب الطلاب المخصصين لهذا السائق (مُصححة للبحث بـ driver_id)
+// 👨‍🎓 جلب الطلاب المخصصين لهذا السائق (حل شامل ونهائي 100%)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
-      let query = supabase.from('students').select('*');
-      
-      // 🟢 البحث الرئيسي بـ driver_id لضمان ظهور كافة الطلاب المتوزعين
-      if (driver.id) {
-        query = query.or(`driver_id.eq.${driver.id},driver_phone.eq.${driver.phone || driver.id},driver_name.eq.${driver.name || ''}`);
-      } else if (driver.phone) {
-        query = query.eq('driver_phone', driver.phone);
-      } else if (driver.name) {
-        query = query.eq('driver_name', driver.name);
+
+      let targetDriverId = driver.id;
+
+      // 1️⃣ إذا كان id السائق غير محدد، نجيبه فوراً من جدول drivers عبر رقم الهاتف أو الاسم
+      if (!targetDriverId) {
+        const { data: dData } = await supabase
+          .from('drivers')
+          .select('id')
+          .or(`phone.eq.${driver.phone || driver.name},name.eq.${driver.name || driver.phone}`)
+          .maybeSingle();
+
+        if (dData && dData.id) {
+          targetDriverId = dData.id;
+        }
       }
 
-      const { data: studentsData, error } = await query;
+      // 2️⃣ تجميع كل القيم الاحتمالية للسائق (الـ ID الحقيقي، رقم الهاتف، والاسم)
+      const possibleIds = [
+        targetDriverId,
+        driver.id,
+        driver.phone,
+        driver.name,
+        Number(driver.phone),
+        Number(driver.name)
+      ].filter(v => v !== undefined && v !== null && v !== '' && !isNaN(v));
+
+      // 3️⃣ الاستعلام المباشر من جدول الطلاب باستخدام قائمة المعرفات
+      const { data: studentsData, error } = await supabase
+        .from('students')
+        .select('*')
+        .in('driver_id', possibleIds);
+
       if (!error && studentsData) {
         setDriverStudents(studentsData);
       } else if (error) {
         console.error('خطأ في جلب طلاب السائق:', error.message);
       }
     } catch (e) {
-      console.error('خطأ في جلب طلاب السائق:', e);
+      console.error('خطأ أثناء جلب بيانات طلاب السائق:', e);
     }
   };
   
