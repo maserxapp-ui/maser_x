@@ -45,15 +45,15 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع الشاملة (توزع أي طالب مضاف ما عدا الغائبين والمعتذرين)
+// 🎯 دالة التوزيع المربوطة بالخانات الثلاث (العلبة الخضراء والوردية فقط)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
-    // 🛑 منع إعادة تحميل الصفحة
+    // 🛑 منع إعادة تحميل الصفحة والخروج لشاشة الدخول
     if (e && e.preventDefault) e.preventDefault();
     
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين والأستثناءات) على السائقين؟')) return;
     }
 
     try {
@@ -65,32 +65,37 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 🎯 منطق الفلترة المضمن: قبول الجميع واستبعاد الغائبين فقط
+      // 🎯 التصفية حسب الخانات الثلاث الظاهرة بالواجهة:
       const eligibleStudents = studentsData.filter(student => {
-        const fullText = `
+        const statusText = `
           ${student.tomorrow_status || ''} 
           ${student.attendance_status || ''} 
           ${student.status || ''}
-        `;
+        `.trim();
 
-        // 🛑 استبعاد من سُجّل عليه غياب أو اعتذار فقط
-        const isAbsent = 
-          student.is_absent === true ||
-          fullText.includes('غائب') || 
-          fullText.includes('اعتذار') || 
-          fullText.includes('عطلة') || 
-          fullText.includes('أعتذر');
+        // 🛑 1. إذا كان الطالب ينتمي لخانة "الطلاب الغائبون" (العلبة الرمادية): يُستبعد فوراً!
+        const isInGreyBox = 
+          statusText.includes('عطلة') || 
+          statusText.includes('اعتذار') || 
+          statusText.includes('غائب') || 
+          statusText.includes('أعتذر') ||
+          student.is_absent === true;
 
-        // ✅ أي طالب آخر (جديد، مداوم، استثناء) يُشمل بالتوزيع فوراً
-        return !isAbsent;
+        if (isInGreyBox) return false;
+
+        // ✅ 2. الشمول فقط لمن ينتمي لـ "الطلاب المداومون" (أخضر) أو "الاستثناءات" (وردي)
+        const isInGreenBox = statusText.includes('جدول') || statusText.includes('مداوم') || student.is_attending === true;
+        const isInPinkBox = statusText.includes('استثناء') || Boolean(student.exam_note) || student.has_exception === true;
+
+        return isInGreenBox || isInPinkBox;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert('⚠️ جميع الطلاب المتاحين حالياً مسجلون كغائبين!');
+        if (!autoMode) alert('⚠️ جميع الطلاب ينتمون لخانة الغائبين حالياً!');
         return;
       }
 
-      // 🎯 تحديث بيانات السائق للطالب في Supabase
+      // 🎯 3. توزيع الطلاب المقبولين فقط على السائقين
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -104,14 +109,14 @@ const [driverPassword, setDriverPassword] = useState('');
           .eq('id', eligibleStudents[i].id);
       }
 
-      // 🎯 تحديث الشاشة فوراً بالبيانات الجديدة
+      // 🎯 4. تحديث بيانات الواجهة فوراً
       const { data: refreshedStudents } = await supabase.from('students').select('*');
       if (refreshedStudents && typeof setStudents === 'function') {
         setStudents(refreshedStudents);
       }
 
       if (!autoMode) {
-        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب بالتساوي على (${drivers.length}) سائق!`);
+        alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب (من المداومين والاستثناءات) بالتساوي على (${drivers.length}) سائق!`);
       }
 
     } catch (err) {
