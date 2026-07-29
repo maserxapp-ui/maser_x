@@ -648,6 +648,99 @@ const [driverPassword, setDriverPassword] = useState('');
         return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">متوقف</span>;
     }
   };
+  // 🔄 دالة توزيع الطلاب بالتساوي على السائقين وتحديث Supabase
+const handleAutoDistribute = async (onlyAttending = false) => {
+  try {
+    setLoading(true);
+
+    // 1. جلب قائمة السائقين المتاحين من Supabase
+    const { data: driversList, error: driverErr } = await supabase
+      .from('drivers')
+      .select('*');
+
+    if (driverErr || !driversList || driversList.length === 0) {
+      alert('⚠️ لا يوجد سائقون مضافون في النظام لتوزيع الطلاب عليهم.');
+      setLoading(false);
+      return;
+    }
+
+    // 2. فلترة الطلاب المشمولين بالتوزيع
+    let studentsToDistribute = [...students];
+
+    if (onlyAttending) {
+      studentsToDistribute = studentsToDistribute.filter(
+        (s) =>
+          !s.is_absent &&
+          s.tomorrow_status !== 'لا أداوم غداً' &&
+          (!s.exam_note || !String(s.exam_note).includes('لا أداوم غداً'))
+      );
+    }
+
+    if (studentsToDistribute.length === 0) {
+      alert('ℹ️ لا يوجد طلاب بحاجة للتوزيع حالياً.');
+      setLoading(false);
+      return;
+    }
+
+    // 3. إجراء التوزيع الدائري (Round-Robin) بالتساوي
+    const updates = studentsToDistribute.map((student, index) => {
+      const assignedDriver = driversList[index % driversList.length];
+      return {
+        id: student.id,
+        driver_id: assignedDriver.id,
+        driver_name: assignedDriver.name,
+        driver_phone: assignedDriver.phone,
+        assigned_driver: assignedDriver.name,
+      };
+    });
+
+    // 4. حفظ التوزيع مباشرة في قاعدة البيانات Supabase (تحديث كافة الحقول المتقاطعة)
+    let hasError = false;
+    for (const item of updates) {
+      const { error: updateErr } = await supabase
+        .from('students')
+        .update({
+          driver_id: item.driver_id,
+          driver_name: item.driver_name,
+          driver_phone: item.driver_phone,
+          assigned_driver: item.assigned_driver,
+        })
+        .eq('id', item.id);
+
+      if (updateErr) {
+        console.error(`خطأ في تحديث الطالب رقم ${item.id}:`, updateErr);
+        hasError = true;
+      }
+    }
+
+    if (hasError) {
+      alert('⚠️ تم التوزيع مع وجود بعض الأخطاء في تحديث بعض الطلاب.');
+    } else {
+      alert(`🎉 تم توزيع ${studentsToDistribute.length} طالب على ${driversList.length} سائق بنجاح!`);
+    }
+
+    // 5. إعادة تحديث البيانات في الواجهة
+    if (typeof fetchStudents === 'function') fetchStudents();
+    if (typeof fetchDrivers === 'function') fetchDrivers();
+
+  } catch (err) {
+    console.error('خطأ غير متوقع في عملية التوزيع:', err);
+    alert('❌ حدث خطأ أثناء التوزيع، يرجى المحاولة لاحقاً.');
+  } finally {
+    setLoading(false);
+  }
+};
+  // 🔍 دالة يجلب اسم السائق بناءً على driver_id أو الاسم المسجل
+const getDriverName = (driverId) => {
+  if (!driverId) return <span className="text-amber-600 font-semibold">غير مخصص</span>;
+  
+  const foundDriver = drivers?.find((d) => String(d.id) === String(driverId));
+  if (foundDriver) {
+    return <span className="font-bold text-slate-700">🚗 {foundDriver.name}</span>;
+  }
+  
+  return <span className="font-bold text-slate-700">🚗 {driverId}</span>;
+};
 if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} loginRole={loginRole} setLoginRole={setLoginRole} />;
   }
@@ -1283,7 +1376,8 @@ if (viewMode === 'user') {
           {(activeTab === 'expenses' || activeTab === 'reports') && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
               <div className="text-4xl">📊</div>
-              <h3 className="font-bold text-slate-800">التقارير الحسابية والمصروفات</h3>
+              <h3 className="font-bold t
+                ext-slate-800">التقارير الحسابية والمصروفات</h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
             </div>
           )}
