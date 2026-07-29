@@ -12,7 +12,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
 
-  // 📅 حساب اسم يوم الغد تلقائياً بحسب تاريخ اليوم الحالي
+  // 📅 حساب اسم يوم الغد تلقائيfاً بحسب تاريخ اليوم الحالي
   const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
   const tomorrowName = daysOfWeek[tomorrowIndex];
@@ -142,29 +142,46 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب الطلاب المخصصين للسائق اعتماداً على رقم الموبايل (مُعدّلة)
+// 👨‍🎓 جلب طلاب السائق (الكود المباشر والدقيق 100%)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ قراءة رقم موبايل السائق (أو معرّف الدخول الذي استخدمه مثل 22)
-      const driverPhone = String(driver.phone || driver.mobile || driver.username || driver.name || driver.id || '').trim();
+      // 1️⃣ معرفة النص أو الرقم الذي سجل به السائق (مثل "22")
+      const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
+      if (!loginValue) return;
 
-      if (!driverPhone) return;
+      let realDriverId = driver.id;
 
-      // 2️⃣ البحث في جدول الطلاب بـ driver_id أو driver_phone بنفس رقم الموبايل
+      // 2️⃣ جلب الـ ID الحقيقي للسائق من جدول drivers (لأن السائق 22 يملك ID رقمي مثل 2 أو 3 أو 4)
+      const { data: driverData } = await supabase
+        .from('drivers')
+        .select('id')
+        .or(`phone.eq.${loginValue},name.eq.${loginValue}`)
+        .maybeSingle();
+
+      if (driverData && driverData.id) {
+        realDriverId = driverData.id;
+      }
+
+      if (!realDriverId) {
+        console.warn('⚠️ لم يتم العثور على السائق في جدول drivers');
+        return;
+      }
+
+      // 3️⃣ البحث في جدول الطلاب بـ driver_id حصراً (بدون استخدام حقول غير موجودة)
       const { data: studentsData, error } = await supabase
         .from('students')
         .select('*')
-        .or(`driver_id.eq.${driverPhone},driver_phone.eq.${driverPhone}`);
+        .eq('driver_id', realDriverId);
 
-      if (!error && studentsData) {
-        setDriverStudents(studentsData);
-      } else if (error) {
-        console.error('خطأ في جلب طلاب السائق:', error.message);
+      if (error) {
+        console.error('❌ خطأ Supabase في جلب الطلاب:', error.message);
+      } else {
+        setDriverStudents(studentsData || []);
       }
     } catch (e) {
-      console.error('خطأ أثناء جلب بيانات طلاب السائق:', e);
+      console.error('حدث خطأ أثناء جلب الطلاب:', e);
     }
   };
   
