@@ -45,15 +45,15 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المضمونة (بدون إعادة تحميل وبفلترة دقيقة جداً)
+// 🎯 دالة التوزيع الشاملة (توزع أي طالب مضاف ما عدا الغائبين والمعتذرين)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
-    // 🛑 منع إعادة تحميل الصفحة والتسجيل الخروجي
+    // 🛑 منع إعادة تحميل الصفحة
     if (e && e.preventDefault) e.preventDefault();
     
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين والأستثناءات فقط) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب على السائقين؟')) return;
     }
 
     try {
@@ -65,41 +65,32 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 🎯 1. فلترة مشددة: اختيار المداومين والاستثناءات فقط
+      // 🎯 منطق الفلترة المضمن: قبول الجميع واستبعاد الغائبين فقط
       const eligibleStudents = studentsData.filter(student => {
-        const tStatus = String(student.tomorrow_status || '').trim();
-        const aStatus = String(student.attendance_status || '').trim();
-        const sStatus = String(student.status || '').trim();
-        
-        const fullText = `${tStatus} ${aStatus} ${sStatus}`;
+        const fullText = `
+          ${student.tomorrow_status || ''} 
+          ${student.attendance_status || ''} 
+          ${student.status || ''}
+        `;
 
-        // ❌ استبعاد أي طالب لديه عطلة أو اعتذار أو غياب
+        // 🛑 استبعاد من سُجّل عليه غياب أو اعتذار فقط
         const isAbsent = 
-          fullText.includes('عطلة') || 
-          fullText.includes('اعتذار') || 
+          student.is_absent === true ||
           fullText.includes('غائب') || 
+          fullText.includes('اعتذار') || 
+          fullText.includes('عطلة') || 
           fullText.includes('أعتذر');
 
-        if (isAbsent) return false;
-
-        // ✅ شمول فقط من يملك كلمة (جدول / مداوم / استثناء / أداوم / امتحان)
-        const isEligible = 
-          fullText.includes('جدول') || 
-          fullText.includes('مداوم') || 
-          fullText.includes('استثناء') || 
-          fullText.includes('أداوم') ||
-          student.exam_note || 
-          student.has_exception;
-
-        return isEligible;
+        // ✅ أي طالب آخر (جديد، مداوم، استثناء) يُشمل بالتوزيع فوراً
+        return !isAbsent;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert('⚠️ لا يوجد طلاب ينطبق عليهم شرط الدوام أو الاستثناء!');
+        if (!autoMode) alert('⚠️ جميع الطلاب المتاحين حالياً مسجلون كغائبين!');
         return;
       }
 
-      // 🎯 2. تحديث السائقين في قاعدة البيانات للطلاب المستحقين فقط
+      // 🎯 تحديث بيانات السائق للطالب في Supabase
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -113,7 +104,7 @@ const [driverPassword, setDriverPassword] = useState('');
           .eq('id', eligibleStudents[i].id);
       }
 
-      // 🎯 3. إعادة جلب البيانات لتحديث الشاشة فوراً دون الخروج (بدون Reload)
+      // 🎯 تحديث الشاشة فوراً بالبيانات الجديدة
       const { data: refreshedStudents } = await supabase.from('students').select('*');
       if (refreshedStudents && typeof setStudents === 'function') {
         setStudents(refreshedStudents);
