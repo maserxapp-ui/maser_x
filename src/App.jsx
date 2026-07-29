@@ -45,45 +45,61 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
- const handleAutoDistribute = async (e, isAutomatic = false) => {
+// 🎯 دالة التوزيع المضمونة (بدون إعادة تحميل وبفلترة دقيقة جداً)
+  const handleAutoDistribute = async (e, isAutomatic = false) => {
+    // 🛑 منع إعادة تحميل الصفحة والتسجيل الخروجي
     if (e && e.preventDefault) e.preventDefault();
     
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (غير الغائبين) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين والأستثناءات فقط) على السائقين؟')) return;
     }
 
     try {
       const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
-      const { data: students, error: sErr } = await supabase.from('students').select('*');
+      const { data: studentsData, error: sErr } = await supabase.from('students').select('*');
 
       if (dErr || sErr || !drivers || drivers.length === 0) {
         if (!autoMode) alert('⚠️ لا يوجد سائقون أو حدث خطأ في جلب البيانات!');
         return;
       }
 
-      // 🎯 تصفية الطلاب: استبعاد الغائبين وأصحاب العطلة/الاعتذار
-      const eligibleStudents = students.filter(student => {
-        const allStatus = `${student.tomorrow_status || ''} ${student.attendance_status || ''} ${student.status || ''}`;
+      // 🎯 1. فلترة مشددة: اختيار المداومين والاستثناءات فقط
+      const eligibleStudents = studentsData.filter(student => {
+        const tStatus = String(student.tomorrow_status || '').trim();
+        const aStatus = String(student.attendance_status || '').trim();
+        const sStatus = String(student.status || '').trim();
+        
+        const fullText = `${tStatus} ${aStatus} ${sStatus}`;
 
+        // ❌ استبعاد أي طالب لديه عطلة أو اعتذار أو غياب
         const isAbsent = 
-          allStatus.includes('عطلة رسمية/اعتذار') ||
-          allStatus.includes('عطلة رسمية / اعتذار') ||
-          allStatus.includes('اعتذار') ||
-          allStatus.includes('عطلة') ||
-          allStatus.includes('غائب') ||
-          allStatus.includes('أعتذر');
+          fullText.includes('عطلة') || 
+          fullText.includes('اعتذار') || 
+          fullText.includes('غائب') || 
+          fullText.includes('أعتذر');
 
-        return !isAbsent;
+        if (isAbsent) return false;
+
+        // ✅ شمول فقط من يملك كلمة (جدول / مداوم / استثناء / أداوم / امتحان)
+        const isEligible = 
+          fullText.includes('جدول') || 
+          fullText.includes('مداوم') || 
+          fullText.includes('استثناء') || 
+          fullText.includes('أداوم') ||
+          student.exam_note || 
+          student.has_exception;
+
+        return isEligible;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert('⚠️ جميع الطلاب غائبون أو معتذرون!');
+        if (!autoMode) alert('⚠️ لا يوجد طلاب ينطبق عليهم شرط الدوام أو الاستثناء!');
         return;
       }
 
-      // 🎯 توزيع الطلاب المتبقين على السائقين بالتساوي
+      // 🎯 2. تحديث السائقين في قاعدة البيانات للطلاب المستحقين فقط
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
 
@@ -91,16 +107,21 @@ const [driverPassword, setDriverPassword] = useState('');
           .from('students')
           .update({
             driver_name: assignedDriver.name,
-            driver_phone: assignedDriver.phone
+            driver_phone: assignedDriver.phone,
+            assigned_driver: assignedDriver.name
           })
           .eq('id', eligibleStudents[i].id);
+      }
+
+      // 🎯 3. إعادة جلب البيانات لتحديث الشاشة فوراً دون الخروج (بدون Reload)
+      const { data: refreshedStudents } = await supabase.from('students').select('*');
+      if (refreshedStudents && typeof setStudents === 'function') {
+        setStudents(refreshedStudents);
       }
 
       if (!autoMode) {
         alert(`🎉 تم بنجاح توزيع (${eligibleStudents.length}) طالب بالتساوي على (${drivers.length}) سائق!`);
       }
-
-      window.location.reload();
 
     } catch (err) {
       console.error('خطأ أثناء التوزيع:', err);
