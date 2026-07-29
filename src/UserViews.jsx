@@ -668,34 +668,46 @@ function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  // 🔄 جلب الطلاب المرتبطين بالسائق مع فحص شامل لجميع الاحتمالات
+  // 🔄 جلب الطلاب المرتبطين بالسائق ذكياً
   const fetchStudents = async () => {
     if (!user || !supabase) return;
     setLoading(true);
     try {
       const cleanPhone = user.phone ? String(user.phone).trim() : '';
-      const phoneWithoutZero = cleanPhone.startsWith('0') ? cleanPhone.substring(1) : cleanPhone;
-      const phoneWithZero = cleanPhone.startsWith('0') ? cleanPhone : '0' + cleanPhone;
+      const cleanName = user.name ? String(user.name).trim() : '';
 
-      // البحث بجميع الحقول والاحتمالات الممكنة لتوزيع الطلاب
-      const queryConditions = [
-        `driver_phone.eq.${cleanPhone}`,
-        `driver_phone.eq.${phoneWithZero}`,
-        `driver_phone.eq.${phoneWithoutZero}`,
-        `driver_name.eq.${user.name}`,
-        `assigned_driver.eq.${user.name}`,
-        `driver_id.eq.${user.id || 0}`
-      ].join(',');
+      // 1. البحث عن بيانات السائق في جدول drivers لجلب id الخاص به
+      let realDriverId = user.id;
+      const { data: driverRow } = await supabase
+        .from('drivers')
+        .select('id, name, phone')
+        .or(`phone.eq.${cleanPhone},name.eq.${cleanName}`)
+        .maybeSingle();
 
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .or(queryConditions);
+      if (driverRow) {
+        realDriverId = driverRow.id;
+      }
 
-      if (!error && data) {
-        setStudents(data);
-      } else if (error) {
-        console.error('خطأ في استعلام الطلاب:', error);
+      // 2. صياغة الاستعلام لجدول الطلاب بجميع الاحتمالات
+      const conditions = [];
+      if (realDriverId) conditions.push(`driver_id.eq.${realDriverId}`);
+      if (cleanPhone) conditions.push(`driver_phone.eq.${cleanPhone}`);
+      if (cleanName) {
+        conditions.push(`driver_name.eq.${cleanName}`);
+        conditions.push(`assigned_driver.eq.${cleanName}`);
+      }
+
+      if (conditions.length > 0) {
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .or(conditions.join(','));
+
+        if (!error && data) {
+          setStudents(data);
+        } else if (error) {
+          console.error('خطأ في استعلام الطلاب:', error);
+        }
       }
     } catch (err) {
       console.error('خطأ في جلب الطلاب:', err);
@@ -792,7 +804,6 @@ function DriverView({ user, setUser, supabase }) {
           {loading ? (
             <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
           ) : students.length === 0 ? (
-            /* 🔍 كارت التنبيه والمساعدة عند عدم وجود طلاب */
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
               <p className="text-2xl">📭</p>
               <p className="text-xs font-bold">لم يتم العثور على طلاب مسجلين لهذا السائق!</p>
@@ -801,9 +812,6 @@ function DriverView({ user, setUser, supabase }) {
                 <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
                 <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
               </div>
-              <p className="text-[10px] text-amber-700">
-                تأكد من أن كود زر "التوزيع" يقوم بتحديث حقل <code className="bg-amber-100 px-1 rounded">driver_name</code> أو <code className="bg-amber-100 px-1 rounded">driver_phone</code> في جدول <code className="bg-amber-100 px-1 rounded">students</code> لنفس الاسم والرقم أعلاه.
-              </p>
             </div>
           ) : (
             <div className="space-y-2">
