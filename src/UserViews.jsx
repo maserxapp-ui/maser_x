@@ -142,55 +142,30 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (تصفية مباشرة ومضمونة 100% داخل المتصفح)
+// 👨‍🎓 جلب طلاب السائق (استعلام مباشر باستخدام driver_phone و driver_id)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ جلب كشف الطلاب وكشف السائقين بالكامل من Supabase
-      const { data: allStudents, error: sErr } = await supabase.from('students').select('*');
-      const { data: allDrivers, error: dErr } = await supabase.from('drivers').select('*');
+      // 1️⃣ استخراج معرّف دخول السائق أو رقم هاتفه (مثل 22)
+      const driverPhone = String(driver.phone || driver.mobile || driver.username || driver.name || driver.id || '').trim();
 
-      if (sErr || dErr) {
-        console.error('❌ خطأ في جلب البيانات من قاعدة البيانات:', sErr || dErr);
-        return;
-      }
+      if (!driverPhone) return;
 
-      // 2️⃣ تحديد قيمة الدخول الحالية للسائق (مثل "22")
-      const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
+      // 2️⃣ البحث المباشر من Supabase في حقل driver_phone وحقل driver_id
+      const { data: studentsData, error } = await supabase
+        .from('students')
+        .select('*')
+        .or(`driver_phone.eq.${driverPhone},driver_id.eq.${driverPhone}`);
 
-      // 3️⃣ مطابقة السائق في جدول drivers لمعرفة حسابه بالكامل
-      const myDriver = (allDrivers || []).find(d => 
-        String(d.id) === loginValue ||
-        String(d.phone) === loginValue ||
-        String(d.name) === loginValue ||
-        (driver.id && String(d.id) === String(driver.id))
-      );
-
-      console.log('🎯 السائق الذي تم التعرف عليه:', myDriver);
-
-      // 4️⃣ تصفية الطلاب الذين يملكون نفس driver_id بالسلسلة النصية المباشرة
-      const myStudents = (allStudents || []).filter(student => {
-        if (!student.driver_id) return false;
-
-        const studentDriverId = String(student.driver_id).trim();
-
-        return (
-          (myDriver && studentDriverId === String(myDriver.id)) ||
-          studentDriverId === loginValue ||
-          (driver.id && studentDriverId === String(driver.id)) ||
-          (driver.phone && studentDriverId === String(driver.phone))
-        );
-      });
-
-      console.log('✅ قائمة الطلاب المخصصين لهذا السائق:', myStudents);
-
-      // 5️⃣ عرض الطلاب في شاشة السائق
-      if (typeof setDriverStudents === 'function') {
-        setDriverStudents(myStudents);
+      if (error) {
+        console.error('❌ خطأ في جلب الطلاب:', error.message);
+      } else if (studentsData) {
+        console.log('✅ الطلاب المكتشفون من Supabase:', studentsData);
+        setDriverStudents(studentsData);
       }
     } catch (e) {
-      console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
+      console.error('خطأ غير متوقع أثناء جلب البيانات:', e);
     }
   };
   
