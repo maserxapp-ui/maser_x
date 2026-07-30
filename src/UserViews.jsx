@@ -142,51 +142,42 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-  // 👨‍🎓 جلب طلاب السائق المضمون 100% (في UserViews.jsx)
+// 👨‍🎓 جلب طلاب السائق (آمن 100% ويمنع خطأ 400 نهائياً)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ جلب جميع البيانات بدون استعلامات معقدة لتجنب أخطاء السيرفر
-      const { data: allStudents, error: sErr } = await supabase.from('students').select('*');
-      const { data: allDrivers, error: dErr } = await supabase.from('drivers').select('*');
+      // 1️⃣ جلب بيانات الطلاب مباشرة دون شروط معقدة تسبب خطأ 400
+      const { data: allStudents, error: sErr } = await supabase
+        .from('students')
+        .select('*');
 
-      if (sErr || dErr) {
-        console.error('❌ خطأ في جلب البيانات:', sErr || dErr);
+      if (sErr) {
+        console.error('❌ خطأ في جلب بيانات الطلاب:', sErr.message);
         return;
       }
 
-      // 2️⃣ معرفة معرّف دخول السائق (مثل "22")
-      const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
+      // 2️⃣ استخراج معرف دخول السائق (مثل "22")
+      const loginVal = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
 
-      // البحث عن حساب السائق الكامل من جدول drivers
-      const currentDriverObj = (allDrivers || []).find(d => 
-        String(d.id) === loginValue ||
-        String(d.phone) === loginValue ||
-        String(d.name) === loginValue
-      );
-
-      const realId = currentDriverObj ? String(currentDriverObj.id) : loginValue;
-      const realPhone = currentDriverObj ? String(currentDriverObj.phone) : loginValue;
-
-      // 3️⃣ مطابقة الطلاب الذين يتبعون لهذا السائق بأي طريقة من الطرق
-      const myStudents = (allStudents || []).filter(s => {
-        const sDriverId = String(s.driver_id || '').trim();
-        const sDriverPhone = String(s.driver_phone || '').trim();
+      // 3️⃣ تصفية الطلاب داخل المتصفح مباشرة
+      const myStudents = (allStudents || []).filter(student => {
+        const sDriverId = String(student.driver_id || '').trim();
+        const sDriverPhone = String(student.driver_phone || '').trim();
 
         return (
-          (sDriverId !== '' && (sDriverId === realId || sDriverId === realPhone || sDriverId === loginValue)) ||
-          (sDriverPhone !== '' && (sDriverPhone === realPhone || sDriverPhone === realId || sDriverPhone === loginValue))
+          (sDriverId !== '' && sDriverId === loginVal) ||
+          (sDriverPhone !== '' && sDriverPhone === loginVal)
         );
       });
 
-      console.log('✅ الطلاب المخصصون لهذا السائق:', myStudents);
+      console.log('✅ الطلاب التابعين لهذا السائق:', myStudents);
 
       if (typeof setDriverStudents === 'function') {
         setDriverStudents(myStudents);
       }
     } catch (e) {
-      console.error('خطأ أثناء جلب البيانات:', e);
+      console.error('خطأ غير متوقع أثناء المعالجة:', e);
     }
   };
   
