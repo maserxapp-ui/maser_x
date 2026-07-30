@@ -46,7 +46,7 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع الشاملة والمصححة (في App.jsx)
+// 🎯 دالة التوزيع الشاملة والمصممة بالكامل (في App.jsx)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
@@ -71,7 +71,7 @@ const [driverPassword, setDriverPassword] = useState('');
       const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
       const tomorrowDay = daysArabic[baghdadTomorrow.getDay()];
 
-      // 2️⃣ تصفية الطلاب المداومين (استبعاد الغائبين والمحتذرين فقط)
+      // 2️⃣ تصفية الطلاب المداومين (استبعاد الغائبين والمعتذرين فقط)
       const eligibleStudents = studentsData.filter(student => {
         const fullText = Object.values(student).map(v => String(v || '')).join(' ');
         
@@ -100,16 +100,19 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 3️⃣ حفظ driver_id و driver_phone معاً لكل طالب للتأكيد
+      // 3️⃣ حفظ جميع حقول السائق تلقائياً (driver_id, driver_phone, driver_name, assigned_driver)
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
-        const driverPhoneVal = String(assignedDriver.phone || assignedDriver.username || assignedDriver.name || assignedDriver.id || '');
+        const driverPhoneVal = String(assignedDriver.phone || assignedDriver.username || assignedDriver.id || '');
+        const driverNameVal = String(assignedDriver.name || assignedDriver.phone || '');
 
         await supabase
           .from('students')
           .update({
             driver_id: assignedDriver.id,
-            driver_phone: driverPhoneVal
+            driver_phone: driverPhoneVal,
+            driver_name: driverNameVal,
+            assigned_driver: driverNameVal
           })
           .eq('id', eligibleStudents[i].id);
       }
@@ -121,7 +124,12 @@ const [driverPassword, setDriverPassword] = useState('');
       for (const student of nonEligible) {
         await supabase
           .from('students')
-          .update({ driver_id: null, driver_phone: null })
+          .update({ 
+            driver_id: null, 
+            driver_phone: null,
+            driver_name: null,
+            assigned_driver: null 
+          })
           .eq('id', student.id);
       }
 
