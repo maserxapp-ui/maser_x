@@ -142,42 +142,44 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (آمن 100% ويمنع خطأ 400 نهائياً)
+// 👨‍🎓 جلب طلاب السائق (تصفية آمنة في المتصفح تمنع أخطاء 400 نهائياً)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ جلب بيانات الطلاب مباشرة دون شروط معقدة تسبب خطأ 400
-      const { data: allStudents, error: sErr } = await supabase
+      // 1️⃣ جلب جميع الطلاب باستعلام بسيط بدون شروط سيرفر مسببة للخطأ
+      const { data: allStudents, error } = await supabase
         .from('students')
         .select('*');
 
-      if (sErr) {
-        console.error('❌ خطأ في جلب بيانات الطلاب:', sErr.message);
+      if (error) {
+        console.error('❌ خطأ في جلب البيانات من السيرفر:', error.message);
         return;
       }
 
-      // 2️⃣ استخراج معرف دخول السائق (مثل "22")
+      // 2️⃣ استخراج معرّف دخول السائق الحالية (مثل "22")
       const loginVal = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
 
-      // 3️⃣ تصفية الطلاب داخل المتصفح مباشرة
+      // 3️⃣ المطابقة والفلترة بأمان داخل المتصفح
       const myStudents = (allStudents || []).filter(student => {
         const sDriverId = String(student.driver_id || '').trim();
         const sDriverPhone = String(student.driver_phone || '').trim();
+        const sDriverName = String(student.driver_name || student.driver || '').trim();
 
         return (
           (sDriverId !== '' && sDriverId === loginVal) ||
-          (sDriverPhone !== '' && sDriverPhone === loginVal)
+          (sDriverPhone !== '' && sDriverPhone === loginVal) ||
+          (sDriverName !== '' && sDriverName === loginVal)
         );
       });
 
-      console.log('✅ الطلاب التابعين لهذا السائق:', myStudents);
+      console.log('✅ الطلاب المكتشفون في المتصفح:', myStudents);
 
       if (typeof setDriverStudents === 'function') {
         setDriverStudents(myStudents);
       }
     } catch (e) {
-      console.error('خطأ غير متوقع أثناء المعالجة:', e);
+      console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
     }
   };
   
