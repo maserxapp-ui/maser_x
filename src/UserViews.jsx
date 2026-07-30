@@ -142,30 +142,51 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (استعلام مباشر باستخدام driver_phone و driver_id)
+  // 👨‍🎓 جلب طلاب السائق المضمون 100% (في UserViews.jsx)
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ استخراج معرّف دخول السائق أو رقم هاتفه (مثل 22)
-      const driverPhone = String(driver.phone || driver.mobile || driver.username || driver.name || driver.id || '').trim();
+      // 1️⃣ جلب جميع البيانات بدون استعلامات معقدة لتجنب أخطاء السيرفر
+      const { data: allStudents, error: sErr } = await supabase.from('students').select('*');
+      const { data: allDrivers, error: dErr } = await supabase.from('drivers').select('*');
 
-      if (!driverPhone) return;
+      if (sErr || dErr) {
+        console.error('❌ خطأ في جلب البيانات:', sErr || dErr);
+        return;
+      }
 
-      // 2️⃣ البحث المباشر من Supabase في حقل driver_phone وحقل driver_id
-      const { data: studentsData, error } = await supabase
-        .from('students')
-        .select('*')
-        .or(`driver_phone.eq.${driverPhone},driver_id.eq.${driverPhone}`);
+      // 2️⃣ معرفة معرّف دخول السائق (مثل "22")
+      const loginValue = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
 
-      if (error) {
-        console.error('❌ خطأ في جلب الطلاب:', error.message);
-      } else if (studentsData) {
-        console.log('✅ الطلاب المكتشفون من Supabase:', studentsData);
-        setDriverStudents(studentsData);
+      // البحث عن حساب السائق الكامل من جدول drivers
+      const currentDriverObj = (allDrivers || []).find(d => 
+        String(d.id) === loginValue ||
+        String(d.phone) === loginValue ||
+        String(d.name) === loginValue
+      );
+
+      const realId = currentDriverObj ? String(currentDriverObj.id) : loginValue;
+      const realPhone = currentDriverObj ? String(currentDriverObj.phone) : loginValue;
+
+      // 3️⃣ مطابقة الطلاب الذين يتبعون لهذا السائق بأي طريقة من الطرق
+      const myStudents = (allStudents || []).filter(s => {
+        const sDriverId = String(s.driver_id || '').trim();
+        const sDriverPhone = String(s.driver_phone || '').trim();
+
+        return (
+          (sDriverId !== '' && (sDriverId === realId || sDriverId === realPhone || sDriverId === loginValue)) ||
+          (sDriverPhone !== '' && (sDriverPhone === realPhone || sDriverPhone === realId || sDriverPhone === loginValue))
+        );
+      });
+
+      console.log('✅ الطلاب المخصصون لهذا السائق:', myStudents);
+
+      if (typeof setDriverStudents === 'function') {
+        setDriverStudents(myStudents);
       }
     } catch (e) {
-      console.error('خطأ غير متوقع أثناء جلب البيانات:', e);
+      console.error('خطأ أثناء جلب البيانات:', e);
     }
   };
   
