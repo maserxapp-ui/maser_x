@@ -46,14 +46,13 @@ const [driverPassword, setDriverPassword] = useState('');
     return () => clearInterval(interval);
   }, []);
 
-// 🎯 دالة التوزيع المعتمدة على توقيت بغداد (نسخة محسّنة وشاملة)
+// 🎯 دالة التوزيع الشاملة والمصححة (في App.jsx)
   const handleAutoDistribute = async (e, isAutomatic = false) => {
     if (e && e.preventDefault) e.preventDefault();
-    
     const autoMode = typeof e === 'boolean' ? e : isAutomatic;
 
     if (!autoMode) {
-      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب (المداومين ليوم غد والأستثناءات) على السائقين؟')) return;
+      if (!window.confirm('هل أنت متأكد من إعادة توزيع الطلاب المداومين على السائقين؟')) return;
     }
 
     try {
@@ -65,84 +64,71 @@ const [driverPassword, setDriverPassword] = useState('');
         return;
       }
 
-      // 1️⃣ حساب يوم "غد" حصراً بتوقيت بغداد
-      const getTomorrowArabicInBaghdad = () => {
-        const baghdadNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
-        const baghdadTomorrow = new Date(baghdadNowStr);
-        baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1);
+      // 1️⃣ حساب يوم غد بتوقيت بغداد
+      const baghdadNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
+      const baghdadTomorrow = new Date(baghdadNowStr);
+      baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1);
+      const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+      const tomorrowDay = daysArabic[baghdadTomorrow.getDay()];
 
-        const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-        return daysArabic[baghdadTomorrow.getDay()];
-      };
-
-      const tomorrowDay = getTomorrowArabicInBaghdad();
-
-      // 2️⃣ تصفية الطلاب حسب شروط الدوام ليوم غد أو الاستثناء
+      // 2️⃣ تصفية الطلاب المداومين (استبعاد الغائبين والمحتذرين فقط)
       const eligibleStudents = studentsData.filter(student => {
-        const fullStudentText = Object.values(student).map(v => String(v || '')).join(' ');
-
-        // استبعاد الغائبين
-        const isExplicitAbsent = 
+        const fullText = Object.values(student).map(v => String(v || '')).join(' ');
+        
+        // استبعاد أي طالب غائب أو أعلن اعتذاره
+        const isAbsent = 
           student.is_absent === true ||
           student.tomorrow_status === 'لا أداوم غداً' ||
-          (student.exam_note && String(student.exam_note).includes('لا أداوم غداً')) ||
-          fullStudentText.includes('اعتذار') || 
-          fullStudentText.includes('أعتذر') || 
-          fullStudentText.includes('غائب');
+          fullText.includes('اعتذار') || 
+          fullText.includes('غائب');
 
-        if (isExplicitAbsent) return false;
+        if (isAbsent) return false;
 
-        // فحص أيام الدوام والاستثناء
+        // فحص أيام الدوام
         const rawDays = JSON.stringify(student.work_days || student.days || student.work_day || '');
-        const normalizeText = (text) => text.replace(/[\[\]"']/g, '').replace(/أ|إ|آ/g, 'ا').trim();
+        const normalize = (t) => String(t || '').replace(/[\[\]"']/g, '').replace(/أ|إ|آ/g, 'ا').trim();
         
-        const isTomorrowInWorkDays = normalizeText(rawDays).includes(normalizeText(tomorrowDay));
-        const isExplicitAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
+        const isTomorrowInDays = normalize(rawDays).includes(normalize(tomorrowDay));
+        const isAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
 
-        const hasExamNote = 
-          student.exam_note && 
-          String(student.exam_note).trim() !== '' && 
-          !String(student.exam_note).includes('لا أداوم غداً');
-
-        const isExamException = (!isTomorrowInWorkDays && hasExamNote) || student.has_exception === true;
-        const isRegularAttending = isTomorrowInWorkDays || isExplicitAttending;
-
-        return isRegularAttending || isExamException;
+        // الطالب يعتبر مداوم إذا وافق اليوم أو أعلن الدوام أو لم تُحدد أيام دوامه أساساً
+        return isTomorrowInDays || isAttending || !student.work_days;
       });
 
       if (eligibleStudents.length === 0) {
-        if (!autoMode) alert(`⚠️ لا يوجد طلاب لديهم دوام ليوم غد (${tomorrowDay}) أو استثناءات!`);
+        if (!autoMode) alert(`⚠️ لا يوجد طلاب مداومون ليوم غد (${tomorrowDay})!`);
         return;
       }
 
-      // 3️⃣ توزيع الطلاب المقبولين بالتساوي
+      // 3️⃣ حفظ driver_id و driver_phone معاً لكل طالب للتأكيد
       for (let i = 0; i < eligibleStudents.length; i++) {
         const assignedDriver = drivers[i % drivers.length];
+        const driverPhoneVal = String(assignedDriver.phone || assignedDriver.username || assignedDriver.name || assignedDriver.id || '');
 
         await supabase
           .from('students')
           .update({
-           driver_id: assignedDriver.id, // 👈 ربط ID السائق المباشر
-           driver_phone: assignedDriver.phone || assignedDriver.name
+            driver_id: assignedDriver.id,
+            driver_phone: driverPhoneVal
           })
           .eq('id', eligibleStudents[i].id);
       }
 
-      // 4️⃣ تصفية وإلغاء الربط عن الطلاب غير المداومين غداً
+      // 4️⃣ تفريغ الطلاب غير المداومين
       const eligibleIds = eligibleStudents.map(s => s.id);
-      const nonEligibleStudents = studentsData.filter(s => !eligibleIds.includes(s.id));
+      const nonEligible = studentsData.filter(s => !eligibleIds.includes(s.id));
 
-      for (const student of nonEligibleStudents) {
+      for (const student of nonEligible) {
         await supabase
           .from('students')
-          .update({ driver_id: null })
+          .update({ driver_id: null, driver_phone: null })
           .eq('id', student.id);
       }
 
-      // 5️⃣ تحديث الشاشة فوراً بالبيانات الجديدة
-      const { data: refreshedStudents } = await supabase.from('students').select('*');
-      if (refreshedStudents && typeof setStudents === 'function') {
-        setStudents(refreshedStudents);
+      // 5️⃣ تحديث الشاشة
+      const { data: refreshed } = await supabase.from('students').select('*');
+      if (refreshed && typeof setStudents === 'function') {
+        setStudents(refreshed);
       }
 
       if (!autoMode) {
