@@ -657,14 +657,15 @@ if (viewMode === 'user') {
       <aside className="w-64 bg-[#0e1e38] text-slate-300 flex flex-col justify-between shadow-xl z-20">
         <div>
           {/* قسم الشعار */}
-          <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
-            <div className="p-2 flex items-center justify-center w-28 h-20 mb-2">
-              <img 
-                src={logoImg} 
-                alt="شعار مسار إكس" 
-                className="max-h-full max-w-full object-contain"
-              />
-            </div>
+         <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
+  {/* 🌟 خلفية بيضاء أنيقة وحجم متناسق للشعار */}
+  <div className="bg-white p-2 rounded-xl shadow-md flex items-center justify-center w-36 h-20 mb-2">
+    <img
+      src={logoImg}
+      alt="شعار مسار إكس"
+      className="max-h-full max-w-full object-contain"
+    />
+  </div>
             <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
           </div>
           <button 
