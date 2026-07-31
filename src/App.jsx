@@ -703,12 +703,7 @@ if (viewMode === 'user') {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-slate-700/50">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg transition-colors">
-            <span>🚪</span>
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
+
       </aside>
 
       {/* المحتوى الرئيسي */}
@@ -729,9 +724,6 @@ if (viewMode === 'user') {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative">
-              🔔 <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full"></span>
-            </button>
             <div className="flex items-center gap-3 border-r pr-4 border-slate-200">
               <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">
                 👤
