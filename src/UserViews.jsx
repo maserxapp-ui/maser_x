@@ -53,8 +53,14 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
     return () => { supabase.removeChannel(channel); };
   }, [isOpen, studentId, driverId, fetchMessages]);
 
-  const sendMessage = async (textToSend) => {
-    if (!textToSend || !studentId || !driverId) return;
+ const sendMessage = async (textToSend) => {
+    if (!textToSend) return;
+
+    // فحص المعرفات قبل الإرسال
+    if (!studentId || !driverId || studentId === 'undefined' || driverId === 'undefined') {
+      alert(`خطأ: أحدهما غير معرف!\nstudentId: ${studentId}\ndriverId: ${driverId}`);
+      return;
+    }
 
     setLoading(true);
     const newMessage = {
@@ -65,9 +71,10 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
     };
 
     const { data, error } = await supabase.from('messages').insert([newMessage]).select();
+
     if (error) {
       console.error("Error sending message:", error);
-      alert("تعذر إرسال الرسالة، تأكد من الاتصال بالشبكة.");
+      alert("سبب رفض الإرسال من Supabase:\n" + error.message);
     } else {
       if (data && data.length > 0) {
         setMessages((prev) => [...prev, data[0]]);
@@ -77,7 +84,6 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
     }
     setLoading(false);
   };
-
   if (!isOpen) return null;
 
   return (
