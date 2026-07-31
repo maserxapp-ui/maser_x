@@ -715,17 +715,22 @@ if (user && user.role === 'driver') {
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
                   {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
                 </div>
-                {assignedDriver?.phone && (
-                  <a href={`tel:${assignedDriver.phone}`} style={{ display: 'inline-block', marginTop: '4px', backgroundColor: '#0284c7', color: 'white', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', textDecoration: 'none' }}>
-                    📞 اتصل بالسايق
-                  </a>
-  <button
-  onClick={() => setIsStudentChatOpen(true)}
-  style={{ display: 'inline-block', marginTop: '4px', marginRight: '4px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
->
-  💬 بلغ السايق
-</button>
-  
+              {assignedDriver?.phone && (
+  <>
+    <a 
+      href={`tel:${assignedDriver.phone}`} 
+      style={{ display: 'inline-block', marginTop: '4px', backgroundColor: '#0284c7', color: 'white', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', textDecoration: 'none' }}
+    >
+      📞 اتصل بالسايق
+    </a>
+    <button
+      onClick={() => setIsStudentChatOpen(true)}
+      style={{ display: 'inline-block', marginTop: '4px', marginRight: '4px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
+    >
+      💬 بلغ السايق
+    </button>
+  </>
+)}  
                 )}
               </div>
             </div>
