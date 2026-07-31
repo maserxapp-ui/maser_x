@@ -1027,24 +1027,25 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
                       </div>
                     </div>
 
-                    {student.phone && (
-                      <a
-                        href={`tel:${student.phone}`}
-                        className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition flex items-center gap-1"
-                      >
-                        📞 اتصال
-                      </a>
-                    <button
-    onClick={() => {
-      setSelectedStudentForChat(student);
-      setIsDriverChatOpen(true);
-    }}
-    className="bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold"
-  >
-    💬 بلغ
-  </button>
-</div>
-                    )}
+                   {student.phone && (
+  <>
+    <a
+      href={`tel:${student.phone}`}
+      className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition inline-block"
+    >
+      📞 اتصال
+    </a>
+    <button
+      onClick={() => {
+        setSelectedStudentForChat(student);
+        setIsDriverChatOpen(true);
+      }}
+      className="bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-600 transition inline-block mr-1"
+    >
+      💬 بلغ
+    </button>
+  </>
+)}
                   </div>
                 );
               })}
