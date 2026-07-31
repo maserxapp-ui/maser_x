@@ -737,42 +737,47 @@ if (viewMode === 'user') {
         </header>
 
         {/* محتوى اللوحة */}
-        <main className="p-6 space-y-6">
-          {activeTab === 'main' && (
-          
-          {/* كروت الإحصائيات السريعة */}
+      <main className="p-6 space-y-6">
+
+        {/* كروت الإحصائيات السريعة (تظهر فقط في الرئيسية) */}
+        {activeTab === 'main' && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-emerald-500">
               <p className="text-xs text-slate-500 font-medium">إجمالي المشتركين</p>
               <p className="text-xl font-bold text-slate-900 mt-1">{totalSubscribers}</p>
               <span className="text-[10px] text-slate-400">مشترك مضاف</span>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-blue-500">
               <p className="text-xs text-slate-500 font-medium">الاشتراكات المدفوعة</p>
               <p className="text-xl font-bold text-emerald-600 mt-1">{paidCount}</p>
               <span className="text-[10px] text-slate-400">حساب مكتمل</span>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-orange-500">
               <p className="text-xs text-slate-500 font-medium">عدد السائقين</p>
               <p className="text-xl font-bold text-amber-600 mt-1">{totalDrivers}</p>
               <span className="text-[10px] text-slate-400">{activeDriversCount} سائق نشط</span>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-indigo-500">
               <p className="text-xs text-slate-500 font-medium">سعة المقاعد الكلية</p>
               <p className="text-xl font-bold text-indigo-600 mt-1">{totalSeats}</p>
               <span className="text-[10px] text-slate-400">مقعد متاح بالأسطول</span>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-purple-500">
               <p className="text-xs text-slate-500 font-medium">المبالغ المحصلة</p>
               <p className="text-lg font-bold text-emerald-600 mt-1">{totalCollectedRevenue.toLocaleString()} د.ع</p>
               <span className="text-[10px] text-slate-400">من أصل {totalExpectedRevenue.toLocaleString()}</span>
             </div>
+
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-b-4 border-cyan-500">
               <p className="text-xs text-slate-500 font-medium">حالة السيرفر</p>
               <p className="text-sm font-bold text-emerald-600 mt-2">متصل بـ Supabase</p>
             </div>
           </div>
-    )}
+        )}
 
           {/* التبويب الرئيسي والمشتركين */}
           {activeTab === 'subscribers' && (
