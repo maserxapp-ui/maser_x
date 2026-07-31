@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-// 💬 مكون نافذة المحادثة المباشرة
+// 💬 مكون نافذة المحادثة المباشرة (الرسائل السريعة فقط + لون نص أسود واضح)
 const DRIVER_QUICK_MESSAGES = [
   "⚠️ تأخرت، يرجى الإسراع.", "⚠️ الرجاء عدم التأخر حفاظًا على وقت الجميع.", "🚗 تم الوصول إلى موقعك.",
   "⏱️ سأنتظر 5 دقائق فقط.", "🚦 سأتحرك الآن.", "⏳ الرحلة متوقفة مؤقتًا.", "🚗 سأمر عليك بعد إنهاء المشترك السابق.",
@@ -18,10 +18,21 @@ const STUDENT_QUICK_MESSAGES = [
 
 function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supabase }) {
   const [messages, setMessages] = React.useState([]);
-  const [inputText, setInputText] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   const quickMessages = currentUserRole === 'driver' ? DRIVER_QUICK_MESSAGES : STUDENT_QUICK_MESSAGES;
+
+  const fetchMessages = React.useCallback(async () => {
+    if (!studentId || !driverId) return;
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('student_id', String(studentId))
+      .eq('driver_id', String(driverId))
+      .order('created_at', { ascending: true });
+
+    if (!error && data) setMessages(data);
+  }, [studentId, driverId, supabase]);
 
   React.useEffect(() => {
     if (!isOpen || !studentId || !driverId) return;
@@ -40,35 +51,29 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isOpen, studentId, driverId]);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('student_id', String(studentId))
-      .eq('driver_id', String(driverId))
-      .order('created_at', { ascending: true });
-
-    if (data) setMessages(data);
-  };
+  }, [isOpen, studentId, driverId, fetchMessages]);
 
   const sendMessage = async (textToSend) => {
-    const text = textToSend || inputText;
-    if (!text.trim()) return;
+    if (!textToSend || !studentId || !driverId) return;
 
     setLoading(true);
     const newMessage = {
       student_id: String(studentId),
       driver_id: String(driverId),
       sender: currentUserRole,
-      text: text.trim()
+      text: textToSend
     };
 
-    const { error } = await supabase.from('messages').insert([newMessage]);
-    if (!error) {
-      setInputText('');
-      fetchMessages();
+    const { data, error } = await supabase.from('messages').insert([newMessage]).select();
+    if (error) {
+      console.error("Error sending message:", error);
+      alert("تعذر إرسال الرسالة، تأكد من الاتصال بالشبكة.");
+    } else {
+      if (data && data.length > 0) {
+        setMessages((prev) => [...prev, data[0]]);
+      } else {
+        fetchMessages();
+      }
     }
     setLoading(false);
   };
@@ -76,25 +81,38 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
       <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '450px', height: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', direction: 'rtl' }}>
         
         {/* Header */}
         <div style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '14px' }}>💬 {currentUserRole === 'driver' ? 'محادثة الطالب' : 'محادثة السائق'}</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+          <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#ffffff' }}>
+            💬 {currentUserRole === 'driver' ? 'محادثة الطالب' : 'محادثة السائق'}
+          </span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#ffffff', fontSize: '20px', cursor: 'pointer' }}>✕</button>
         </div>
 
         {/* Messages list */}
         <div style={{ flex: 1, padding: '12px', overflowY: 'auto', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {messages.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '20px', fontSize: '12px' }}>لا توجد رسائل بعد.. ابدأ المحادثة!</p>
+            <p style={{ textAlign: 'center', color: '#000000', marginTop: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+              لا توجد رسائل بعد.. اضغط على أي رسالة سريعة من الأسفل للإرسال!
+            </p>
           ) : (
             messages.map((msg, index) => {
               const isMe = msg.sender === currentUserRole;
               return (
                 <div key={index} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '80%', padding: '8px 12px', borderRadius: '12px', fontSize: '13px', backgroundColor: isMe ? '#f59e0b' : '#ffffff', color: isMe ? '#ffffff' : '#1e293b', border: isMe ? 'none' : '1px solid #e2e8f0' }}>
+                  <div style={{ 
+                    maxWidth: '85%', 
+                    padding: '8px 12px', 
+                    borderRadius: '12px', 
+                    fontSize: '13px', 
+                    fontWeight: 'bold',
+                    backgroundColor: isMe ? '#fef3c7' : '#ffffff', 
+                    color: '#000000', // لون النصوص أسود واضح 
+                    border: isMe ? '1px solid #f59e0b' : '1px solid #cbd5e1' 
+                  }}>
                     {msg.text}
                   </div>
                 </div>
@@ -103,31 +121,31 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
           )}
         </div>
 
-        {/* Quick Messages */}
-        <div style={{ padding: '8px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', maxHeight: '120px', overflowY: 'auto' }}>
-          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>⚡ رسائل سريعة:</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        {/* Quick Messages ONLY */}
+        <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '2px solid #e2e8f0', maxHeight: '250px', overflowY: 'auto' }}>
+          <div style={{ fontSize: '12px', color: '#000000', fontWeight: 'bold', marginBottom: '8px' }}>⚡ اختر رسالة سريعة للإرسال:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {quickMessages.map((msg, idx) => (
-              <button key={idx} disabled={loading} onClick={() => sendMessage(msg)} style={{ fontSize: '11px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '20px', padding: '3px 8px', cursor: 'pointer' }}>
+              <button 
+                key={idx} 
+                disabled={loading} 
+                onClick={() => sendMessage(msg)} 
+                style={{ 
+                  fontSize: '12px', 
+                  backgroundColor: '#f1f5f9', 
+                  color: '#000000', 
+                  fontWeight: 'bold',
+                  border: '1px solid #64748b', 
+                  borderRadius: '10px', 
+                  padding: '8px 12px', 
+                  cursor: loading ? 'wait' : 'pointer',
+                  textAlign: 'right'
+                }}
+              >
                 {msg}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Input */}
-        <div style={{ padding: '8px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '6px' }}>
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="اكتب رسالة..."
-            style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px', fontSize: '12px', outline: 'none' }}
-          />
-          <button onClick={() => sendMessage()} disabled={loading} style={{ backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-            إرسال
-          </button>
         </div>
 
       </div>
@@ -715,22 +733,14 @@ if (user && user.role === 'driver') {
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
                   {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
                 </div>
-              {assignedDriver?.phone && (
-  <>
-    <a 
-      href={`tel:${assignedDriver.phone}`} 
-      style={{ display: 'inline-block', marginTop: '4px', backgroundColor: '#0284c7', color: 'white', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', textDecoration: 'none' }}
-    >
-      📞 اتصل بالسايق
-    </a>
-    <button
-      onClick={() => setIsStudentChatOpen(true)}
-      style={{ display: 'inline-block', marginTop: '4px', marginRight: '4px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
-    >
-      💬 بلغ السايق
-    </button>
-  </>
-)}  
+              {assignedDriver && (
+  <button
+    onClick={() => setIsStudentChatOpen(true)}
+    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+  >
+    💬 مراسلة السائق
+  </button>
+)}
                 )}
               </div>
             </div>
@@ -1027,25 +1037,15 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
                       </div>
                     </div>
 
-                   {student.phone && (
-  <>
-    <a
-      href={`tel:${student.phone}`}
-      className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-emerald-600 transition inline-block"
-    >
-      📞 اتصال
-    </a>
-    <button
-      onClick={() => {
-        setSelectedStudentForChat(student);
-        setIsDriverChatOpen(true);
-      }}
-      className="bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-600 transition inline-block mr-1"
-    >
-      💬 بلغ
-    </button>
-  </>
-)}
+              <button
+  onClick={() => {
+    setSelectedStudentForChat(student);
+    setIsDriverChatOpen(true);
+  }}
+  className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-600 transition inline-block"
+>
+  💬 مراسلة الطالب
+</button>
                   </div>
                 );
               })}
