@@ -654,7 +654,7 @@ if (viewMode === 'user') {
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
       {/* القائمة الجانبية (Sidebar) */}
-      <aside className="w-64 bg-[#0e1e38] text-slate-300 flex flex-col justify-between shadow-xl z-20">
+      <aside className="w-64 bg-white text-slate-800 flex flex-col justify-between shadow-xl z-20 border-l border-slate-200">
         <div>
           {/* قسم الشعار */}
          <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
