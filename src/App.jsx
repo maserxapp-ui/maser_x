@@ -654,20 +654,23 @@ if (viewMode === 'user') {
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
       {/* القائمة الجانبية (Sidebar) */}
-      <aside className="w-64 bg-white text-slate-800 flex flex-col justify-between shadow-xl z-20 border-l border-slate-200">
-        <div>
-          {/* قسم الشعار */}
-         <div className="p-4 flex flex-col items-center border-b border-slate-700/50">
-  {/* 🌟 خلفية بيضاء أنيقة وحجم متناسق للشعار */}
-  <div className="bg-white p-2 rounded-xl shadow-md flex items-center justify-center w-36 h-20 mb-2">
-    <img
-      src={logoImg}
-      alt="شعار مسار إكس"
-      className="max-h-full max-w-full object-contain"
-    />
-  </div>
-            <span className="text-xs text-orange-400 font-bold tracking-wider">نظام إدارة النقل والمحاسبة</span>
-          </div>
+     {/* القائمة الجانبية (Sidebar) بخلفية بيضاء ونصوص داكنة */}
+<aside className="w-64 bg-white text-slate-800 flex flex-col justify-between shadow-xl z-20 border-l border-slate-200">
+  <div>
+    {/* قسم الشعار (بدون مربع أبيض ولا ظل وبحجم ممتاز) */}
+    <div className="p-4 flex flex-col items-center border-b border-slate-200">
+      <div className="flex items-center justify-center w-36 h-20 mb-2">
+        <img
+          src={logoImg}
+          alt="شعار مسار إكس"
+          className="max-h-full max-w-full object-contain"
+        />
+      </div>
+      {/* النص تحت الشعار باللون الأسود الداكن */}
+      <span className="text-xs text-slate-900 font-bold tracking-wider">
+        نظام إدارة النقل والمحاسبة
+      </span>
+    </div>
           <button 
     onClick={() => setViewMode('user')}
     className="m-3 p-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition cursor-pointer"
