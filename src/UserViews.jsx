@@ -1,5 +1,140 @@
 import React, { useState, useEffect } from 'react';
 
+// 💬 مكون نافذة المحادثة المباشرة
+const DRIVER_QUICK_MESSAGES = [
+  "⚠️ تأخرت، يرجى الإسراع.", "⚠️ الرجاء عدم التأخر حفاظًا على وقت الجميع.", "🚗 تم الوصول إلى موقعك.",
+  "⏱️ سأنتظر 5 دقائق فقط.", "🚦 سأتحرك الآن.", "⏳ الرحلة متوقفة مؤقتًا.", "🚗 سأمر عليك بعد إنهاء المشترك السابق.",
+  "⏳ يوجد تأخير بسيط بسبب انتظار أحد المشتركين.", "📲 إذا لم تتمكن من الحضور أخبرني الآن.", "🏢 أنا عند البوابة الرئيسية.",
+  "👋 أين أنت؟", "📞 يرجى الرد.", "⚠️ سأغادر إذا لم تحضر.", "🚗 انطلقت من الموقع.", "🚦 يوجد زحام، سأصل متأخرًا قليلًا.",
+  "🚗 انا يم مشترك اخر سأتي خلال دقائق.", "🏠 لقد وصلت.", "👍تمام", "🚗 سأمر عليك بعد قليل.", "👀 لا أستطيع رؤيتك."
+];
+
+const STUDENT_QUICK_MESSAGES = [
+  "⚠️ تأخرت، يرجى الإسراع.", "👍 تم", "✅ أنا في الطريق", "⏳ أحتاج 5 دقائق.", "🙏 انتظرني قليلًا.",
+  "❌ لن أداوم اليوم.", "🚪 أنا أمام الباب.", "📍 لا أرى السيارة.", "👀 أين موقعك؟", "🙏 آسف على التأخير.",
+  "👀 لا أستطيع رؤيتك.", "🅿️ أنا في الكراج.", "🏫 أنا عند البوابة الرئيسية.", "📍 أين موقعك؟", "👋 أنا بانتظارك.",
+  "✅ يمكنك الانطلاق.", "🚗 هل وصلت؟", "⌛ كم تبقى على وصولك؟"
+];
+
+function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supabase }) {
+  const [messages, setMessages] = React.useState([]);
+  const [inputText, setInputText] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const quickMessages = currentUserRole === 'driver' ? DRIVER_QUICK_MESSAGES : STUDENT_QUICK_MESSAGES;
+
+  React.useEffect(() => {
+    if (!isOpen || !studentId || !driverId) return;
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`chat_${studentId}_${driverId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `student_id=eq.${studentId}`
+      }, (payload) => {
+        setMessages((prev) => [...prev, payload.new]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isOpen, studentId, driverId]);
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('student_id', String(studentId))
+      .eq('driver_id', String(driverId))
+      .order('created_at', { ascending: true });
+
+    if (data) setMessages(data);
+  };
+
+  const sendMessage = async (textToSend) => {
+    const text = textToSend || inputText;
+    if (!text.trim()) return;
+
+    setLoading(true);
+    const newMessage = {
+      student_id: String(studentId),
+      driver_id: String(driverId),
+      sender: currentUserRole,
+      text: text.trim()
+    };
+
+    const { error } = await supabase.from('messages').insert([newMessage]);
+    if (!error) {
+      setInputText('');
+      fetchMessages();
+    }
+    setLoading(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '450px', height: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', direction: 'rtl' }}>
+        
+        {/* Header */}
+        <div style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '14px' }}>💬 {currentUserRole === 'driver' ? 'محادثة الطالب' : 'محادثة السائق'}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {/* Messages list */}
+        <div style={{ flex: 1, padding: '12px', overflowY: 'auto', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {messages.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#94a3b8', marginTop: '20px', fontSize: '12px' }}>لا توجد رسائل بعد.. ابدأ المحادثة!</p>
+          ) : (
+            messages.map((msg, index) => {
+              const isMe = msg.sender === currentUserRole;
+              return (
+                <div key={index} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth: '80%', padding: '8px 12px', borderRadius: '12px', fontSize: '13px', backgroundColor: isMe ? '#f59e0b' : '#ffffff', color: isMe ? '#ffffff' : '#1e293b', border: isMe ? 'none' : '1px solid #e2e8f0' }}>
+                    {msg.text}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Quick Messages */}
+        <div style={{ padding: '8px', backgroundColor: '#f1f5f9', borderTop: '1px solid #e2e8f0', maxHeight: '120px', overflowY: 'auto' }}>
+          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold', marginBottom: '4px' }}>⚡ رسائل سريعة:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {quickMessages.map((msg, idx) => (
+              <button key={idx} disabled={loading} onClick={() => sendMessage(msg)} style={{ fontSize: '11px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '20px', padding: '3px 8px', cursor: 'pointer' }}>
+                {msg}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input */}
+        <div style={{ padding: '8px', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '6px' }}>
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="اكتب رسالة..."
+            style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px', fontSize: '12px', outline: 'none' }}
+          />
+          <button onClick={() => sendMessage()} disabled={loading} style={{ backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+            إرسال
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +146,8 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
-
+  const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
+  
   // 📅 حساب اسم يوم الغد تلقائيfاً بحسب تاريخ اليوم الحالي
   const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
@@ -583,6 +719,13 @@ if (user && user.role === 'driver') {
                   <a href={`tel:${assignedDriver.phone}`} style={{ display: 'inline-block', marginTop: '4px', backgroundColor: '#0284c7', color: 'white', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', textDecoration: 'none' }}>
                     📞 اتصل بالسايق
                   </a>
+  <button
+  onClick={() => setIsStudentChatOpen(true)}
+  style={{ display: 'inline-block', marginTop: '4px', marginRight: '4px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}
+>
+  💬 بلغ السايق
+</button>
+  
                 )}
               </div>
             </div>
@@ -665,7 +808,14 @@ if (user && user.role === 'driver') {
           </div>
         </div>
       )}
-
+      <ChatModal
+  isOpen={isStudentChatOpen}
+  onClose={() => setIsStudentChatOpen(false)}
+  studentId={user.id}
+  driverId={assignedDriver?.id || user.driver_id}
+  currentUserRole="student"
+  supabase={supabase}
+/>
       {/* 🔻 الشريط السفلي */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
         
@@ -692,6 +842,8 @@ if (user && user.role === 'driver') {
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
+const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
 
   // 🔄 جلب الطلاب المرتبطين بالسائق ذكياً
   const fetchStudents = async () => {
@@ -877,6 +1029,16 @@ function DriverView({ user, setUser, supabase }) {
                       >
                         📞 اتصال
                       </a>
+                    <button
+    onClick={() => {
+      setSelectedStudentForChat(student);
+      setIsDriverChatOpen(true);
+    }}
+    className="bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold"
+  >
+    💬 بلغ
+  </button>
+</div>
                     )}
                   </div>
                 );
@@ -905,7 +1067,16 @@ function DriverView({ user, setUser, supabase }) {
             </p>
           </div>
         </div>
-
+{selectedStudentForChat && (
+  <ChatModal
+    isOpen={isDriverChatOpen}
+    onClose={() => setIsDriverChatOpen(false)}
+    studentId={selectedStudentForChat.id}
+    driverId={user.id}
+    currentUserRole="driver"
+    supabase={supabase}
+  />
+)}
       </div>
     </div>
   );
