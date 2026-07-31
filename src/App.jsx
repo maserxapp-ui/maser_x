@@ -738,6 +738,7 @@ if (viewMode === 'user') {
 
         {/* محتوى اللوحة */}
         <main className="p-6 space-y-6">
+          {activeTab === 'main' && (
           
           {/* كروت الإحصائيات السريعة */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -771,9 +772,10 @@ if (viewMode === 'user') {
               <p className="text-sm font-bold text-emerald-600 mt-2">متصل بـ Supabase</p>
             </div>
           </div>
+    )}
 
           {/* التبويب الرئيسي والمشتركين */}
-          {(activeTab === 'main' || activeTab === 'subscribers') && (
+          {activeTab === 'subscribers' && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
               <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
