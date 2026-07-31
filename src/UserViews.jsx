@@ -34,25 +34,19 @@ function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supa
     if (!error && data) setMessages(data);
   }, [studentId, driverId, supabase]);
 
-  React.useEffect(() => {
+React.useEffect(() => {
     if (!isOpen || !studentId || !driverId) return;
+
     fetchMessages();
 
-    const channel = supabase
-      .channel(`chat_${studentId}_${driverId}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages',
-        filter: `student_id=eq.${studentId}`
-      }, (payload) => {
-        setMessages((prev) => [...prev, payload.new]);
-      })
-      .subscribe();
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 3000);
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      clearInterval(interval);
+    };
   }, [isOpen, studentId, driverId, fetchMessages]);
-
  const sendMessage = async (textToSend) => {
     if (!textToSend) return;
 
