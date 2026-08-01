@@ -648,34 +648,7 @@ if (user && user.role === 'driver') {
           const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
             ? user.work_days.includes(tomorrowName)
             : true;
-          return (
-      <div>
-        {activeTab === 'main' ? (
-        <div>
-        {/* 📍 زر تحديد الموقع (أيقونة + نص) */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-          <button
-            type="button"
-            onClick={handleSaveLocation}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              color: '#0284c7',
-              padding: '8px 14px',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span style={{ fontSize: '20px', lineHeight: '1' }}>📍</span>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', marginTop: '4px' }}>تحديد الموقع</span>
-          </button>
-        </div>
+
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               
@@ -708,7 +681,7 @@ if (user && user.role === 'driver') {
                   padding: '12px 8px',
                   borderRadius: '10px',
                   border: tomorrowStatus === 'لا أداوم غداً' ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                 backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
+                  backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
                   color: '#b91c1c',
                   fontWeight: 'bold',
                   fontSize: '12px',
@@ -717,16 +690,13 @@ if (user && user.role === 'driver') {
                 🔴 لا أداوم غداً
               </button>
 
-        
-
-              {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
+              {/* 📝 زر لدي امتحان */}
               {!isWorkDay && (
                 <button
                   onClick={async () => {
                     const examTime = prompt(`📝 غداً (${tomorrowName}) ليس ضمن دوامك الرسمي.\nيرجى تحديد وقت الامتحان (مثال: من الساعة 8:00 صباحاً إلى 11:30 صباحاً):`);
                     if (examTime && examTime.trim() !== '') {
                       try {
-                        // حفظ وقت الامتحان في عمود exam_note بـ Supabase
                         await supabase
                           .from('students')
                           .update({
@@ -738,8 +708,6 @@ if (user && user.role === 'driver') {
                       } catch (err) {
                         console.error('خطأ بالحفظ:', err);
                       }
-                      
-                      // استدعاء الدالة الخاصة بك
                       handleStudentAction('exam_exception', `لدي امتحان غداً (${examTime})`);
                     }
                   }}
@@ -774,162 +742,166 @@ if (user && user.role === 'driver') {
             color: '#0369a1',
             fontWeight: 'bold',
             fontSize: '13px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            marginBottom: '15px'
           }}>
           🏁 أنهيت دوامي (إشعارات العودة)
         </button>
-     
-          {/* 🟢 كارت رحلة الذهاب */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
-              <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
-              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {assignedDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
-              </span>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.car_model || assignedDriver?.car_type || assignedDriver?.car || 'لم تحدد بعد'}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
-                </div>
-                {assignedDriver && (
-                  <button
-                    onClick={() => setIsStudentChatOpen(true)}
-                    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
-                  >
-                    💬 مراسلة السائق
-                  </button>
-                )}
-              </div>
-            </div>
+        {/* 🟢 كارت رحلة الذهاب */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
+            <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
+            <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
+              {assignedDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
+            </span>
           </div>
 
-          {/* 🟠 كارت رحلة العودة */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #f59e0b', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
-              <span style={{ fontWeight: 'bold', color: '#d97706', fontSize: '14px' }}>🟠 رحلة العودة</span>
-              <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {shiftFinished ? 'أنهيت الدوام 🏁' : 'قيد الانتظار ⏳'}
-              </span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>حالة الإشعار</div>
-                <div style={{ fontWeight: 'bold', color: shiftFinished ? '#0284c7' : '#d97706', margin: '3px 0' }}>
-                  {shiftFinished ? 'تم إعلام السائق' : 'اضغط انهيت دوامي'}
-                </div>
-              </div>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
             </div>
-          </div>
 
-        </div>
-      ) : (
-        /* ⚙️ تبويب الإعدادات */
-        <div style={{ padding: '20px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>اسم المشترك:</span>
-                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.name}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
-                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.phone}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
-                <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.university || 'غير محدد'}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
-                <span style={{ fontWeight: 'bold', color: '#059669' }}>{user.price ? `${user.price} د.ع` : 'غير محدد'}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
-                <span style={{ fontWeight: 'bold', color: user.status === 'متاخر' || user.status === 'متأخر' ? '#d97706' : '#16a34a' }}>
-                  {user.status === 'متاخر' || user.status === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>السائق المخصص:</span>
-                <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
-                </span>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                {assignedDriver?.car_model || assignedDriver?.car_type || assignedDriver?.car || 'لم تحدد بعد'}
               </div>
             </div>
 
-            <button 
-              onClick={handleLogout}
-              style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-              🚪 تسجيل الخروج
-            </button>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+              </div>
+              {assignedDriver && (
+                <button
+                  onClick={() => setIsStudentChatOpen(true)}
+                  style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  💬 مراسلة السائق
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      )}
-      <ChatModal
-  isOpen={isStudentChatOpen}
-  onClose={() => setIsStudentChatOpen(false)}
-  studentId={user.id}
-  driverId={assignedDriver?.id || user.driver_id}
-  currentUserRole="student"
-  supabase={supabase}
-/>
-      {/* 🔻 الشريط السفلي */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
-        
-        <button 
-          onClick={() => setActiveTab('main')}
-          style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
-          <span style={{ fontSize: '22px' }}>🏠</span>
-          <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
-        </button>
 
-        <button 
-          onClick={() => setActiveTab('settings')}
-          style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
-          <span style={{ fontSize: '22px' }}>⚙️</span>
-          <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
-        </button>
+        {/* 🟠 كارت رحلة العودة */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #f59e0b', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
+            <span style={{ fontWeight: 'bold', color: '#d97706', fontSize: '14px' }}>🟠 رحلة العودة</span>
+            <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
+              {shiftFinished ? 'أنهيت الدوام 🏁' : 'قيد الانتظار ⏳'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>
+                {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>حالة الإشعار</div>
+              <div style={{ fontWeight: 'bold', color: shiftFinished ? '#0284c7' : '#d97706', margin: '3px 0' }}>
+                {shiftFinished ? 'تم إعلام السائق' : 'اضغط انهيت دوامي'}
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
+    ) : (
+      /* ⚙️ تبويب الإعدادات */
+      <div style={{ padding: '20px' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>اسم المشترك:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.name}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.phone}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user.university || 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: '#059669' }}>{user.price ? `${user.price} د.ع` : 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: user.status === 'متاخر' || user.status === 'متأخر' ? '#d97706' : '#16a34a' }}>
+                {user.status === 'متاخر' || user.status === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>السائق المخصص:</span>
+              <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
+                {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+              </span>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleLogout}
+            style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+            🚪 تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    )}
+
+    <ChatModal
+      isOpen={isStudentChatOpen}
+      onClose={() => setIsStudentChatOpen(false)}
+      studentId={user.id}
+      driverId={assignedDriver?.id || user.driver_id}
+      currentUserRole="student"
+      supabase={supabase}
+    />
+
+    {/* 🔻 الشريط السفلي */}
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
+      
+      <button 
+        onClick={() => setActiveTab('main')}
+        style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
+        <span style={{ fontSize: '22px' }}>🏠</span>
+        <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
+      </button>
+
+      <button 
+        onClick={() => setActiveTab('settings')}
+        style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
+        <span style={{ fontSize: '22px' }}>⚙️</span>
+        <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
+      </button>
 
     </div>
-  );
+
+  </div>
+);
 }
+      
 // 🚗 مكون واجهة السائق الشامل والمصحح
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
