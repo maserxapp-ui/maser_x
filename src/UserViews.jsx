@@ -647,7 +647,7 @@ if (user && user.role === 'driver') {
                   padding: '12px 8px',
                   borderRadius: '10px',
                   border: tomorrowStatus === 'لا أداوم غداً' ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                  backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
+                 backgroundColor: tomorrowStatus === 'لا أداوم غداً' ? '#fef2f2' : '#ffffff',
                   color: '#b91c1c',
                   fontWeight: 'bold',
                   fontSize: '12px',
@@ -656,12 +656,27 @@ if (user && user.role === 'driver') {
                 🔴 لا أداوم غداً
               </button>
 
-              {/* زر لدي امتحان */}
+              {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
               {!isWorkDay && (
                 <button
                   onClick={async () => {
                     const examTime = prompt(`📝 غداً (${tomorrowName}) ليس ضمن دوامك الرسمي.\nيرجى تحديد وقت الامتحان (مثال: من الساعة 8:00 صباحاً إلى 11:30 صباحاً):`);
-                    if (examTime) {
+                    if (examTime && examTime.trim() !== '') {
+                      try {
+                        // حفظ وقت الامتحان في عمود exam_note بـ Supabase
+                        await supabase
+                          .from('students')
+                          .update({
+                            exam_note: examTime.trim(),
+                            tomorrow_status: `لدي امتحان غداً (${examTime.trim()})`,
+                            is_absent: false
+                          })
+                          .eq('id', user.id);
+                      } catch (err) {
+                        console.error('خطأ بالحفظ:', err);
+                      }
+                      
+                      // استدعاء الدالة الخاصة بك
                       handleStudentAction('exam_exception', `لدي امتحان غداً (${examTime})`);
                     }
                   }}
@@ -717,10 +732,12 @@ if (user && user.role === 'driver') {
                 <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
               </div>
-<div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-            <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
-            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
-          </div>
+
+              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+                <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
+              </div>
+
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
@@ -733,14 +750,13 @@ if (user && user.role === 'driver') {
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
                   {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
                 </div>
-              {assignedDriver && (
-  <button
-    onClick={() => setIsStudentChatOpen(true)}
-    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
-  >
-    💬 مراسلة السائق
-  </button>
-)}
+                {assignedDriver && (
+                  <button
+                    onClick={() => setIsStudentChatOpen(true)}
+                    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    💬 مراسلة السائق
+                  </button>
                 )}
               </div>
             </div>
