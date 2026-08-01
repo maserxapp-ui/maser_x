@@ -1105,7 +1105,19 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
                         )}
                       </div>
                     </div>
-
+{/* 📍 زر فتح موقع الطالب على الخريطة */}
+        <button
+          onClick={() => {
+            if (!student.latitude || !student.longitude) {
+              alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
+              return;
+            }
+            window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
+          }}
+          className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block ml-2 cursor-pointer"
+        >
+          📍 الموقع
+        </button>
               <button
   onClick={() => {
     setSelectedStudentForChat(student);
