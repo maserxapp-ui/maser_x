@@ -1135,6 +1135,7 @@ if (viewMode === 'user') {
         String(s.daily_status || '') + ' ' +
         String(s.action_type || '') + ' ' +
         String(s.notes || '')
+        String(s.tomorrow_status || '')
       ).toLowerCase();
 
       const isOfficialWorkDay = Array.isArray(s.work_days) && s.work_days.length > 0
@@ -1177,10 +1178,10 @@ if (viewMode === 'user') {
           displayText: note || 'طلب استثناء / امتحان'
         });
       } 
-      // 🟢 إذا أكّد دوامه أو غداً يوم دوامه الرسمي: يذهب لخانة المداومين
-      else if (confirmedAttending || (isOfficialWorkDay && !confirmedAbsent)) {
-        attendingStudents.push(studentData);
-      } 
+      // 🟢 فقط إذا أكد دوامه صراحة (ضغط أداوم غداً): يذهب لخانة المداومين
+else if (confirmedAttending) {
+  attendingStudents.push(studentData);
+}
       // ⚪ إذا كان ليس يوم دوامه الرسمي: يذهب للغائبين
       else {
         absentStudents.push(studentData);
