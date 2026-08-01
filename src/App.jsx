@@ -1123,7 +1123,19 @@ if (viewMode === 'user') {
     const examStudents = [];
     const attendingStudents = [];
     const absentStudents = [];
+// 🗺️ دالة فتح موقع الطالب على الخريطة
+  const openStudentMap = (lat, lng) => {
+    if (!lat || !lng) {
+      alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
+      return;
+    }
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    window.open(mapUrl, '_blank');
+  };
 
+  // ⏰ فحص وقت تفعيل الأزرار (يتفعل من الساعة 6 صباحاً)
+  const currentHour = new Date().getHours();
+  const isActionActive = currentHour >= 6;
     allStudents.forEach(s => {
       const driver = (drivers || []).find(d => String(d.id) === String(s.driver_id ?? s.driverId));
       const driverName = driver ? driver.name : 'غير محدد';
@@ -1226,6 +1238,37 @@ else if (confirmedAttending) {
                       👤 الجنس: <span className="font-bold text-slate-700">{s.gender || 'غير محدد'}</span> | 🏛️ القضاء: <span className="font-bold text-slate-700">{s.district || 'غير محدد'}</span>
                     </div>
                     <div className="text-indigo-600 font-bold text-[11px] mb-1">🚌 السائق: {s.driverName}</div>
+                    {/* 🛠️ أزرار الموقع والمراسلة للسائق */}
+<div className="flex items-center gap-2 mt-2">
+  {/* 🗺️ زر الموقع */}
+  <button
+    type="button"
+    onClick={() => openStudentMap(s.latitude, s.longitude)}
+    disabled={!isActionActive}
+    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+      isActionActive
+        ? 'bg-sky-600 text-white hover:bg-sky-700 cursor-pointer'
+        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+    }`}
+  >
+    🗺️ الموقع
+  </button>
+
+  {/* 💬 زر المراسلة */}
+  <a
+    href={isActionActive && s.phone ? `https://wa.me/${s.phone}` : '#'}
+    target="_blank"
+    rel="noopener noreferrer"
+    onClick={(e) => !isActionActive && e.preventDefault()}
+    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+      isActionActive
+        ? 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+    }`}
+  >
+    💬 مراسلة
+  </a>
+</div>
                     <div className="text-rose-700 bg-rose-50 p-2 rounded-lg font-bold border border-rose-100 mt-1">
                       💬 {s.displayText}
                     </div>
