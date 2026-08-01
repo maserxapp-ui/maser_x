@@ -719,6 +719,33 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
 if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} loginRole={loginRole} setLoginRole={setLoginRole} />;
   }
+  // ---------------------------------------------------
+  // 🟢 كود فلترة الطلاب لجدول التواجد اليومي
+  // ---------------------------------------------------
+  const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const tomorrowIndex = (new Date().getDay() + 1) % 7;
+  const tomorrowName = daysOfWeek[tomorrowIndex];
+
+  // 🟢 1. المداومون: فقط من ضغط "أداوم غداً"
+  const attendingStudents = students.filter(student => 
+    student.tomorrow_status === 'أداوم غداً'
+  );
+
+  // 📝 2. الاستثناءات: من لديه امتحان
+  const exceptionStudents = students.filter(student => 
+    student.exam_note && student.exam_note.trim() !== ''
+  );
+
+  // 🔴 3. الغائبون: من ليس لديه دوام رسمي أو ضغط "لا أداوم غداً"
+  const absentStudents = students.filter(student => {
+    const hasOfficialWorkTomorrow = student.work_days && student.work_days.includes(tomorrowName);
+
+    if (student.exam_note && student.exam_note.trim() !== '') return false;
+    if (student.tomorrow_status === 'أداوم غداً') return false;
+
+    return student.tomorrow_status === 'لا أداوم غداً' || !hasOfficialWorkTomorrow;
+  });
+  // ---------------------------------------------------
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
