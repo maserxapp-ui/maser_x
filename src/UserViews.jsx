@@ -648,7 +648,8 @@ if (user && user.role === 'driver') {
           const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
             ? user.work_days.includes(tomorrowName)
             : true;
-<>
+          return (
+      <div>
         {/* 📍 زر تحديد الموقع (أيقونة + نص) */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
           <button
