@@ -1130,13 +1130,13 @@ if (viewMode === 'user') {
 
       // دمج كافة الحقول الممكنة للبحث عن حالة الطلب
       const fullStatusText = (
-        String(s.attendance_status || '') + ' ' +
-        String(s.status || '') + ' ' +
-        String(s.daily_status || '') + ' ' +
-        String(s.action_type || '') + ' ' +
-        String(s.notes || '')
-        String(s.tomorrow_status || '')
-      ).toLowerCase();
+  String(s.attendance_status || '') + ' ' +
+  String(s.status || '') + ' ' +
+  String(s.daily_status || '') + ' ' +
+  String(s.action_type || '') + ' ' +
+  String(s.notes || '') + ' ' + // 👈 إضافة علامة الجمع هنا للربط
+  String(s.tomorrow_status || '')
+).toLowerCase();
 
       const isOfficialWorkDay = Array.isArray(s.work_days) && s.work_days.length > 0
         ? s.work_days.some(w => String(w).includes(targetDayName) || targetDayName.includes(String(w)))
