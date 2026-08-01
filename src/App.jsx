@@ -62,28 +62,28 @@ const [driverPassword, setDriverPassword] = useState('');
   };
 
 // ⏰ 1. فحص الوقت والتوزيع التلقائي الساعة 9:00 مساءً (الساعة 21)
-  useEffect(() => {
-    const checkTimeAndDistribute = () => {
-      const now = new Date();
-      const hours = now.getHours(); // 21 تعني الساعة 9 مساءً
-      const todayStr = now.toISOString().split('T')[0];
+useEffect(() => {
+  const checkTimeAndDistribute = () => {
+    const now = new Date();
+    const hours = now.getHours(); // 21 تعني الساعة 9 مساءً
+    const todayStr = now.toISOString().split('T')[0];
 
-      const lastDistributed = localStorage.getItem('last_auto_distribute_date');
+    const lastDistributed = localStorage.getItem('last_auto_distribute_date');
 
-      // إذا كانت الساعة 9 مساءً ولم يتم التوزيع اليوم بعد
-      if (hours === 21 && lastDistributed !== todayStr) {
-        handleAutoDistribute(true); // توزيع تلقائي
-        localStorage.setItem('last_auto_distribute_date', todayStr);
-      }
-    };
+    // إذا كانت الساعة 9 مساءً ولم يتم التوزيع اليوم بعد
+    if (hours === 21 && lastDistributed !== todayStr) {
+      handleAutoDistribute(true); // توزيع تلقائي
+      localStorage.setItem('last_auto_distribute_date', todayStr);
+    }
+  };
 
-    const interval = setInterval(checkTimeAndDistribute, 30000); // يفحص كل 30 ثانية
-    checkTimeAndDistribute();
+  const interval = setInterval(checkTimeAndDistribute, 30000); // يفحص كل 30 ثانية
+  checkTimeAndDistribute();
 
-    return () => clearInterval(interval);
-  }, []);
+  return () => clearInterval(interval);
+}, []);
 
-// 🎲 دالة لخلط الطلاب عشوائياً لمنح فرص عادلة يومياً
+// 🎲 2. دالة لخلط الطلاب عشوائياً لمنح فرص عادلة يومياً
 const shuffleArray = (array) => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -93,7 +93,7 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// 🎯 دالة التوزيع المقتصدة (ملء سيارة تلو الأخرى)
+// 🎯 3. دالة التوزيع المقتصدة (ملء سيارة تلو الأخرى + مراعاة الاستثناءات)
 const handleAutoDistribute = async (e, isAutomatic = false) => {
   if (e && e.preventDefault) e.preventDefault();
   const autoMode = typeof e === 'boolean' ? e : isAutomatic;
@@ -122,22 +122,31 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     // 3️⃣ تصفية الطلاب المداومين واستبعاد الغائبين/المعتذرين
     const eligibleStudents = studentsData.filter(student => {
       const fullText = Object.values(student).map(v => String(v || '')).join(' ');
+      const statusStr = String(student.tomorrow_status || '');
       
+      // استبعاد الغائبين
       const isAbsent = 
         student.is_absent === true ||
-        student.tomorrow_status === 'لا أداوم غداً' ||
+        statusStr === 'لا أداوم غداً' ||
         fullText.includes('اعتذار') || 
         fullText.includes('غائب');
 
       if (isAbsent) return false;
 
+      // 🎯 فحص الاستثناءات والامتحانات (يتجاوز جدول الدوام الأصلي)
+      const hasExamException = 
+        statusStr.includes('امتحان') || 
+        statusStr.includes('استثناء') || 
+        (student.exam_note && String(student.exam_note).trim() !== '');
+
       const rawDays = JSON.stringify(student.work_days || student.days || student.work_day || '');
       const normalize = (t) => String(t || '').replace(/[\[\]"']/g, '').replace(/أ|إ|آ/g, 'ا').trim();
       
       const isTomorrowInDays = normalize(rawDays).includes(normalize(tomorrowDay));
-      const isAttending = student.tomorrow_status === 'أداوم غداً' || student.tomorrow_status === 'مداوم';
+      const isAttending = statusStr === 'أداوم غداً' || statusStr === 'مداوم';
 
-      return isTomorrowInDays || isAttending || !student.work_days;
+      // يداوم إذا: لديه امتحان OR يداوم حسَب الجدول OR اختار "أداوم غداً"
+      return hasExamException || isTomorrowInDays || isAttending || !student.work_days;
     });
 
     if (eligibleStudents.length === 0) {
