@@ -339,63 +339,66 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
-    if (!user) return;
+  if (!user) return;
 
-    setActionAlert(`جاري إرسال: "${labelText}"...`);
+  setActionAlert(`جاري إرسال: "${labelText}"...`);
 
-    try {
-      // تحديد النص الذي سيُحفظ بناءً على نوع الزر
-      let noteValue = null;
+  try {
+    // 1️⃣ تحديد القيم التي ستُحفظ في Supabase بناءً على نوع الزر
+    let statusValue = null;
+    let noteValue = null;
 
-      if (actionType === 'exam_exception') {
-        noteValue = labelText; // نص الاستثناء والوقت
-      } else if (actionType === 'absent' || labelText.includes('لا أداوم')) {
-        noteValue = 'لا أداوم غداً'; // علامة الغياب
-      } else {
-        noteValue = null; // أداوم غداً (تفريغ الخيار وعودة للدوام الطبيعي)
-      }
-
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ 
-          exam_note: noteValue 
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        alert(`⚠️ خطأ من Supabase:\n${updateError.message}`);
-        throw updateError;
-      }
-
-      setTomorrowStatus(labelText);
-
-      // إرسال الإشعار
-      try {
-        await supabase.from('notifications').insert([
-          {
-            student_id: user.id,
-            student_name: user.name,
-            driver_id: assignedDriver?.id || null,
-            driver_name: assignedDriver?.name || user.driver_name || null,
-            title: `تحديث من الطالب: ${user.name}`,
-            message: `قام الطالب بـ: ${labelText}`,
-            type: actionType,
-            created_at: new Date().toISOString()
-          }
-        ]);
-      } catch (e) {
-        console.warn('Could not insert notification:', e);
-      }
-
-      setActionAlert(`تم إرسال إشعار "${labelText}" بنجاح! ✅`);
-      setTimeout(() => setActionAlert(''), 4000);
-
-    } catch (err) {
-      console.error('Error:', err);
-      setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب`);
-      setTimeout(() => setActionAlert(''), 4000);
+    if (actionType === 'exam_exception') {
+      noteValue = labelText; // حفظ نص الاستثناء والوقت
+    } else if (actionType === 'absent' || labelText.includes('لا أداوم')) {
+      statusValue = 'لا أداوم غداً'; // حفظ الغياب
+    } else if (actionType === 'attending' || labelText.includes('أداوم غداً')) {
+      statusValue = 'أداوم غداً'; // 🟢 حفظ الدوام الصريح لعمود tomorrow_status
     }
-  };
+
+    // 2️⃣ تحديث الجدول في Supabase بالشكل الصحيح
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({ 
+        tomorrow_status: statusValue, // 👈 كتابة حالة الدوام بالعمود الجديد
+        exam_note: noteValue          // 👈 كتابة ملاحظة الامتحان
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      alert(`⚠️ خطأ من Supabase:\n${updateError.message}`);
+      throw updateError;
+    }
+
+    setTomorrowStatus(labelText);
+
+    // 3️⃣ إرسال الإشعار للسائق والإدارة
+    try {
+      await supabase.from('notifications').insert([
+        {
+          student_id: user.id,
+          student_name: user.name,
+          driver_id: assignedDriver?.id || null,
+          driver_name: assignedDriver?.name || user.driver_name || null,
+          title: `تحديث من الطالب: ${user.name}`,
+          message: `قام الطالب بـ: ${labelText}`,
+          type: actionType,
+          created_at: new Date().toISOString()
+        }
+      ]);
+    } catch (e) {
+      console.warn('Could not insert notification:', e);
+    }
+
+    setActionAlert(`تم إرسال إشعار "${labelText}" بنجاح! ✅`);
+    setTimeout(() => setActionAlert(''), 4000);
+
+  } catch (err) {
+    console.error('Error:', err);
+    setActionAlert(`❌ حدث خطأ أثناء إرسال الطلب`);
+    setTimeout(() => setActionAlert(''), 4000);
+  }
+};
   const handleLogout = () => {
     setUser(null);
     setAssignedDriver(null);
