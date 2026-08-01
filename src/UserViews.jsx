@@ -648,7 +648,31 @@ if (user && user.role === 'driver') {
           const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
             ? user.work_days.includes(tomorrowName)
             : true;
-
+<>
+        {/* 📍 زر تحديد الموقع (أيقونة + نص) */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <button
+            type="button"
+            onClick={handleSaveLocation}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              color: '#0284c7',
+              padding: '8px 14px',
+              borderRadius: '16px',
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span style={{ fontSize: '20px', lineHeight: '1' }}>📍</span>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', marginTop: '4px' }}>تحديد الموقع</span>
+          </button>
+        </div>
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               
@@ -690,24 +714,7 @@ if (user && user.role === 'driver') {
                 🔴 لا أداوم غداً
               </button>
 
-              {/* 📍 زر تحديد الموقع */}
-<button
-  onClick={handleSaveLocation}
-  style={{
-    width: '100%',
-    padding: '10px',
-    marginBottom: '10px',
-    borderRadius: '10px',
-    backgroundColor: '#0284c7',
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: '12px',
-    border: 'none',
-    cursor: 'pointer'
-  }}
->
-  📍 تحديد / تحديث موقعي على الخريطة
-</button>
+        
 
               {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
               {!isWorkDay && (
