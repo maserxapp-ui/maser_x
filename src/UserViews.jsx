@@ -336,6 +336,37 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
     }
   };
+
+  // 📍 دالة جلب وتحديث الموقع على الخريطة
+  const handleSaveLocation = () => {
+    if (!navigator.geolocation) {
+      alert('❌ نظام الـ GPS غير مدعوم في متصفحك');
+      return;
+    }
+
+    alert('جاري تحديد موقعك الحالي... ⏳');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        const { error } = await supabase
+          .from('students')
+          .update({ latitude: lat, longitude: lng })
+          .eq('id', user.id);
+
+        if (!error) {
+          alert('✅ تم حفظ موقعك بنجاح!');
+        } else {
+          alert('❌ حدث خطأ أثناء حفظ الموقع');
+        }
+      },
+      (err) => {
+        alert('⚠️ يرجى السماح للتطبيق بالوصول للموقع (GPS)');
+      }
+    );
+  };
   
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
@@ -658,6 +689,25 @@ if (user && user.role === 'driver') {
                 }}>
                 🔴 لا أداوم غداً
               </button>
+
+              {/* 📍 زر تحديد الموقع */}
+<button
+  onClick={handleSaveLocation}
+  style={{
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    borderRadius: '10px',
+    backgroundColor: '#0284c7',
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: '12px',
+    border: 'none',
+    cursor: 'pointer'
+  }}
+>
+  📍 تحديد / تحديث موقعي على الخريطة
+</button>
 
               {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
               {!isWorkDay && (
