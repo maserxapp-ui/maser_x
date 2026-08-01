@@ -650,6 +650,8 @@ if (user && user.role === 'driver') {
             : true;
           return (
       <div>
+        {activeTab === 'main' ? (
+        <div>
         {/* 📍 زر تحديد الموقع (أيقونة + نص) */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
           <button
