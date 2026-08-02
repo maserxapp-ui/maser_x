@@ -159,6 +159,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [user, setUser] = useState(null);
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const studentData = user;
   
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
