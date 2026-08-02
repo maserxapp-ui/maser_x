@@ -927,15 +927,30 @@ function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
-const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
-// 🟢 كود التوقيت والتحقق من موافقة الإدارة (ساعة 9 بليل)
+  const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
+  // 🟢 كود التوقيت والتحقق من موافقة الإدارة (ساعة 9 بليل)
   const [isApprovedByAdmin, setIsApprovedByAdmin] = React.useState(true);
   const [isAfter9PM, setIsAfter9PM] = React.useState(false);
+
+  // 🆕 حالات تتبع الرحلة ومواعيد المراسلة
+  const [isChatWindowOpen, setIsChatWindowOpen] = React.useState(false);
+  const [driverTripStatus, setDriverTripStatus] = React.useState('not_started');
 
   React.useEffect(() => {
     const checkTimeAndApproval = async () => {
       const now = new Date();
       const baghdadHour = (now.getUTCHours() + 3) % 24;
+      const baghdadMinute = now.getUTCMinutes();
+
+      // 🕒 تصفير وتحديث التوزيع يومياً الساعة 6:30 مساءً (18:30)
+      if (baghdadHour === 18 && baghdadMinute >= 30) {
+        await supabase.from('system_settings').upsert({ key: 'trips_approved_today', value: 'false' });
+      }
+
+      // 🕒 نافذة المراسلة مفتوحة فقط من 6:00 صباحاً إلى 9:00 صباحاً
+      const canChat = baghdadHour >= 6 && baghdadHour < 9;
+      setIsChatWindowOpen(canChat);
+
       const after9 = baghdadHour >= 21 || baghdadHour < 4;
       setIsAfter9PM(after9);
 
@@ -950,6 +965,7 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
 
     checkTimeAndApproval();
   }, []);
+
   // 🔄 جلب الطلاب المرتبطين بالسائق ذكياً
   const fetchStudents = async () => {
     if (!user || !supabase) return;
@@ -958,16 +974,17 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
       const cleanPhone = user.phone ? String(user.phone).trim() : '';
       const cleanName = user.name ? String(user.name).trim() : '';
 
-      // 1. البحث عن بيانات السائق في جدول drivers لجلب id الخاص به
+      // 1. البحث عن بيانات السائق في جدول drivers لجلب id الخاص به وحالة الرحلة
       let realDriverId = user.id;
       const { data: driverRow } = await supabase
         .from('drivers')
-        .select('id, name, phone')
+        .select('id, name, phone, trip_status')
         .or(`phone.eq.${cleanPhone},name.eq.${cleanName}`)
         .maybeSingle();
 
       if (driverRow) {
         realDriverId = driverRow.id;
+        if (driverRow.trip_status) setDriverTripStatus(driverRow.trip_status);
       }
 
       // 2. صياغة الاستعلام لجدول الطلاب بجميع الاحتمالات
@@ -1001,6 +1018,40 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
   React.useEffect(() => {
     fetchStudents();
   }, [user]);
+
+  // 🚗 وظائف تتبع الرحلة وصعود الطلاب
+  const handleStartJourney = async () => {
+    try {
+      if (user?.id) {
+        await supabase.from('drivers').update({ trip_status: 'on_the_way' }).eq('id', user.id);
+        setDriverTripStatus('on_the_way');
+        alert('📢 تم إرسال إشعار للطلاب: أنك في الطريق إليهم الآن!');
+      }
+    } catch (err) {
+      alert('خطأ في التحديث: ' + err.message);
+    }
+  };
+
+  const handleStudentBoarded = async (studentId) => {
+    try {
+      await supabase.from('students').update({ is_boarded: true }).eq('id', studentId);
+      setStudents(prev => prev.map(s => s.id === studentId ? { ...s, is_boarded: true } : s));
+    } catch (err) {
+      alert('خطأ في تحديث حالة الطالب: ' + err.message);
+    }
+  };
+
+  const handleCompleteTrip = async () => {
+    try {
+      if (user?.id) {
+        await supabase.from('drivers').update({ trip_status: 'completed' }).eq('id', user.id);
+        setDriverTripStatus('completed');
+        alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح.');
+      }
+    } catch (err) {
+      alert('خطأ في إتمام الرحلة: ' + err.message);
+    }
+  };
 
   // 📊 تصنيف الطلاب (مداومين وغائبين)
   const absentStudentsList = students.filter(s => 
@@ -1073,6 +1124,35 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
 
       <div className="max-w-md mx-auto p-4 space-y-4">
 
+        {/* 🚗 أزرار التحكم بالرحلة (أنا في طريقي لكم / إتمام الرحلة) */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+          <button
+            onClick={handleStartJourney}
+            disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
+            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+              driverTripStatus === 'on_the_way' 
+                ? 'bg-emerald-600 cursor-not-allowed' 
+                : driverTripStatus === 'completed' 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-sky-600 hover:bg-sky-700'
+            }`}
+          >
+            {driverTripStatus === 'on_the_way' ? '🟢 أنت في الطريق للطلاب' : driverTripStatus === 'completed' ? '✅ اكتملت الرحلة' : '🚗 أنا في طريقي إليكم'}
+          </button>
+
+          <button
+            onClick={handleCompleteTrip}
+            disabled={driverTripStatus === 'completed'}
+            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+              driverTripStatus === 'completed'
+                ? 'bg-emerald-700 cursor-not-allowed'
+                : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+          >
+            {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
+          </button>
+        </div>
+
         {/* 2. بطاقات الإحصائيات */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
@@ -1095,9 +1175,16 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
             <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
               <span className="text-base">🎓</span> طلاب خط السائق
             </h3>
-            <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-              {students.length} مسجلين
-            </span>
+            <div className="flex items-center gap-2">
+              {!isChatWindowOpen && (
+                <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
+                  🔒 المراسلة (6-9 ص)
+                </span>
+              )}
+              <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+                {students.length} مسجلين
+              </span>
+            </div>
           </div>
 
           {loading ? (
@@ -1120,12 +1207,12 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
                   <div 
                     key={student.id || index} 
                     className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
-                      isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
+                      student.is_boarded ? 'bg-emerald-50/60 border-emerald-300' : isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                        student.is_boarded ? 'bg-emerald-100 text-emerald-700' : isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
                       }`}>
                         {index + 1}
                       </span>
@@ -1141,30 +1228,62 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
                             🔴 غير مداوم
                           </span>
                         )}
+                        {student.is_boarded && (
+                          <span className="inline-block mt-1 bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded font-bold mr-1">
+                            🙋‍♂️ صعد للمركبة
+                          </span>
+                        )}
                       </div>
                     </div>
-{/* 📍 زر فتح موقع الطالب على الخريطة */}
-        <button
-          onClick={() => {
-            if (!student.latitude || !student.longitude) {
-              alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
-              return;
-            }
-            window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
-          }}
-          className="bg-sky-600 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block ml-2 cursor-pointer"
-        >
-          📍 الموقع
-        </button>
-              <button
-  onClick={() => {
-    setSelectedStudentForChat(student);
-    setIsDriverChatOpen(true);
-  }}
-  className="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-600 transition inline-block"
->
-  💬 مراسلة الطالب
-</button>
+
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {/* 📍 زر فتح موقع الطالب على الخريطة */}
+                      <button
+                        onClick={() => {
+                          if (!student.latitude || !student.longitude) {
+                            alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
+                            return;
+                          }
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
+                        }}
+                        className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
+                      >
+                        📍 الموقع
+                      </button>
+
+                      {/* 🙋‍♂️ زر صعد معي */}
+                      <button
+                        onClick={() => handleStudentBoarded(student.id)}
+                        disabled={student.is_boarded}
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                          student.is_boarded 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                        }`}
+                      >
+                        {student.is_boarded ? '✔️ صعد' : '🙋‍♂️ صعد معي'}
+                      </button>
+
+                      {/* 💬 زر مراسلة الطالب (مقيد بتوقيت 6:00 ص - 9:00 ص) */}
+                      <button
+                        onClick={() => {
+                          if (!isChatWindowOpen) {
+                            alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
+                            return;
+                          }
+                          setSelectedStudentForChat(student);
+                          setIsDriverChatOpen(true);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                          isChatWindowOpen 
+                            ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
+                            : 'bg-slate-300 text-slate-600 cursor-pointer'
+                        }`}
+                      >
+                        💬 مراسلة
+                      </button>
+                    </div>
+
                   </div>
                 );
               })}
@@ -1192,16 +1311,17 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
             </p>
           </div>
         </div>
-{selectedStudentForChat && (
-  <ChatModal
-    isOpen={isDriverChatOpen}
-    onClose={() => setIsDriverChatOpen(false)}
-    studentId={selectedStudentForChat.id}
-    driverId={user.id}
-    currentUserRole="driver"
-    supabase={supabase}
-  />
-)}
+
+        {selectedStudentForChat && (
+          <ChatModal
+            isOpen={isDriverChatOpen}
+            onClose={() => setIsDriverChatOpen(false)}
+            studentId={selectedStudentForChat.id}
+            driverId={user.id}
+            currentUserRole="driver"
+            supabase={supabase}
+          />
+        )}
       </div>
     </div>
   );
