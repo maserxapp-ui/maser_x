@@ -2145,15 +2145,21 @@ function AdminReturnTripsManager({ supabase }) {
     const { data: driversList } = await supabase.from('drivers').select('*');
     setDrivers(driversList || []);
 
-    // 3. تجميع الطالبات حسب السائق (مع اعتماد سائق الصباح كافتراضي إذا لم يُحدد سائق عودة)
+    // 3. تجميع الطالبات حسب السائق (مع مطابقة مرنة للـ ID وضبط الاسم)
     const groups = {};
     students?.forEach(student => {
       const activeDriverId = student.return_driver_id || student.driver_id || 'unassigned';
-      const driverObj = driversList?.find(d => d.id === activeDriverId);
+      
+      // مطابقة مرنة لتجاوز اختلاف نوع البيانات (String/Number)
+      const driverObj = driversList?.find(d => String(d.id) === String(activeDriverId));
+
+      const resolvedName = driverObj 
+        ? (driverObj.full_name || driverObj.name || driverObj.driver_name || 'سائق بدون اسم')
+        : (activeDriverId === 'unassigned' ? 'لم يُحدد سائق بعد' : 'سائق غير معروف');
 
       if (!groups[activeDriverId]) {
         groups[activeDriverId] = {
-          driverName: driverObj ? driverObj.full_name : 'بانتظار تحديد سائق',
+          driverName: resolvedName,
           approved: student.return_approved,
           students: []
         };
@@ -2168,7 +2174,7 @@ function AdminReturnTripsManager({ supabase }) {
     loadReturnData();
   }, []);
 
-  // زر الموافقة ونشر الباقة للسائق والطالبات
+  // موافقة ونشر الباقة
   const handleApproveGroup = async (driverId) => {
     const groupStudents = returnGroups[driverId]?.students || [];
     const studentIds = groupStudents.map(s => s.id);
@@ -2185,7 +2191,7 @@ function AdminReturnTripsManager({ supabase }) {
     loadReturnData();
   };
 
-  // تغيير سائق طالبة معينة من القائمة
+  // إعادة تعيين السائق للطالبة
   const handleReassignStudent = async (studentId, newDriverId) => {
     await supabase
       .from('students')
@@ -2199,8 +2205,8 @@ function AdminReturnTripsManager({ supabase }) {
   };
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4" dir="rtl">
-      <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4 text-slate-900" dir="rtl">
+      <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
         👑 إدارة رحلات العودة (الطالبات المنهيات للدوام)
       </h3>
 
@@ -2210,10 +2216,10 @@ function AdminReturnTripsManager({ supabase }) {
         Object.keys(returnGroups).map(driverId => {
           const group = returnGroups[driverId];
           return (
-            <div key={driverId} className="border border-slate-300 bg-white p-3 rounded-lg mb-3 shadow-sm">
+            <div key={driverId} className="border border-slate-300 bg-white p-3 rounded-lg mb-3 shadow-sm text-slate-900">
               <div className="flex justify-between items-center bg-slate-100 p-2 rounded-md mb-2">
-                <span className="font-bold text-xs text-slate-700">
-                  🚕 السائق: {group.driverName} ({group.students.length} طالبات)
+                <span className="font-extrabold text-xs text-slate-900">
+                  🚕 السائق: <span className="text-indigo-700 font-bold">{group.driverName}</span> ({group.students.length} طالبات)
                 </span>
                 
                 {!group.approved ? (
@@ -2233,17 +2239,19 @@ function AdminReturnTripsManager({ supabase }) {
                 {group.students.map(std => (
                   <div key={std.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 rounded border border-slate-200">
                     <div>
-                      <strong className="block text-slate-800">{std.full_name}</strong>
-                      <span className="text-slate-500 text-[11px]">📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
+                      <strong className="block text-slate-900 font-bold">{std.full_name}</strong>
+                      <span className="text-slate-600 text-[11px]">📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
                     </div>
                     
                     <select 
                       value={std.return_driver_id || std.driver_id || ''} 
                       onChange={(e) => handleReassignStudent(std.id, e.target.value)}
-                      className="text-xs p-1 rounded border border-slate-300 bg-white">
-                      <option value="">اختر السائق...</option>
+                      className="text-xs p-1 rounded border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none">
+                      <option value="" className="text-slate-900 bg-white">اختر السائق...</option>
                       {drivers.map(d => (
-                        <option key={d.id} value={d.id}>{d.full_name}</option>
+                        <option key={d.id} value={d.id} className="text-slate-900 bg-white">
+                          {d.full_name || d.name || d.driver_name || 'سائق بدون اسم'}
+                        </option>
                       ))}
                     </select>
                   </div>
