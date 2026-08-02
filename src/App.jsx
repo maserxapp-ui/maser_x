@@ -2135,27 +2135,32 @@ function AdminReturnTripsManager({ supabase }) {
   const [drivers, setDrivers] = React.useState([]);
 
   const loadReturnData = async () => {
+    // 1. جلب كل الطالبات اللاتي أنهين الدوام
     const { data: students } = await supabase
       .from('students')
-      .select('*, drivers(full_name)')
-      .eq('finish_status', 'finished')
-      .not('return_driver_id', 'is', null);
+      .select('*')
+      .eq('finish_status', 'finished');
 
+    // 2. جلب قائمة السائقين
     const { data: driversList } = await supabase.from('drivers').select('*');
     setDrivers(driversList || []);
 
+    // 3. تجميع الطالبات حسب السائق (مع اعتماد سائق الصباح كافتراضي إذا لم يُحدد سائق عودة)
     const groups = {};
     students?.forEach(student => {
-      const driverId = student.return_driver_id;
-      if (!groups[driverId]) {
-        groups[driverId] = {
-          driverName: student.drivers?.full_name || 'سائق غير مسمى',
+      const activeDriverId = student.return_driver_id || student.driver_id || 'unassigned';
+      const driverObj = driversList?.find(d => d.id === activeDriverId);
+
+      if (!groups[activeDriverId]) {
+        groups[activeDriverId] = {
+          driverName: driverObj ? driverObj.full_name : 'بانتظار تحديد سائق',
           approved: student.return_approved,
           students: []
         };
       }
-      groups[driverId].students.push(student);
+      groups[activeDriverId].students.push(student);
     });
+
     setReturnGroups(groups);
   };
 
@@ -2163,67 +2168,80 @@ function AdminReturnTripsManager({ supabase }) {
     loadReturnData();
   }, []);
 
+  // زر الموافقة ونشر الباقة للسائق والطالبات
   const handleApproveGroup = async (driverId) => {
+    const groupStudents = returnGroups[driverId]?.students || [];
+    const studentIds = groupStudents.map(s => s.id);
+
     await supabase
       .from('students')
-      .update({ return_approved: true })
-      .eq('return_driver_id', driverId)
-      .eq('finish_status', 'finished');
+      .update({ 
+        return_driver_id: driverId === 'unassigned' ? null : driverId, 
+        return_approved: true 
+      })
+      .in('id', studentIds);
 
-    alert('تمت الموافقة ونشر رحلة العودة للسائق والطالبات بنجاح!');
+    alert('✅ تمت الموافقة ونشر رحلة العودة بنجاح!');
     loadReturnData();
   };
 
+  // تغيير سائق طالبة معينة من القائمة
   const handleReassignStudent = async (studentId, newDriverId) => {
     await supabase
       .from('students')
-      .update({ return_driver_id: newDriverId, return_approved: false })
+      .update({ 
+        return_driver_id: newDriverId, 
+        return_approved: false 
+      })
       .eq('id', studentId);
 
     loadReturnData();
   };
 
   return (
-    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', marginTop: '20px' }} dir="rtl">
-      <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', marginBottom: '12px' }}>
-        👑 إدارة رحلات العودة (باجات 4 طالبات)
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4" dir="rtl">
+      <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+        👑 إدارة رحلات العودة (الطالبات المنهيات للدوام)
       </h3>
 
       {Object.keys(returnGroups).length === 0 ? (
-        <p style={{ fontSize: '13px', color: '#64748b' }}>لا توجد باقات عودة معلقة حالياً.</p>
+        <p className="text-xs text-slate-500">لا توجد طالبات أنهين الدوام حالياً.</p>
       ) : (
         Object.keys(returnGroups).map(driverId => {
           const group = returnGroups[driverId];
           return (
-            <div key={driverId} style={{ border: '1px solid #cbd5e1', padding: '12px', borderRadius: '12px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', marginBottom: '10px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '13px' }}>🚕 السائق: {group.driverName} ({group.students.length} طالبات)</span>
+            <div key={driverId} className="border border-slate-300 bg-white p-3 rounded-lg mb-3 shadow-sm">
+              <div className="flex justify-between items-center bg-slate-100 p-2 rounded-md mb-2">
+                <span className="font-bold text-xs text-slate-700">
+                  🚕 السائق: {group.driverName} ({group.students.length} طالبات)
+                </span>
                 
                 {!group.approved ? (
                   <button 
                     onClick={() => handleApproveGroup(driverId)}
-                    style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-none px-3 py-1 rounded-md text-xs font-bold cursor-pointer">
                     ✅ موافقة ونشر الرحلة
                   </button>
                 ) : (
-                  <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-bold">
                     مقبولة ومنشورة 🚀
                   </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="flex flex-col gap-1.5">
                 {group.students.map(std => (
-                  <div key={std.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div key={std.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 rounded border border-slate-200">
                     <div>
-                      <strong style={{ display: 'block' }}>{std.full_name}</strong>
-                      <span style={{ color: '#64748b', fontSize: '11px' }}>📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
+                      <strong className="block text-slate-800">{std.full_name}</strong>
+                      <span className="text-slate-500 text-[11px]">📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
                     </div>
                     
                     <select 
-                      value={std.return_driver_id || ''} 
+                      value={std.return_driver_id || std.driver_id || ''} 
                       onChange={(e) => handleReassignStudent(std.id, e.target.value)}
-                      style={{ fontSize: '11px', padding: '4px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                      className="text-xs p-1 rounded border border-slate-300 bg-white">
+                      <option value="">اختر السائق...</option>
                       {drivers.map(d => (
                         <option key={d.id} value={d.id}>{d.full_name}</option>
                       ))}
@@ -2238,4 +2256,3 @@ function AdminReturnTripsManager({ supabase }) {
     </div>
   );
 }
-
