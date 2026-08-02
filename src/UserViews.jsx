@@ -166,7 +166,22 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
   const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
-  
+  // 🚕 حالة ودالة جلب بيانات سائق العودة للطالبة
+  const [assignedReturnDriver, setAssignedReturnDriver] = useState(null);
+
+  useEffect(() => {
+    const fetchReturnDriver = async () => {
+      if (user?.return_driver_id) {
+        const { data } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('id', user.return_driver_id)
+          .single();
+        if (data) setAssignedReturnDriver(data);
+      }
+    };
+    fetchReturnDriver();
+  }, [user]);
   // 📅 حساب اسم يوم الغد تلقائيfاً بحسب تاريخ اليوم الحالي
   const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
