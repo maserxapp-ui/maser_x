@@ -174,6 +174,55 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // التبديل بين الشاشات السفلية: 'main' أو 'settings'
   const [activeTab, setActiveTab] = useState('main');
 
+  // 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
+  const handleFinishShift = async () => {
+    try {
+      const { error: updateErr } = await supabase
+        .from('students')
+        .update({ finish_status: 'finished' })
+        .eq('id', user.id);
+
+      if (updateErr) throw updateErr;
+
+      const { data: unassignedStudents, error: fetchErr } = await supabase
+        .from('students')
+        .select('id')
+        .eq('finish_status', 'finished')
+        .is('return_driver_id', null);
+
+      if (fetchErr) throw fetchErr;
+
+      if (unassignedStudents && unassignedStudents.length >= 4) {
+        const { data: drivers } = await supabase.from('drivers').select('id');
+
+        if (drivers && drivers.length > 0) {
+          const chosenDriver = drivers[0];
+          const groupOfFour = unassignedStudents.slice(0, 4).map(s => s.id);
+
+          await supabase
+            .from('students')
+            .update({ 
+              return_driver_id: chosenDriver.id, 
+              return_approved: false 
+            })
+            .in('id', groupOfFour);
+        }
+      }
+
+      alert('تم تسجيل إنهاء دوامك بنجاح! سيتم ترتيب سيارة العودة واعتمادها من الإدارة.');
+      
+      if (typeof fetchStudentData === 'function') {
+        fetchStudentData();
+      } else {
+        window.location.reload();
+      }
+
+    } catch (err) {
+      console.error('خطأ أثناء تسجيل إنهاء الدوام:', err);
+      alert('حدث خطأ أثناء حفظ الحالة، يرجى المحاولة مرة أخرى.');
+    }
+  };
+
   // 🕒 حالات توقيت بغداد والعداد التنازلي
   const [baghdadTime, setBaghdadTime] = useState('');
   const [countdown, setCountdown] = useState('');
@@ -772,21 +821,29 @@ if (user && user.role === 'driver') {
           );
         })()}
 
-        {/* زر أنهيت دوامي */}
+        {/* 🎓 زر أنهيت دوامي والتجميع التلقائي */}
         <button
-          onClick={() => handleStudentAction('finished', 'أنهيت دوامي')}
+          onClick={handleFinishShift}
+          disabled={studentData?.finish_status === 'finished'}
           style={{
             width: '100%',
             padding: '12px',
             borderRadius: '10px',
-            border: shiftFinished ? '2px solid #0284c7' : '1px solid #cbd5e1',
-            backgroundColor: shiftFinished ? '#e0f2fe' : '#f8fafc',
-            color: '#0369a1',
+            border: 'none',
+            backgroundColor: studentData?.finish_status === 'finished' ? '#94a3b8' : '#8b5cf6',
+            color: '#ffffff',
             fontWeight: 'bold',
             fontSize: '13px',
-            cursor: 'pointer'
+            cursor: studentData?.finish_status === 'finished' ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 8px rgba(139, 92, 246, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
           }}>
-          🏁 أنهيت دوامي (إشعارات العودة)
+          {studentData?.finish_status === 'finished' 
+            ? 'تم تسجيل إنهاء دوامكِ اليوم ✅' 
+            : 'أنهيت دوامي (تنسيق سيارة العودة) 🎓'}
         </button>
 
       </div>
@@ -835,33 +892,49 @@ if (user && user.role === 'driver') {
             </div>
           </div>
 
-          {/* 🟠 كارت رحلة العودة */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #f59e0b', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
-              <span style={{ fontWeight: 'bold', color: '#d97706', fontSize: '14px' }}>🟠 رحلة العودة</span>
-              <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {shiftFinished ? 'أنهيت الدوام 🏁' : 'قيد الانتظار ⏳'}
-              </span>
-            </div>
+          {/* 🎒 كارت رحلة العودة المحدث للطالبة */}
+        {assignedReturnDriver && studentData?.return_approved ? (
+          <div style={{
+            backgroundColor: '#eff6ff',
+            border: '2px solid #3b82f6',
+            borderRadius: '16px',
+            padding: '14px',
+            marginBottom: '15px',
+            textAlign: 'center'
+          }}>
+            <h4 style={{ color: '#1d4ed8', margin: '0 0 6px 0', fontSize: '15px' }}>🚗 رحلة العودة الخاصة بكِ جاهزة</h4>
+            <p style={{ fontSize: '13px', color: '#1e40af', margin: '0 0 10px 0' }}>
+              السائق المسؤول عن عودتكِ: <b>{assignedReturnDriver.full_name || 'سائق العودة'}</b>
+            </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>حالة الإشعار</div>
-                <div style={{ fontWeight: 'bold', color: shiftFinished ? '#0284c7' : '#d97706', margin: '3px 0' }}>
-                  {shiftFinished ? 'تم إعلام السائق' : 'اضغط انهيت دوامي'}
-                </div>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+              <button 
+                onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
+                style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                💬 مراسلة السائق
+              </button>
+              <button 
+                onClick={() => openDriverLocation && openDriverLocation(assignedReturnDriver)}
+                style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                📍 موقع السائق
+              </button>
             </div>
           </div>
-
-        </div>
+        ) : studentData?.finish_status === 'finished' ? (
+          <div style={{
+            backgroundColor: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '12px',
+            padding: '12px',
+            marginBottom: '15px',
+            textAlign: 'center',
+            fontSize: '13px',
+            color: '#b45309',
+            fontWeight: 'bold'
+          }}>
+            ⌛ تم تسجيل إنهاء الدوام! جاري جلب سيارات العودة وتجميع الطالبات بانتظار اعتماد الإدارة...
+          </div>
+        ) : null}
       ) : (
         /* ⚙️ تبويب الإعدادات */
         <div style={{ padding: '20px' }}>
@@ -1349,6 +1422,115 @@ function DriverView({ user, setUser, supabase }) {
           />
         )}
       </div>
+    </div>
+  );
+}
+// 👑 مكون إدارة رحلات العودة (باجات 4 طالبات) للأدمن
+function AdminReturnTripsManager({ supabase }) {
+  const [returnGroups, setReturnGroups] = React.useState({});
+  const [drivers, setDrivers] = React.useState([]);
+
+  const loadReturnData = async () => {
+    const { data: students } = await supabase
+      .from('students')
+      .select('*, drivers(full_name)')
+      .eq('finish_status', 'finished')
+      .not('return_driver_id', 'is', null);
+
+    const { data: driversList } = await supabase.from('drivers').select('*');
+    setDrivers(driversList || []);
+
+    const groups = {};
+    students?.forEach(student => {
+      const driverId = student.return_driver_id;
+      if (!groups[driverId]) {
+        groups[driverId] = {
+          driverName: student.drivers?.full_name || 'سائق غير مسمى',
+          approved: student.return_approved,
+          students: []
+        };
+      }
+      groups[driverId].students.push(student);
+    });
+    setReturnGroups(groups);
+  };
+
+  React.useEffect(() => {
+    loadReturnData();
+  }, []);
+
+  const handleApproveGroup = async (driverId) => {
+    await supabase
+      .from('students')
+      .update({ return_approved: true })
+      .eq('return_driver_id', driverId)
+      .eq('finish_status', 'finished');
+
+    alert('تمت الموافقة ونشر رحلة العودة للسائق والطالبات بنجاح!');
+    loadReturnData();
+  };
+
+  const handleReassignStudent = async (studentId, newDriverId) => {
+    await supabase
+      .from('students')
+      .update({ return_driver_id: newDriverId, return_approved: false })
+      .eq('id', studentId);
+
+    loadReturnData();
+  };
+
+  return (
+    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', marginTop: '20px' }} dir="rtl">
+      <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b', marginBottom: '12px' }}>
+        👑 إدارة رحلات العودة (باجات 4 طالبات)
+      </h3>
+
+      {Object.keys(returnGroups).length === 0 ? (
+        <p style={{ fontSize: '13px', color: '#64748b' }}>لا توجد باقات عودة معلقة حالياً.</p>
+      ) : (
+        Object.keys(returnGroups).map(driverId => {
+          const group = returnGroups[driverId];
+          return (
+            <div key={driverId} style={{ border: '1px solid #cbd5e1', padding: '12px', borderRadius: '12px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', marginBottom: '10px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13px' }}>🚕 السائق: {group.driverName} ({group.students.length} طالبات)</span>
+                
+                {!group.approved ? (
+                  <button 
+                    onClick={() => handleApproveGroup(driverId)}
+                    style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    ✅ موافقة ونشر الرحلة
+                  </button>
+                ) : (
+                  <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                    مقبولة ومنشورة 🚀
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {group.students.map(std => (
+                  <div key={std.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div>
+                      <strong style={{ display: 'block' }}>{std.full_name}</strong>
+                      <span style={{ color: '#64748b', fontSize: '11px' }}>📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
+                    </div>
+                    
+                    <select 
+                      value={std.return_driver_id || ''} 
+                      onChange={(e) => handleReassignStudent(std.id, e.target.value)}
+                      style={{ fontSize: '11px', padding: '4px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                      {drivers.map(d => (
+                        <option key={d.id} value={d.id}>{d.full_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }
