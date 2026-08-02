@@ -690,6 +690,28 @@ if (user && user.role === 'driver') {
                 🔴 لا أداوم غداً
               </button>
 
+              <div className="max-w-md mx-auto p-4 space-y-4">
+
+  {/* 🟢 تنبيه الطالب عندما يضغط السائق "أنا في طريقي إليكم" */}
+  {assignedDriver?.trip_status === 'on_the_way' && (
+    <div style={{
+      backgroundColor: '#dcfce7',
+      border: '2px solid #22c55e',
+      borderRadius: '12px',
+      padding: '14px',
+      marginBottom: '15px',
+      textAlign: 'center',
+      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.2)'
+    }}>
+      <span style={{ fontSize: '20px', display: 'block', marginBottom: '4px' }}>🚕</span>
+      <strong style={{ color: '#15803d', fontSize: '14px' }}>
+        يرجى انتظار السائق، فهو في طريقه إليكم الآن! يُرجى متابعة الموقع لحظة بلحظة.
+      </strong>
+    </div>
+  )}
+
+  {/* هنا تبدأ باقي عناصر الواجهة وأزرار الدوام والامتحان... */}
+
               {/* 📍 زر تحديد الموقع */}
 <button
   onClick={handleSaveLocation}
