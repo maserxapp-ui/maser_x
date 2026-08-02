@@ -690,7 +690,6 @@ if (user && user.role === 'driver') {
                 🔴 لا أداوم غداً
               </button>
 
-              <div className="max-w-md mx-auto p-4 space-y-4">
 
   {/* 🟢 تنبيه الطالب عندما يضغط السائق "أنا في طريقي إليكم" */}
   {assignedDriver?.trip_status === 'on_the_way' && (
@@ -710,7 +709,6 @@ if (user && user.role === 'driver') {
     </div>
   )}
 
-  {/* هنا تبدأ باقي عناصر الواجهة وأزرار الدوام والامتحان... */}
 
               {/* 📍 زر تحديد الموقع */}
 <button
