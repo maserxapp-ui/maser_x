@@ -965,7 +965,13 @@ function DriverView({ user, setUser, supabase }) {
       // 🕒 تصفير وتحديث التوزيع يومياً الساعة 6:30 مساءً (18:30)
       if (baghdadHour === 18 && baghdadMinute >= 30) {
         await supabase.from('system_settings').upsert({ key: 'trips_approved_today', value: 'false' });
-      }
+      // 2. 🚗 تصفير حالة الرحلة وصعود الطلاب لليوم الجديد (الإضافة الجديدة)
+  if (user?.id) {
+    await supabase.from('drivers').update({ trip_status: 'not_started' }).eq('id', user.id);
+    await supabase.from('students').update({ is_boarded: false }).eq('driver_id', user.id);
+    setDriverTripStatus('not_started');
+  }
+}
 
       // 🕒 نافذة المراسلة مفتوحة فقط من 6:00 صباحاً إلى 9:00 صباحاً
       const canChat = baghdadHour >= 6 && baghdadHour < 9;
