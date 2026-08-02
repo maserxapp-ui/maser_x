@@ -1029,6 +1029,25 @@ function DriverView({ user, setUser, supabase }) {
   const [isChatWindowOpen, setIsChatWindowOpen] = React.useState(false);
   const [driverTripStatus, setDriverTripStatus] = React.useState('not_started');
 
+      // 🚗 حالات ودالة جلب باقة طالبات العودة الخاصة بالسائق
+  const [returnTripStudents, setReturnTripStudents] = React.useState([]);
+
+  const fetchDriverReturnStudents = async () => {
+    if (!user?.id) return;
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('return_driver_id', user.id)
+      .eq('finish_status', 'finished');
+
+    if (!error && data) {
+      setReturnTripStudents(data);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchDriverReturnStudents();
+  }, [user]);
   React.useEffect(() => {
     const checkTimeAndApproval = async () => {
       const now = new Date();
@@ -1167,6 +1186,96 @@ function DriverView({ user, setUser, supabase }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
+      {/* 📦 باقة رحلة العودة (تظهر أسفل الشاشة بعد موافقة الأدمن) */}
+        {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
+          <div style={{
+            backgroundColor: '#ffffff',
+            border: '2px solid #6366f1',
+            borderRadius: '16px',
+            padding: '16px',
+            marginTop: '20px',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)'
+          }} dir="rtl">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0, fontSize: '15px', color: '#4338ca', fontWeight: 'bold' }}>
+                🎒 باقة رحلة العودة ({returnTripStudents.length} طالبات)
+              </h4>
+              <span style={{ fontSize: '11px', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '3px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
+                مُعتمدة من الإدارة ✅
+              </span>
+            </div>
+
+            {/* قائمة الطالبات الـ 4 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {returnTripStudents.map((std) => (
+                <div key={std.id} style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '12px'
+                }}>
+                  {/* بيانات الطالبة والعنوان */}
+                  <div style={{ marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '14px', color: '#1e293b', display: 'block' }}>{std.full_name}</strong>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      📍 القضاء: <b>{std.district || 'غير محدد'}</b> | السكن: <b>{std.address || std.housing_address || 'غير محدد'}</b>
+                    </span>
+                  </div>
+
+                  {/* أزرار الإجراءات لكل طالبة */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    
+                    {/* 1. زر تم الصعود */}
+                    <button
+                      onClick={async () => {
+                        await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
+                        fetchDriverReturnStudents();
+                      }}
+                      style={{
+                        backgroundColor: std.is_boarded_return ? '#22c55e' : '#f1f5f9',
+                        color: std.is_boarded_return ? '#fff' : '#475569',
+                        border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+                      }}>
+                      {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
+                    </button>
+
+                    {/* 2. زر تم الإيصال */}
+                    <button
+                      onClick={async () => {
+                        await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
+                        fetchDriverReturnStudents();
+                      }}
+                      style={{
+                        backgroundColor: std.is_dropped_return ? '#3b82f6' : '#f1f5f9',
+                        color: std.is_dropped_return ? '#fff' : '#475569',
+                        border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+                      }}>
+                      {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
+                    </button>
+
+                    {/* 3. زر المحادثة */}
+                    <button
+                      onClick={() => openStudentChat && openStudentChat(std)}
+                      style={{ backgroundColor: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+                      💬 مراسلة
+                    </button>
+
+                    {/* 4. زر خريطة موقع الطالبة */}
+                    {std.latitude && std.longitude && (
+                      <a
+                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ backgroundColor: '#fef3c7', color: '#b45309', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none' }}>
+                        🗺️ موقع الطالبة
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       {/* ⚠️ شريط تنبيه التوزيع عند السائق */}
       {isAfter9PM && !isApprovedByAdmin && (
         <div style={{
