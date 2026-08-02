@@ -1111,7 +1111,8 @@ if (viewMode === 'user') {
       </p>
     </div>
   </div>
-
+{/* 👑 نافذة إدارة رحلات العودة (باجات 4 طالبات) */}
+<AdminReturnTripsManager supabase={supabase} />
   {(() => {
     const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const now = new Date();
