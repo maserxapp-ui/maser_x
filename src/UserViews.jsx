@@ -928,7 +928,28 @@ function DriverView({ user, setUser, supabase }) {
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
 const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
+// 🟢 كود التوقيت والتحقق من موافقة الإدارة (ساعة 9 بليل)
+  const [isApprovedByAdmin, setIsApprovedByAdmin] = React.useState(true);
+  const [isAfter9PM, setIsAfter9PM] = React.useState(false);
 
+  React.useEffect(() => {
+    const checkTimeAndApproval = async () => {
+      const now = new Date();
+      const baghdadHour = (now.getUTCHours() + 3) % 24;
+      const after9 = baghdadHour >= 21 || baghdadHour < 4;
+      setIsAfter9PM(after9);
+
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'trips_approved_today')
+        .maybeSingle();
+
+      setIsApprovedByAdmin(data?.value === 'true');
+    };
+
+    checkTimeAndApproval();
+  }, []);
   // 🔄 جلب الطلاب المرتبطين بالسائق ذكياً
   const fetchStudents = async () => {
     if (!user || !supabase) return;
@@ -996,6 +1017,23 @@ const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
+      {/* ⚠️ شريط تنبيه التوزيع عند السائق */}
+      {isAfter9PM && !isApprovedByAdmin && (
+        <div style={{
+          backgroundColor: '#fffbebe6',
+          border: '2px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '14px',
+          margin: '10px 15px',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)'
+        }}>
+          <span style={{ fontSize: '18px', display: 'block', marginBottom: '4px' }}>⏳</span>
+          <strong style={{ color: '#b45309', fontSize: '14px' }}>
+            بانتظار الإدارة الموافقة أو التعديل على الطلاب كي يتم تثبيت الطلبة معك
+          </strong>
+        </div>
+      )}
       {/* 1. الشريط العلوي */}
       <div className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40 border-b border-slate-800">
         <div className="max-w-md mx-auto flex items-center justify-between">
