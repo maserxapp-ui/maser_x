@@ -1594,11 +1594,7 @@ else if (confirmedAttending) {
 
           {/* تبويب الرحلات والمصروفات */}
           {activeTab === 'trips' && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
-              <div className="text-4xl">🗺️</div>
-              <h3 className="font-bold text-slate-800">جدول الرحلات والتحركات</h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">يمكنك جدولة الرحلات اليومية لمحافظة ميسان وباقي الخطوط بسهولة.</p>
-            </div>
+            <TripsManagement supabase={supabase} />
           )}
 
           {(activeTab === 'expenses' || activeTab === 'reports') && (
@@ -1946,6 +1942,156 @@ else if (confirmedAttending) {
           </div>
         </div>
       )}
+
+    </div>
+  );
+}
+export function TripsManagement({ supabase }) {
+  const [drivers, setDrivers] = React.useState([]);
+  const [students, setStudents] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [isApproved, setIsApproved] = React.useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: driversData } = await supabase.from('drivers').select('*');
+      const { data: studentsData } = await supabase.from('students').select('*');
+      
+      setDrivers(driversData || []);
+      setStudents(studentsData || []);
+
+      const { data: config } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'trips_approved_today')
+        .maybeSingle();
+
+      setIsApproved(config?.value === 'true');
+    } catch (err) {
+      console.error('خطأ في جلب البيانات:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleReassignStudent = async (studentId, newDriverId) => {
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ driver_id: newDriverId })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      setStudents(prev =>
+        prev.map(st => st.id === studentId ? { ...st, driver_id: newDriverId } : st)
+      );
+    } catch (err) {
+      alert('حدث خطأ أثناء نقل الطالب: ' + err.message);
+    }
+  };
+
+  const handleApproveDistribution = async () => {
+    try {
+      await supabase
+        .from('system_settings')
+        .upsert({ key: 'trips_approved_today', value: 'true' });
+
+      await supabase
+        .from('students')
+        .update({ assignment_status: 'approved' });
+
+      setIsApproved(true);
+      alert('✅ تم اعتماد وتثبيت توزيع الطلاب بنجاح وإرساله للشرائح والسائقين!');
+    } catch (err) {
+      alert('خطأ أثناء الاعتماد: ' + err.message);
+    }
+  };
+
+  if (loading) return <div style={{ padding: '30px', textAlign: 'center' }}>⏳ جاري تحميل جدول الرحلات والتوزيع...</div>;
+
+  return (
+    <div style={{ padding: '20px', direction: 'rtl' }}>
+      
+      {/* 🟢 شريط التحكم العلوي */}
+      <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>🚌 جدول الرحلات والتوزيع اليومي</h2>
+          <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '13px' }}>
+            توزيع الطلاب المباشر (الساعة 9:00 مساءً) - يمكنك التعديل والاعتماد هنا.
+          </p>
+        </div>
+
+        <div>
+          {isApproved ? (
+            <span style={{ backgroundColor: '#dcfce7', color: '#15803d', padding: '10px 18px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px' }}>
+              ✔️ تم اعتماد التوزيع اليوم
+            </span>
+          ) : (
+            <button
+              onClick={handleApproveDistribution}
+              style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
+            >
+              ✅ الموافقة واعتماد التوزيع النهائي
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 📋 كروت السائقين والطلاب */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {drivers.map(driver => {
+          const driverStudents = students.filter(s => s.driver_id === driver.id);
+
+          return (
+            <div key={driver.id} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', color: '#0284c7' }}>🚗 {driver.name}</h3>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>رقم الهاتف: {driver.phone || 'غير مدخل'}</span>
+                </div>
+                <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '12px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '12px' }}>
+                  {driverStudents.length} طالب
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {driverStudents.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '15px', fontSize: '13px' }}>لا يوجد طلاب مخصصين لهذا السائق</div>
+                ) : (
+                  driverStudents.map(student => (
+                    <div key={student.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>{student.name}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{student.university} - {student.location}</div>
+                      </div>
+
+                      <select
+                        value={student.driver_id || ''}
+                        onChange={(e) => handleReassignStudent(student.id, e.target.value)}
+                        style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer' }}
+                      >
+                        {drivers.map(d => (
+                          <option key={d.id} value={d.id}>
+                            نقل إلى: {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))
+                )}
+              </div>
+
+            </div>
+          );
+        })}
+      </div>
 
     </div>
   );
