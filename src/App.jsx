@@ -1953,13 +1953,19 @@ export function TripsManagement({ supabase }) {
   const [isApproved, setIsApproved] = React.useState(false);
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const { data: driversData } = await supabase.from('drivers').select('*');
       const { data: studentsData } = await supabase.from('students').select('*');
       
       setDrivers(driversData || []);
-      setStudents(studentsData || []);
+      
+      // 🚫 1. تصفية الطلاب: إظهار المداومين والاستثناءات فقط واستبعاد الغائبين
+      const activeStudents = (studentsData || []).filter(s => {
+        const isAbsent = s.is_absent === true || s.tomorrow_status === 'لا أداوم غداً';
+        return !isAbsent;
+      });
+      
+      setStudents(activeStudents);
 
       const { data: config } = await supabase
         .from('system_settings')
@@ -1977,6 +1983,9 @@ export function TripsManagement({ supabase }) {
 
   React.useEffect(() => {
     fetchData();
+    // 🔄 2. تحديث تلقائي كل 8 ثوانٍ لمتابعة صعود الطلاب وتنقل السائقين مباشرة
+    const interval = setInterval(fetchData, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleReassignStudent = async (studentId, newDriverId) => {
@@ -2007,13 +2016,13 @@ export function TripsManagement({ supabase }) {
         .update({ assignment_status: 'approved' });
 
       setIsApproved(true);
-      alert('✅ تم اعتماد وتثبيت توزيع الطلاب بنجاح وإرساله للشرائح والسائقين!');
+      alert('✅ تم اعتماد وتثبيت توزيع الطلاب بنجاح وإرساله للسائقين!');
     } catch (err) {
       alert('خطأ أثناء الاعتماد: ' + err.message);
     }
   };
 
-  if (loading) return <div style={{ padding: '30px', textAlign: 'center' }}>⏳ جاري تحميل جدول الرحلات والتوزيع...</div>;
+  if (loading) return <div style={{ padding: '30px', textAlign: 'center' }}>⏳ جاري تحميل جدول الرحلات والتوزيع المباشر...</div>;
 
   return (
     <div style={{ padding: '20px', direction: 'rtl' }}>
@@ -2021,9 +2030,9 @@ export function TripsManagement({ supabase }) {
       {/* 🟢 شريط التحكم العلوي */}
       <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>🚌 جدول الرحلات والتوزيع اليومي</h2>
+          <h2 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>🚌 جدول الرحلات والتوزيع اليومي المباشر</h2>
           <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '13px' }}>
-            توزيع الطلاب المباشر (الساعة 9:00 مساءً) - يمكنك التعديل والاعتماد هنا.
+            يعرض الطلاب المداومين فقط وتتبع صعودهم وحالة السائقين في الوقت الفعلي.
           </p>
         </div>
 
@@ -2044,31 +2053,54 @@ export function TripsManagement({ supabase }) {
       </div>
 
       {/* 📋 كروت السائقين والطلاب */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
         {drivers.map(driver => {
           const driverStudents = students.filter(s => s.driver_id === driver.id);
+          const boardedCount = driverStudents.filter(s => s.is_boarded).length;
 
           return (
             <div key={driver.id} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #cbd5e1', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '12px' }}>
-                <div>
+              {/* 🚗 رأس كارت السائق وحالته المباشرة */}
+              <div style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ margin: 0, fontSize: '16px', color: '#0284c7' }}>🚗 {driver.name}</h3>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>رقم الهاتف: {driver.phone || 'غير مدخل'}</span>
+                  
+                  {/* 3. عرض شارة حالة رحلة السائق */}
+                  {driver.trip_status === 'completed' && (
+                    <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '12px' }}>
+                      🏁 أتم الرحلة واوصل الجميع
+                    </span>
+                  )}
+                  {driver.trip_status === 'on_the_way' && (
+                    <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '12px' }}>
+                      🚕 في الطريق للطلاب
+                    </span>
+                  )}
+                  {(!driver.trip_status || driver.trip_status === 'not_started') && (
+                    <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '11px', padding: '4px 10px', borderRadius: '12px' }}>
+                      ⏳ لم يبدأ بعد
+                    </span>
+                  )}
                 </div>
-                <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '12px', fontWeight: 'bold', padding: '4px 10px', borderRadius: '12px' }}>
-                  {driverStudents.length} طالب
-                </span>
+                
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>الصاعدون: <strong>{boardedCount}</strong> من <strong>{driverStudents.length}</strong></span>
+                  <span>الهاتف: {driver.phone || 'غير مدخل'}</span>
+                </div>
               </div>
 
+              {/* 🎓 قائمة الطلاب ومتابعة الصعود */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {driverStudents.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '15px', fontSize: '13px' }}>لا يوجد طلاب مخصصين لهذا السائق</div>
+                  <div style={{ textAlign: 'center', color: '#94a3b8', padding: '15px', fontSize: '13px' }}>لا يوجد طلاب مداومون مخصصين لهذا السائق اليوم</div>
                 ) : (
                   driverStudents.map(student => (
-                    <div key={student.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div key={student.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: student.is_boarded ? '#f0fdf4' : '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: student.is_boarded ? '1px solid #86efac' : '1px solid #e2e8f0' }}>
                       <div>
-                        <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>{student.name}</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#0f172a' }}>
+                          {student.name} {student.is_boarded && <span style={{ color: '#16a34a', fontSize: '11px', marginRight: '4px' }}>(صعد مع السائق 🟢)</span>}
+                        </div>
                         <div style={{ fontSize: '11px', color: '#64748b' }}>{student.university} - {student.location}</div>
                       </div>
 
