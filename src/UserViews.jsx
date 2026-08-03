@@ -1204,96 +1204,7 @@ function DriverView({ user, setUser, supabase }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
-      {/* 📦 باقة رحلة العودة (تظهر أسفل الشاشة بعد موافقة الأدمن) */}
-        {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
-          <div style={{
-            backgroundColor: '#ffffff',
-            border: '2px solid #6366f1',
-            borderRadius: '16px',
-            padding: '16px',
-            marginTop: '20px',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)'
-          }} dir="rtl">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '15px', color: '#4338ca', fontWeight: 'bold' }}>
-                🎒 باقة رحلة العودة ({returnTripStudents.length} طالبات)
-              </h4>
-              <span style={{ fontSize: '11px', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '3px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
-                مُعتمدة من الإدارة ✅
-              </span>
-            </div>
-
-            {/* قائمة الطالبات الـ 4 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {returnTripStudents.map((std) => (
-                <div key={std.id} style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '12px'
-                }}>
-                  {/* بيانات الطالبة والعنوان */}
-                  <div style={{ marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '14px', color: '#1e293b', display: 'block' }}>{std.full_name}</strong>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>
-                      📍 القضاء: <b>{std.district || 'غير محدد'}</b> | السكن: <b>{std.address || std.housing_address || 'غير محدد'}</b>
-                    </span>
-                  </div>
-
-                  {/* أزرار الإجراءات لكل طالبة */}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    
-                    {/* 1. زر تم الصعود */}
-                    <button
-                      onClick={async () => {
-                        await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
-                        fetchDriverReturnStudents();
-                      }}
-                      style={{
-                        backgroundColor: std.is_boarded_return ? '#22c55e' : '#f1f5f9',
-                        color: std.is_boarded_return ? '#fff' : '#475569',
-                        border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
-                      }}>
-                      {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
-                    </button>
-
-                    {/* 2. زر تم الإيصال */}
-                    <button
-                      onClick={async () => {
-                        await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
-                        fetchDriverReturnStudents();
-                      }}
-                      style={{
-                        backgroundColor: std.is_dropped_return ? '#3b82f6' : '#f1f5f9',
-                        color: std.is_dropped_return ? '#fff' : '#475569',
-                        border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
-                      }}>
-                      {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
-                    </button>
-
-                    {/* 3. زر المحادثة */}
-                    <button
-                      onClick={() => openStudentChat && openStudentChat(std)}
-                      style={{ backgroundColor: '#e0e7ff', color: '#4338ca', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      💬 مراسلة
-                    </button>
-
-                    {/* 4. زر خريطة موقع الطالبة */}
-                    {std.latitude && std.longitude && (
-                      <a
-                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ backgroundColor: '#fef3c7', color: '#b45309', borderRadius: '8px', padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', textDecoration: 'none' }}>
-                        🗺️ موقع الطالبة
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      
       {/* ⚠️ شريط تنبيه التوزيع عند السائق */}
       {isAfter9PM && !isApprovedByAdmin && (
         <div style={{
@@ -1516,7 +1427,91 @@ function DriverView({ user, setUser, supabase }) {
             </div>
           )}
         </div>
+{/* 🎒 طلاب الرحلة الثانية (موقعه بين طلاب الخط وبين بيانات السائق) */}
+        {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 mt-5 shadow-sm" dir="rtl">
+            
+            {/* عنوان الكارت بالثيم الموحد */}
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎒</span>
+                <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
+              </div>
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
+                {returnTripStudents.length} طالبات • معتمدة ✅
+              </span>
+            </div>
 
+            {/* قائمة الطالبات */}
+            <div className="flex flex-col gap-3">
+              {returnTripStudents.map((std) => (
+                <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                  
+                  {/* بيانات الطالبة والعنوان */}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
+                      <div className="text-xs text-slate-500">
+                        📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* الأزرار بنفس ثيم أزرار طلاب خط السائق */}
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    
+                    {/* 1. زر صعود الطالبة */}
+                    <button
+                      onClick={async () => {
+                        await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
+                        fetchDriverReturnStudents();
+                      }}
+                      className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
+                        std.is_boarded_return ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      }`}>
+                      {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
+                    </button>
+
+                    {/* 2. زر إيصال الطالبة */}
+                    <button
+                      onClick={async () => {
+                        await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
+                        fetchDriverReturnStudents();
+                      }}
+                      className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
+                        std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                      }`}>
+                      {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
+                    </button>
+
+                    {/* 3. زر المراسلة السريعة (يرتبط بنفس نافذة رسائل السائق) */}
+                    <button
+                      onClick={() => {
+                        setSelectedStudentForChat(std);
+                        setIsDriverChatOpen(true);
+                      }}
+                      className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer flex items-center gap-1">
+                      💬 مراسلة
+                    </button>
+
+                    {/* 4. زر موقع الطالبة */}
+                    {std.latitude && std.longitude && (
+                      <a
+                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3.5 py-2 rounded-xl font-bold no-underline flex items-center gap-1">
+                        🗺️ موقع الطالبة
+                      </a>
+                    )}
+
+                  </div>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        )}
         {/* 4. بيانات السائق */}
         <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
           <h4 className="font-bold text-xs text-orange-400 mb-2.5 flex items-center gap-1.5">
