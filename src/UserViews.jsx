@@ -1321,12 +1321,6 @@ function DriverView({ user, setUser, supabase }) {
           >
             {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
           </button>
-          {/* 🔄 زر تصفير الرحلة للبدء بيوم جديد */}
-        <button
-          onClick={handleDriverResetTrip}
-          className="w-full mt-2 py-2.5 px-4 rounded-xl text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-          <span>🔄</span> تصفير الرحلة للبدء بيوم جديد
-        </button>
         </div>
 
         {/* 2. بطاقات الإحصائيات */}
