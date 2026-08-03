@@ -432,7 +432,40 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       }
     );
   };
-  
+  // 🔄 دالة تصفير رحلة السائق والبدء بيوم جديد
+  const handleDriverResetTrip = async () => {
+    const confirmReset = window.confirm(
+      "⚠️ هل أنت متأكد من تصفير رحلتك وإعادة كافة الحالات للبدء بيوم جديد؟"
+    );
+    if (!confirmReset) return;
+
+    try {
+      // 1️⃣ تصفير حالة الرحلة للسائق نفسه في جدول drivers (حذف completed)
+      const { error: driverErr } = await supabase
+        .from('drivers')
+        .update({ trip_status: null })
+        .eq('id', user.id);
+
+      if (driverErr) throw driverErr;
+
+      // 2️⃣ تصفير حالات جميع الطالبات التابعات لهذا السائق في جدول students
+      await supabase
+        .from('students')
+        .update({
+          is_boarded: false,
+          is_boarded_return: false,
+          is_dropped_return: false,
+          finish_status: null
+        })
+        .or(`driver_id.eq.${user.id},return_driver_id.eq.${user.id}`);
+
+      alert("✅ تم تصفير الرحلة بنجاح! التطبيق جاهز للرحلة القادمة.");
+      window.location.reload(); // تحديث الواجهة فوراً
+    } catch (err) {
+      console.error("خطأ التصفير:", err);
+      alert("❌ حدث خطأ أثناء تصفير الرحلة: " + err.message);
+    }
+  };
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
   if (!user) return;
@@ -1288,6 +1321,12 @@ function DriverView({ user, setUser, supabase }) {
           >
             {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
           </button>
+          {/* 🔄 زر تصفير الرحلة للبدء بيوم جديد */}
+        <button
+          onClick={handleDriverResetTrip}
+          className="w-full mt-2 py-2.5 px-4 rounded-xl text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+          <span>🔄</span> تصفير الرحلة للبدء بيوم جديد
+        </button>
         </div>
 
         {/* 2. بطاقات الإحصائيات */}
