@@ -33,7 +33,7 @@ const [driverPassword, setDriverPassword] = useState('');
           tomorrow_status: null,
           exam_note: null
         })
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // تطبيق التصفير على كافة السجلات
+        .not('id', 'is', null);
 
       if (error) {
         alert('❌ حدث خطأ أثناء التصفير: ' + error.message);
