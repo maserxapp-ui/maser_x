@@ -13,6 +13,42 @@ export default function App() {
 const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
+  // 📊 حساب الإحصائيات الحية من الطلاب
+  const totalStudentsCount = students?.length || 0;
+  
+  const absentCount = students?.filter(s => 
+    s.tomorrow_status === 'لا أداوم غداً' || s.is_absent === true
+  ).length || 0;
+
+  const examCount = students?.filter(s => 
+    s.exam_note || s.tomorrow_status?.includes('استثناء') || s.tomorrow_status?.includes('امتحان')
+  ).length || 0;
+
+  const attendingCount = Math.max(0, totalStudentsCount - absentCount - examCount);
+
+  // النِسَب المئوية
+  const attendingPercent = totalStudentsCount > 0 ? Math.round((attendingCount / totalStudentsCount) * 100) : 0;
+  const absentPercent = totalStudentsCount > 0 ? Math.round((absentCount / totalStudentsCount) * 100) : 0;
+  const examPercent = totalStudentsCount > 0 ? Math.max(0, 100 - attendingPercent - absentPercent) : 0;
+
+  // مؤشرات الكفاءة
+  const collectionRate = (totalExpectedRevenue && totalExpectedRevenue > 0) ? Math.round(((totalCollectedRevenue || 0) / totalExpectedRevenue) * 100) : 0;
+  const seatUtilization = (totalSeats && totalSeats > 0) ? Math.round(((totalSubscribers || 0) / totalSeats) * 100) : 0;
+  const driverReadiness = (totalDrivers && totalDrivers > 0) ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
+
+  // ⚡ اشتراك المزامنة الفورية
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchAllData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => fetchAllData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, () => fetchAllData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 // 🔄 دالة التصفير الشاملة (تصفير الطالبات + تصفير كافة السائقين)
   const handleManualResetTrips = async () => {
     const confirmReset = window.confirm(
@@ -874,224 +910,223 @@ if (viewMode === 'user') {
         {/* محتوى اللوحة */}
       <main className="p-6 space-y-6">
 
-        {activeTab === 'main' && (
-  <div className="space-y-6">
+    {activeTab === 'main' && (
+          <div className="space-y-6">
 
-    {/* 1️⃣ بانر الترحيب الاحترافي */}
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          مرحباً بك في لوحة تحكم مسار X 👋
-        </h2>
-        <p className="text-slate-300 text-sm mt-1">نظرة عامة على حالة الاشتراكات، السائقين، وتوقعات رحلات يوم غد.</p>
-      </div>
-      <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-4 py-2 rounded-xl text-xs text-emerald-400 font-medium shadow-inner">
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        النظام يعمل بكفاءة وصحة السيرفر ممتازة
-      </div>
-    </div>
-
-    {/* 2️⃣ كروت الإحصائيات الأساسية (المشتركين، السائقين، المبالغ، السعة) */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-      
-      {/* إجمالي المشتركين بالمنصة */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">المسجلون بالمنصة</span>
-          <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-lg">👥</span>
-        </div>
-        <div className="mt-4 flex items-baseline justify-between">
-          <h3 className="text-3xl font-extrabold text-slate-900">{totalSubscribers}</h3>
-          <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">مشترك مسجل</span>
-        </div>
-        <p className="text-xs text-slate-400 mt-2">الحسابات المكتملة: <span className="font-bold text-slate-700">{paidCount}</span></p>
-      </div>
-
-      {/* عدد السائقين بالمنصة */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">السائقون بالمنصة</span>
-          <span className="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-lg">🚌</span>
-        </div>
-        <div className="mt-4 flex items-baseline justify-between">
-          <h3 className="text-3xl font-extrabold text-slate-900">{totalDrivers}</h3>
-          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">سائق معتمد</span>
-        </div>
-        <p className="text-xs text-slate-400 mt-2">السائقون النشطون: <span className="font-bold text-slate-700">{activeDriversCount}</span></p>
-      </div>
-
-      {/* المبالغ المحصلة */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">المبالغ المحصلة</span>
-          <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl text-lg">💳</span>
-        </div>
-        <div className="mt-4">
-          <h3 className="text-2xl font-extrabold text-emerald-600">{totalCollectedRevenue?.toLocaleString()} <span className="text-xs font-normal text-slate-500">د.ع</span></h3>
-        </div>
-        <p className="text-xs text-slate-400 mt-2">المبلغ الكلي المتوقع: <span className="font-bold text-slate-700">{totalExpectedRevenue?.toLocaleString()} د.ع</span></p>
-      </div>
-
-      {/* سعة الأسطول */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">سعة المقاعد الكلية</span>
-          <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-lg">💺</span>
-        </div>
-        <div className="mt-4 flex items-baseline justify-between">
-          <h3 className="text-3xl font-extrabold text-slate-900">{totalSeats}</h3>
-          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">مقعد متاح</span>
-        </div>
-        <p className="text-xs text-slate-400 mt-2">جاهزية كاملة لرحلات الغد</p>
-      </div>
-
-    </div>
-
-    {/* 3️⃣ المخطط البياني الدائري (توقعات الدوام والغياب) + مؤشرات الأداء */}
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      {/* 🟢🔴 الرسم البياني الدائري لنسبة الحضور والغياب */}
-      <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">📊 إحصائيات وتوقعات رحلات يوم غد</h3>
-              <p className="text-xs text-slate-400 mt-0.5">مخطط بياني توضيحي لنسب المداومين والغائبين</p>
-            </div>
-            <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-3 py-1 rounded-full">جدول غداً</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-around gap-6 my-6">
-            
-            {/* Donut Chart دائري احترافي بالـ CSS */}
-            <div className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner"
-                 style={{
-                   background: 'conic-gradient(#10B981 0% 65%, #EF4444 65% 85%, #F59E0B 85% 100%)'
-                 }}>
-              {/* التجاويف الداخلي للدائرة */}
-              <div className="w-28 h-28 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
-                <span className="text-2xl font-black text-slate-800">100%</span>
-                <span className="text-[10px] font-medium text-slate-400">إجمالي الحضور</span>
+            {/* 1️⃣ بانر الترحيب الاحترافي */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  مرحباً بك في لوحة تحكم مسار X 👋
+                </h2>
+                <p className="text-slate-300 text-sm mt-1">نظرة عامة على حالة الاشتراكات، السائقين، وتوقعات رحلات يوم غد.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-4 py-2 rounded-xl text-xs text-emerald-400 font-medium shadow-inner">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                النظام يعمل بكفاءة وصحة السيرفر ممتازة
               </div>
             </div>
 
-            {/* مفتاح الرسم البياني (Legend) */}
-            <div className="space-y-3 w-full sm:w-auto">
+            {/* 2️⃣ كروت الإحصائيات الأساسية (المشتركين، السائقين، المبالغ، السعة) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               
-              {/* المداومون - أخضر */}
-              <div className="flex items-center justify-between gap-8 p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm"></span>
-                  <span className="text-sm font-semibold text-slate-700">المداومون غداً</span>
+              {/* إجمالي المشتركين بالمنصة */}
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">المسجلون بالمنصة</span>
+                  <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-lg">👥</span>
                 </div>
-                <span className="text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">65%</span>
-              </div>
-
-              {/* الغائبون - أحمر */}
-              <div className="flex items-center justify-between gap-8 p-3 bg-rose-50/70 rounded-xl border border-rose-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-sm"></span>
-                  <span className="text-sm font-semibold text-slate-700">الغائبون / اعتذار</span>
+                <div className="mt-4 flex items-baseline justify-between">
+                  <h3 className="text-3xl font-extrabold text-slate-900">{totalSubscribers || 0}</h3>
+                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">مشترك مسجل</span>
                 </div>
-                <span className="text-xs font-bold text-rose-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">20%</span>
+                <p className="text-xs text-slate-400 mt-2">الحسابات المكتملة: <span className="font-bold text-slate-700">{paidCount || 0}</span></p>
               </div>
 
-              {/* أسباب أخرى / استثناءات - أصفر */}
-              <div className="flex items-center justify-between gap-8 p-3 bg-amber-50/70 rounded-xl border border-amber-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm"></span>
-                  <span className="text-sm font-semibold text-slate-700">امتحانات / استثناء</span>
+              {/* عدد السائقين بالمنصة */}
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">السائقون بالمنصة</span>
+                  <span className="p-2.5 bg-amber-50 text-amber-600 rounded-xl text-lg">🚌</span>
                 </div>
-                <span className="text-xs font-bold text-amber-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">15%</span>
+                <div className="mt-4 flex items-baseline justify-between">
+                  <h3 className="text-3xl font-extrabold text-slate-900">{totalDrivers || 0}</h3>
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">سائق معتمد</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">السائقون النشطون: <span className="font-bold text-slate-700">{activeDriversCount || 0}</span></p>
+              </div>
+
+              {/* المبالغ المحصلة */}
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">المبالغ المحصلة</span>
+                  <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl text-lg">💳</span>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-2xl font-extrabold text-emerald-600">{(totalCollectedRevenue || 0).toLocaleString()} <span className="text-xs font-normal text-slate-500">د.ع</span></h3>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">المبلغ الكلي المتوقع: <span className="font-bold text-slate-700">{(totalExpectedRevenue || 0).toLocaleString()} د.ع</span></p>
+              </div>
+
+              {/* سعة الأسطول */}
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">سعة المقاعد الكلية</span>
+                  <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-lg">💺</span>
+                </div>
+                <div className="mt-4 flex items-baseline justify-between">
+                  <h3 className="text-3xl font-extrabold text-slate-900">{totalSeats || 0}</h3>
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">مقعد متاح</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">جاهزية كاملة لرحلات الغد</p>
+              </div>
+
+            </div>
+
+            {/* 3️⃣ المخطط البياني الدائري ومؤشرات الأداء */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* الرسم البياني الدائري لنسبة الحضور والغياب */}
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">📊 إحصائيات وتوقعات رحلات يوم غد</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">مخطط بياني توضيحي لنسب المداومين والغائبين</p>
+                    </div>
+                    <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-3 py-1 rounded-full">جدول غداً</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-around gap-6 my-6">
+                    
+                    {/* Donut Chart دائري */}
+                    <div className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner"
+                         style={{
+                           background: `conic-gradient(#10B981 0% ${attendingPercent}%, #EF4444 ${attendingPercent}% ${attendingPercent + absentPercent}%, #F59E0B ${attendingPercent + absentPercent}% 100%)`
+                         }}>
+                      <div className="w-28 h-28 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
+                        <span className="text-2xl font-black text-slate-800">{attendingPercent}%</span>
+                        <span className="text-[10px] font-medium text-slate-400">إجمالي الحضور</span>
+                      </div>
+                    </div>
+
+                    {/* مفتاح الرسم البياني (Legend) */}
+                    <div className="space-y-3 w-full sm:w-auto">
+                      
+                      {/* المداومون - أخضر */}
+                      <div className="flex items-center justify-between gap-8 p-3 bg-emerald-50/70 rounded-xl border border-emerald-100">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm"></span>
+                          <span className="text-sm font-semibold text-slate-700">المداومون غداً</span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">{attendingPercent}%</span>
+                      </div>
+
+                      {/* الغائبون - أحمر */}
+                      <div className="flex items-center justify-between gap-8 p-3 bg-rose-50/70 rounded-xl border border-rose-100">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-sm"></span>
+                          <span className="text-sm font-semibold text-slate-700">الغائبون / اعتذار</span>
+                        </div>
+                        <span className="text-xs font-bold text-rose-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">{absentPercent}%</span>
+                      </div>
+
+                      {/* أسباب أخرى / استثناءات - أصفر */}
+                      <div className="flex items-center justify-between gap-8 p-3 bg-amber-50/70 rounded-xl border border-amber-100">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm"></span>
+                          <span className="text-sm font-semibold text-slate-700">امتحانات / استثناء</span>
+                        </div>
+                        <span className="text-xs font-bold text-amber-700 bg-white px-2.5 py-1 rounded-lg shadow-xs">{examPercent}%</span>
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* ملخص تفصيلي بالأرقام */}
+                <div className="pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <span className="block text-xs text-slate-400">المداومون فعلياً</span>
+                    <span className="text-base font-bold text-emerald-600 mt-0.5 block">🟢 {attendingCount} طلاب</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <span className="block text-xs text-slate-400">الغائبون غداً</span>
+                    <span className="text-base font-bold text-rose-600 mt-0.5 block">🔴 {absentCount} طلاب</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <span className="block text-xs text-slate-400">جاهزية الحافلات</span>
+                    <span className="text-base font-bold text-indigo-600 mt-0.5 block">⚡ {driverReadiness}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ⚡ مؤشرات أداء النظام والسيرفر */}
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    ⚡ مؤشرات الكفاءة
+                  </h3>
+
+                  <div className="space-y-4">
+                    
+                    {/* أداء التحصيل */}
+                    <div>
+                      <div className="flex justify-between text-xs font-semibold mb-1.5">
+                        <span className="text-slate-600">نسبة تحصيل المبالغ</span>
+                        <span className="text-emerald-600">{collectionRate}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${collectionRate}%` }}></div>
+                      </div>
+                    </div>
+
+                    {/* إشغال المقاعد */}
+                    <div>
+                      <div className="flex justify-between text-xs font-semibold mb-1.5">
+                        <span className="text-slate-600">نسبة استغلال المقاعد</span>
+                        <span className="text-indigo-600">{seatUtilization}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${seatUtilization}%` }}></div>
+                      </div>
+                    </div>
+
+                    {/* تغطية السائقين */}
+                    <div>
+                      <div className="flex justify-between text-xs font-semibold mb-1.5">
+                        <span className="text-slate-600">جاهزية السائقين</span>
+                        <span className="text-amber-600">{driverReadiness}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-amber-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${driverReadiness}%` }}></div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
+                    <span className="text-xs font-bold text-slate-700 block mb-1">📌 حالة الرحلات اليومية</span>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      يتم مزامنة بيانات الحضور والغياب مع تطبيق السائقين والمشتركين تلقائياً عبر Supabase.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                  <span>قاعدة بيانات Supabase</span>
+                  <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    مُتصل ومُحدث
+                  </span>
+                </div>
               </div>
 
             </div>
 
           </div>
-        </div>
-
-        {/* ملخص تفصيلي بالأرقام */}
-        <div className="pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 bg-slate-50 rounded-xl">
-            <span className="block text-xs text-slate-400">المداومون فعلياً</span>
-            <span className="text-base font-bold text-emerald-600 mt-0.5 block">🟢 6 طلاب</span>
-          </div>
-          <div className="p-2 bg-slate-50 rounded-xl">
-            <span className="block text-xs text-slate-400">الغائبون غداً</span>
-            <span className="text-base font-bold text-rose-600 mt-0.5 block">🔴 2 طلاب</span>
-          </div>
-          <div className="p-2 bg-slate-50 rounded-xl">
-            <span className="block text-xs text-slate-400">جاهزية الحافلات</span>
-            <span className="text-base font-bold text-indigo-600 mt-0.5 block">⚡ 100%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ⚡ مؤشرات أداء النظام والسيرفر */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            ⚡ مؤشرات الكفاءة
-          </h3>
-
-          <div className="space-y-4">
-            
-            {/* أداء التحصيل */}
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-1.5">
-                <span className="text-slate-600">نسبة تحصيل المبالغ</span>
-                <span className="text-emerald-600">100%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div className="bg-emerald-500 h-2.5 rounded-full w-full"></div>
-              </div>
-            </div>
-
-            {/* إشغال المقاعد */}
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-1.5">
-                <span className="text-slate-600">نسبة استغلال المقاعد</span>
-                <span className="text-indigo-600">75%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div className="bg-indigo-500 h-2.5 rounded-full w-3/4"></div>
-              </div>
-            </div>
-
-            {/* تغطية السائقين */}
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-1.5">
-                <span className="text-slate-600">جاهزية السائقين</span>
-                <span className="text-amber-600">100%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div className="bg-amber-500 h-2.5 rounded-full w-full"></div>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
-            <span className="text-xs font-bold text-slate-700 block mb-1">📌 حالة الرحلات اليومية</span>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              يتم مزامنة بيانات الحضور والغياب مع تطبيق السائقين والمشتركين تلقائياً عبر Supabase.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <span>قاعدة بيانات Supabase</span>
-          <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            مُتصل ومُحدث
-          </span>
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-)}
+        )}
           {/* التبويب الرئيسي والمشتركين */}
           {activeTab === 'subscribers' && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
