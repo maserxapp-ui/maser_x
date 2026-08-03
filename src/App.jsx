@@ -25,7 +25,6 @@ const [driverPassword, setDriverPassword] = useState('');
         .from('students')
         .update({
           is_boarded: false,
-          is_dropped: false,
           finish_status: null,
           return_driver_id: null,
           return_approved: false,
