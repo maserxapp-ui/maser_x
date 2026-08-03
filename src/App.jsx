@@ -13,7 +13,26 @@ export default function App() {
 const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
-  
+  // ⚡ كود المزامنة الفورية (Realtime) للإنعاش التلقائي
+  useEffect(() => {
+    if (typeof supabase === 'undefined') return;
+    const channel = supabase
+      .channel('realtime-dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 // 🔄 دالة التصفير الشاملة (تصفير الطالبات + تصفير كافة السائقين)
   const handleManualResetTrips = async () => {
     const confirmReset = window.confirm(
@@ -803,26 +822,7 @@ if (viewMode === 'user') {
   const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0) 
     ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
 
-  // ⚡ 2. كود المزامنة الفورية (Realtime) للإنعاش التلقائي
-  useEffect(() => {
-    if (typeof supabase === 'undefined') return;
-    const channel = supabase
-      .channel('realtime-dashboard-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
-        if (typeof fetchAllData === 'function') fetchAllData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
-        if (typeof fetchAllData === 'function') fetchAllData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, () => {
-        if (typeof fetchAllData === 'function') fetchAllData();
-      })
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
