@@ -13,15 +13,16 @@ export default function App() {
 const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
-// 🔄 دالة التصفير اليدوي لجميع الرحلات وحالات الطلاب
+// 🔄 دالة التصفير الشاملة (تصفير الطالبات + تصفير كافة السائقين)
   const handleManualResetTrips = async () => {
     const confirmReset = window.confirm(
-      "⚠️ هل أنت متأكد من رغبتك في تصفير جميع الرحلات وحالات الطلاب اليومية للتحضير لليوم الجديد؟"
+      "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
     );
     if (!confirmReset) return;
 
     try {
-      const { error } = await supabase
+      // 1️⃣ تصفير حالات جميع الطلاب
+      const { error: studentErr } = await supabase
         .from('students')
         .update({
           is_boarded: false,
@@ -35,15 +36,21 @@ const [driverPassword, setDriverPassword] = useState('');
         })
         .not('id', 'is', null);
 
-      if (error) {
-        alert('❌ حدث خطأ أثناء التصفير: ' + error.message);
-      } else {
-        alert('✅ تم تصفير جميع الرحلات وحالات الطالبات بنجاح!');
-        window.location.reload(); // إعادة تحميل الصفحة لتحديث البيانات فوراً
-      }
+      if (studentErr) throw studentErr;
+
+      // 2️⃣ تصفير حالات جميع السائقين (مسح مكتملة / completed)
+      const { error: driverErr } = await supabase
+        .from('drivers')
+        .update({ trip_status: null })
+        .not('id', 'is', null);
+
+      if (driverErr) throw driverErr;
+
+      alert('✅ تم تصفير جميع الرحلات وحالات الطالبات والسائقين بنجاح!');
+      window.location.reload();
     } catch (err) {
       console.error(err);
-      alert('❌ حدث خطأ غير متوقع أثناء التصفير');
+      alert('❌ حدث خطأ أثناء التصفير: ' + err.message);
     }
   };
   const getBaghdadDateInfo = () => {
