@@ -13,7 +13,40 @@ export default function App() {
 const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
+// 🔄 دالة التصفير اليدوي لجميع الرحلات وحالات الطلاب
+  const handleManualResetTrips = async () => {
+    const confirmReset = window.confirm(
+      "⚠️ هل أنت متأكد من رغبتك في تصفير جميع الرحلات وحالات الطلاب اليومية للتحضير لليوم الجديد؟"
+    );
+    if (!confirmReset) return;
 
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({
+          is_boarded: false,
+          is_dropped: false,
+          finish_status: null,
+          return_driver_id: null,
+          return_approved: false,
+          is_boarded_return: false,
+          is_dropped_return: false,
+          tomorrow_status: null,
+          exam_note: null
+        })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // تطبيق التصفير على كافة السجلات
+
+      if (error) {
+        alert('❌ حدث خطأ أثناء التصفير: ' + error.message);
+      } else {
+        alert('✅ تم تصفير جميع الرحلات وحالات الطالبات بنجاح!');
+        window.location.reload(); // إعادة تحميل الصفحة لتحديث البيانات فوراً
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ حدث خطأ غير متوقع أثناء التصفير');
+    }
+  };
   const getBaghdadDateInfo = () => {
     const now = new Date();
     // تحويل الوقت لتوقيت بغداد بغض النظر عن جهاز المستخدم
@@ -1110,6 +1143,12 @@ if (viewMode === 'user') {
         ⏱️ تتحدث قائمة الرحلات تلقائياً عند الساعة <span className="font-bold text-slate-700">9:00 مساءً</span> للتحضير لليوم التالي.
       </p>
     </div>
+    {/* 🔄 زر التصفير اليدوي */}
+        <button
+          onClick={handleManualResetTrips}
+          className="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold px-4 py-2 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
+          <span>🔄</span> تصفير الرحلات اليومية
+        </button>
   </div>
 {/* 👑 نافذة إدارة رحلات العودة (باجات 4 طالبات) */}
 <AdminReturnTripsManager supabase={supabase} />
