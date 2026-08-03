@@ -13,42 +13,7 @@ export default function App() {
 const [driverPassword, setDriverPassword] = useState('');
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
-  // 📊 حساب الإحصائيات الحية من الطلاب
-  const totalStudentsCount = students?.length || 0;
   
-  const absentCount = students?.filter(s => 
-    s.tomorrow_status === 'لا أداوم غداً' || s.is_absent === true
-  ).length || 0;
-
-  const examCount = students?.filter(s => 
-    s.exam_note || s.tomorrow_status?.includes('استثناء') || s.tomorrow_status?.includes('امتحان')
-  ).length || 0;
-
-  const attendingCount = Math.max(0, totalStudentsCount - absentCount - examCount);
-
-  // النِسَب المئوية
-  const attendingPercent = totalStudentsCount > 0 ? Math.round((attendingCount / totalStudentsCount) * 100) : 0;
-  const absentPercent = totalStudentsCount > 0 ? Math.round((absentCount / totalStudentsCount) * 100) : 0;
-  const examPercent = totalStudentsCount > 0 ? Math.max(0, 100 - attendingPercent - absentPercent) : 0;
-
-  // مؤشرات الكفاءة
-  const collectionRate = (totalExpectedRevenue && totalExpectedRevenue > 0) ? Math.round(((totalCollectedRevenue || 0) / totalExpectedRevenue) * 100) : 0;
-  const seatUtilization = (totalSeats && totalSeats > 0) ? Math.round(((totalSubscribers || 0) / totalSeats) * 100) : 0;
-  const driverReadiness = (totalDrivers && totalDrivers > 0) ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
-
-  // ⚡ اشتراك المزامنة الفورية
-  useEffect(() => {
-    const channel = supabase
-      .channel('realtime-dashboard-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => fetchAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, () => fetchAllData())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 // 🔄 دالة التصفير الشاملة (تصفير الطالبات + تصفير كافة السائقين)
   const handleManualResetTrips = async () => {
     const confirmReset = window.confirm(
@@ -821,6 +786,43 @@ if (viewMode === 'user') {
     return student.tomorrow_status === 'لا أداوم غداً' || !hasOfficialWorkTomorrow;
   });
   // ---------------------------------------------------
+  // ⚡ 1. حساب الإحصائيات الحية للمخطط والدائرة
+  const totalStudentsCount = students?.length || 0;
+  const absentCount = (typeof absentStudents !== 'undefined') ? absentStudents.length : (students?.filter(s => s.tomorrow_status === 'لا أداوم غداً' || s.is_absent).length || 0);
+  const examCount = (typeof exceptionStudents !== 'undefined') ? exceptionStudents.length : (students?.filter(s => s.exam_note).length || 0);
+  const attendingCount = Math.max(0, totalStudentsCount - absentCount - examCount);
+
+  const attendingPercent = totalStudentsCount > 0 ? Math.round((attendingCount / totalStudentsCount) * 100) : 0;
+  const absentPercent = totalStudentsCount > 0 ? Math.round((absentCount / totalStudentsCount) * 100) : 0;
+  const examPercent = totalStudentsCount > 0 ? Math.max(0, 100 - attendingPercent - absentPercent) : 0;
+
+  const collectionRate = (typeof totalExpectedRevenue !== 'undefined' && totalExpectedRevenue > 0) 
+    ? Math.round(((totalCollectedRevenue || 0) / totalExpectedRevenue) * 100) : 0;
+  const seatUtilization = (typeof totalSeats !== 'undefined' && totalSeats > 0) 
+    ? Math.round(((totalSubscribers || 0) / totalSeats) * 100) : 0;
+  const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0) 
+    ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
+
+  // ⚡ 2. كود المزامنة الفورية (Realtime) للإنعاش التلقائي
+  useEffect(() => {
+    if (typeof supabase === 'undefined') return;
+    const channel = supabase
+      .channel('realtime-dashboard-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subscribers' }, () => {
+        if (typeof fetchAllData === 'function') fetchAllData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
       
