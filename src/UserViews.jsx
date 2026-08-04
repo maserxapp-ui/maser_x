@@ -1336,12 +1336,19 @@ function DriverView({ user, setUser, supabase }) {
               🔄 تحديث
             </button>
             <button
-              onClick={() => setUser(null)}
-              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
-            >
-              <span>خروج</span>
-              <span>🚪</span>
-            </button>
+          onClick={() => {
+            // 🗑️ مسح الذاكرة نهائياً
+            localStorage.removeItem('maser_currentUser');
+            localStorage.removeItem('maser_viewMode');
+            localStorage.removeItem('maser_loginRole');
+            // 🔄 تصفير الشاشة للخروج
+            setUser(null);
+          }}
+          className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
+        >
+          <span>خروج</span>
+          <span>🚪</span>
+        </button>
           </div>
         </div>
       </div>
