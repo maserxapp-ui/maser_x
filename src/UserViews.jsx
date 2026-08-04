@@ -256,68 +256,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     studentData?.subscription_expiry || user?.subscription_expiry
   );
 
-  // 🔒 2️⃣ شاشة القفل (تظهر فقط إذا كان هناك تاريخ محدد بالفعل وانتهى رسمياً)
-  if (user && (studentData?.subscription_expiry || user?.subscription_expiry) && remainingSubscriptionDays <= 0) {
-    const handleLogout = () => {
-      // مسح كافة التخزينات وإجبار المتصفح على الانتقال للواجهة الرئيسية الخالية
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.replace(window.location.origin + window.location.pathname);
-    };
-
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        color: '#ffffff',
-        padding: '20px',
-        textAlign: 'center',
-        direction: 'rtl'
-      }}>
-        <div style={{ fontSize: '64px', marginBottom: '12px' }}>🚫</div>
-        <h2 style={{ color: '#ef4444', margin: '0 0 10px 0', fontSize: '22px' }}>حسابك غير مفعل</h2>
-        <p style={{ fontSize: '15px', color: '#94a3b8', maxWidth: '350px', lineHeight: '1.6', marginBottom: '20px' }}>
-          انتهت مدة اشتراكك الشهري. يرجى دفع الأجرة للإدارة لتفعيل حسابك وتجديد الاشتراك.
-        </p>
-        
-        <div style={{
-          backgroundColor: '#1e293b',
-          border: '1px solid #334155',
-          padding: '12px 20px',
-          borderRadius: '12px',
-          fontSize: '13px',
-          color: '#f8fafc',
-          marginBottom: '24px'
-        }}>
-          📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
-        </div>
-
-        {/* 🚪 زر الخروج القسري المباشر */}
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: '#dc2626',
-            color: '#ffffff',
-            border: 'none',
-            padding: '12px 28px',
-            borderRadius: '10px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
-          }}>
-          🚪 تسجيل الخروج
-        </button>
-      </div>
-    );
-  }
+ 
   // 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
   const handleFinishShift = async () => {
     try {
@@ -673,6 +612,68 @@ const handleStudentAction = async (actionType, labelText) => {
     setErrorMsg('');
     setActiveTab('main');
   };
+   // 🔒 2️⃣ شاشة القفل (تظهر فقط إذا كان هناك تاريخ محدد بالفعل وانتهى رسمياً)
+  if (user && (studentData?.subscription_expiry || user?.subscription_expiry) && remainingSubscriptionDays <= 0) {
+    const handleLogout = () => {
+      // مسح كافة التخزينات وإجبار المتصفح على الانتقال للواجهة الرئيسية الخالية
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace(window.location.origin + window.location.pathname);
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#0f172a',
+        color: '#ffffff',
+        padding: '20px',
+        textAlign: 'center',
+        direction: 'rtl'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '12px' }}>🚫</div>
+        <h2 style={{ color: '#ef4444', margin: '0 0 10px 0', fontSize: '22px' }}>حسابك غير مفعل</h2>
+        <p style={{ fontSize: '15px', color: '#94a3b8', maxWidth: '350px', lineHeight: '1.6', marginBottom: '20px' }}>
+          انتهت مدة اشتراكك الشهري. يرجى دفع الأجرة للإدارة لتفعيل حسابك وتجديد الاشتراك.
+        </p>
+        
+        <div style={{
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          fontSize: '13px',
+          color: '#f8fafc',
+          marginBottom: '24px'
+        }}>
+          📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+        </div>
+
+        {/* 🚪 زر الخروج القسري المباشر */}
+        <button
+          onClick={handleLogout}
+          style={{
+            backgroundColor: '#dc2626',
+            color: '#ffffff',
+            border: 'none',
+            padding: '12px 28px',
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+          }}>
+          🚪 تسجيل الخروج
+        </button>
+      </div>
+    );
+  }
   // 1️⃣ شاشة تسجيل الدخول
   if (!user) {
     return (
