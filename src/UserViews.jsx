@@ -240,7 +240,50 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
   // التبديل بين الشاشات السفلية: 'main' أو 'settings'
   const [activeTab, setActiveTab] = useState('main');
+// 📅 دالة حساب الأيام المتبقية لانتهاء الاشتراك
+  const getRemainingSubscriptionDays = (expiryDateStr) => {
+    if (!expiryDateStr) return 0;
+    const today = new Date();
+    const expiry = new Date(expiryDateStr);
+    const diffTime = expiry - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
+  const remainingSubscriptionDays = getRemainingSubscriptionDays(studentData?.subscription_expiry || user?.subscription_expiry);
+
+  // 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك
+  if (remainingSubscriptionDays <= 0) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#0f172a',
+        color: '#ffffff',
+        padding: '20px',
+        textAlign: 'center',
+        direction: 'rtl'
+      }}>
+        <div style={{ fontSize: '64px', marginBottom: '12px' }}>🚫</div>
+        <h2 style={{ color: '#ef4444', margin: '0 0 10px 0', fontSize: '22px' }}>حسابك غير مفعل</h2>
+        <p style={{ fontSize: '15px', color: '#94a3b8', maxWidth: '350px', lineHeight: '1.6', marginBottom: '20px' }}>
+          انتهت مدة اشتراكك الشهري. يرجى دفع الأجرة للإدارة لتفعيل حسابك وتجديد الاشتراك.
+        </p>
+        <div style={{
+          backgroundColor: '#1e293b',
+          border: '1px solid #334155',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          fontSize: '13px',
+          color: '#f8fafc'
+        }}>
+          📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+        </div>
+      </div>
+    );
+  }
   // 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
   const handleFinishShift = async () => {
     try {
