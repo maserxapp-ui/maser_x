@@ -251,12 +251,18 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
   const remainingSubscriptionDays = getRemainingSubscriptionDays(studentData?.subscription_expiry || user?.subscription_expiry);
 
-  // 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك مع زر تسجيل الخروج
+// 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك مع تسجيل خروج حقيقي
   if (remainingSubscriptionDays <= 0) {
     const handleLogout = () => {
-      // مسح جلسة الدخول وإعادة تحميل الصفحة للخروج فوراً
+      // 1. مسح جميع بيانات الجلسة المخزنة
       localStorage.removeItem('maser_currentUser');
-      window.location.reload();
+      localStorage.clear();
+
+      // 2. إعادة إسناد الحالة إلى واجهة التسجيل الرئيسية
+      if (typeof setLoginRole === 'function') setLoginRole('');
+      
+      // 3. إعادة التوجيه الفوري للرابط الرئيسي
+      window.location.href = window.location.origin;
     };
 
     return (
@@ -290,7 +296,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
         </div>
 
-        {/* 🚪 زر تسجيل الخروج */}
+        {/* 🚪 زر تسجيل الخروج القسري */}
         <button
           onClick={handleLogout}
           style={{
