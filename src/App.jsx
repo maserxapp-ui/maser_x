@@ -570,6 +570,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       name,
       phone,
       university,
+      password,
       gender,    // 👈 أضف الجنس هنا
       district,
       location: newStudentLocation,
