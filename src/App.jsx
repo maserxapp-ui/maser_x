@@ -34,6 +34,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('maser_viewMode') || 'user');
   const [loginRole, setLoginRole] = useState(() => localStorage.getItem('maser_loginRole') || 'student');
   const [driverPassword, setDriverPassword] = useState('');
+  const [driverTripPrice, setDriverTripPrice] = useState('');
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('maser_currentUser');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
@@ -681,6 +682,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     setSelectedDriverId(null);
     setDriverName('');
     setDriverPhone('');
+    setDriverTripPrice('');
     setCarType('حافلة كيا كوستار');
     setCarNumber('');
     setRoute('منطقة حي الخليج - الجامعة');
@@ -700,6 +702,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     setCapacity(driver.capacity?.toString() || '22');
     setDriverStatus(driver.status || 'نشط');
     setShowDriverModal(true);
+    setDriverTripPrice(driver.trip_price || '');
   };
 
   async function handleSaveDriver(e) {
@@ -719,6 +722,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       route: route,
       capacity: parseInt(capacity, 10) || 0,
       status: driverStatus
+      trip_price: Number(driverTripPrice) || 0
     };
 
     if (isEditingDriver) {
@@ -2013,7 +2017,16 @@ else if (confirmedAttending) {
                   onChange={(e) => setDriverPhone(e.target.value)}
                 />
               </div>
-
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">💵 سعر الرحلة الواحدة (د.ع)</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 5000"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+                  value={driverTripPrice || ''}
+                  onChange={(e) => setDriverTripPrice(e.target.value)}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-600 font-bold mb-1">نوع السيارة / الحافلة</label>
@@ -2242,7 +2255,23 @@ export function TripsManagement({ supabase }) {
                   <span>الهاتف: {driver.phone || 'غير مدخل'}</span>
                 </div>
               </div>
-
+{/* 💰 كشف مستحقات السائق */}
+        <div style={{
+          marginTop: '8px',
+          marginBottom: '8px',
+          padding: '8px 12px',
+          backgroundColor: '#f8fafc',
+          borderRadius: '8px',
+          fontSize: '13px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          border: '1px solid #e2e8f0',
+          direction: 'rtl'
+        }}>
+          <span>💵 سعر الرحلة: <b>{(driver.trip_price || 0).toLocaleString('ar-EG')} د.ع</b></span>
+          <span>🧮 المستحق الكلي: <b style={{ color: '#16a34a', fontWeight: 'bold' }}>{((driver.completed_trips || 0) * (driver.trip_price || 0)).toLocaleString('ar-EG')} د.ع</b></span>
+        </div>
               {/* 🎓 قائمة الطلاب ومتابعة الصعود */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {driverStudents.length === 0 ? (
