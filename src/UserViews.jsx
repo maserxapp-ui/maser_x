@@ -1059,10 +1059,18 @@ if (user && user.role === 'driver') {
             </div>
 
             <button 
-              onClick={handleLogout}
-              style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-              🚪 تسجيل الخروج
-            </button>
+  onClick={() => {
+    // 🗑️ مسح بيانات الجلسة من ذاكرة الجهاز
+    localStorage.removeItem('maser_currentUser');
+    localStorage.removeItem('maser_viewMode');
+    localStorage.removeItem('maser_loginRole');
+
+    // 🔄 تنفيذ دالة تسجيل الخروج الأصلية
+    if (typeof handleLogout === 'function') handleLogout();
+  }}
+  style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+  🚪 تسجيل الخروج
+</button>
           </div>
         </div>
       )}
