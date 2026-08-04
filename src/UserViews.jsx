@@ -1216,6 +1216,33 @@ if (user && user.role === 'driver') {
                 </span>
               </div>
 
+              {/* 💳 كارت تفاصيل الاشتراك الشهري */}
+        <div style={{
+          marginTop: '16px',
+          paddingTop: '16px',
+          borderTop: '2px dashed #e2e8f0'
+        }}>
+          <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px' }}>💳 حالة الاشتراك الشهري</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
+              <b>{(studentData?.subscription_start_date || user?.subscription_start_date) ? new Date(studentData?.subscription_start_date || user?.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>⏳ الأيام المتبقية:</span>
+              <b style={{ color: remainingSubscriptionDays <= 5 ? '#dc2626' : '#16a34a' }}>
+                {remainingSubscriptionDays} يوم
+              </b>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
+              <b>{(studentData?.subscription_expiry || user?.subscription_expiry) ? new Date(studentData?.subscription_expiry || user?.subscription_expiry).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+            </div>
+          </div>
+        </div>
+
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
                 <span style={{ color: '#64748b' }}>السائق المخصص:</span>
                 <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
