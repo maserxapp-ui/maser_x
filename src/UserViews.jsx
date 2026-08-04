@@ -992,25 +992,25 @@ if (user && user.role === 'driver') {
             </p>
 
            <button
-          onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
-          style={{
-            width: '100%',
-            backgroundColor: '#3b82f6',
-            color: '#ffffff',
-            border: 'none',
-            padding: '10px 14px',
-            borderRadius: '10px',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
-          }}>
-          💬 مراسلة السائق
-        </button>
+  onClick={() => handleOpenDriverChat(assignedReturnDriver || returnDriver)}
+  style={{
+    width: '100%',
+    backgroundColor: '#3b82f6',
+    color: '#ffffff',
+    border: 'none',
+    padding: '10px 14px',
+    borderRadius: '10px',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
+  }}>
+  💬 مراسلة السائق
+</button>
           </div>
         ) : studentData?.finish_status === 'finished' ? (
           <div style={{
@@ -1143,7 +1143,15 @@ if (user && user.role === 'driver') {
         </button>
 
       </div>
-
+{/* 💬 نافذة المحادثة المباشرة مع السائق */}
+<ChatModal
+  isOpen={isChatOpen}
+  onClose={() => setIsChatOpen(false)}
+  studentId={studentData?.id || student?.id} // يمرر id الطالبة الحالية
+  driverId={activeChatDriverId}              // يمرر id سائق العودة
+  currentUserRole="student"                 // يحدد دور المستخدم كطالبة
+  supabase={supabase}                       // متصفح Supabase
+/>
     </div>
   );
 }
