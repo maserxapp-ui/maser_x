@@ -156,7 +156,14 @@ React.useEffect(() => {
 export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+  try {
+    const saved = localStorage.getItem('maser_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+});
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
@@ -290,7 +297,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(timer);
   }, []);
 
- // 🔑 تسجيل الدخول (سائق وطالب - كود كامل ومحمي)
+ // 🔑 تسجيل الدخول (السائق والطالب - مع الحفظ التلقائي في ذاكرة الجهاز)
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -311,12 +318,16 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           .maybeSingle();
 
         if (driver) {
-          setUser({ ...driver, role: 'driver' });
+          const driverData = { ...driver, role: 'driver' };
+          setUser(driverData);
+          
+          // 💾 1. حفظ بيانات السائق في ذاكرة الجهاز لكي لا تضيع عند الـ F5
+          localStorage.setItem('maser_currentUser', JSON.stringify(driverData));
           return;
         }
         setErrorMsg('بيانات دخول السائق غير صحيحة');
       } else {
-        // 🎓 البحث في الطلاب فقط (كود الطالب كاملاً بدون أي تغيير)
+        // 🎓 البحث في الطلاب فقط
         let { data: student } = await supabase
           .from('students')
           .select('*')
@@ -325,7 +336,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           .maybeSingle();
 
         if (student) {
-          setUser({ ...student, role: 'student' });
+          const studentData = { ...student, role: 'student' };
+          setUser(studentData);
+          
+          // 💾 2. حفظ بيانات الطالب في ذاكرة الجهاز لكي لا تضيع عند الـ F5
+          localStorage.setItem('maser_currentUser', JSON.stringify(studentData));
+
           setTomorrowStatus(student.tomorrow_status || null);
           setShiftFinished(student.shift_status === 'أنهيت دوامي');
           await fetchDriverForStudent(student);
