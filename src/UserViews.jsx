@@ -241,15 +241,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // التبديل بين الشاشات السفلية: 'main' أو 'settings'
   const [activeTab, setActiveTab] = useState('main');
 // 📅 دالة حساب الأيام المتبقية لانتهاء الاشتراك
-  const getRemainingSubscriptionDays = (expiryDateStr) => {
-    if (!expiryDateStr) return 0;
-    const today = new Date();
-    const expiry = new Date(expiryDateStr);
-    const diffTime = expiry - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
 
-  const remainingSubscriptionDays = getRemainingSubscriptionDays(studentData?.subscription_expiry || user?.subscription_expiry);
 
 // 1️⃣ دالة حساب الأيام المتبقية (تعتبر الحساب مفعلاً 30 يوماً افتراضياً إذا لم يُحدد تاريخ بعد)
   const getRemainingSubscriptionDays = (expiryDateStr) => {
