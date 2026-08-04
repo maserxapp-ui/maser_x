@@ -1577,6 +1577,37 @@ function DriverView({ user, setUser, supabase }) {
           />
         )}
       </div>
+      {/* 🎧 قسم الدعم الفني في أسفل الواجهة */}
+      <div className="mt-8 p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm text-center space-y-3">
+        <div className="flex items-center justify-center gap-2 text-slate-700 font-bold text-sm">
+          <span className="text-emerald-500 text-lg">🎧</span>
+          <span>إذا واجهتك أي مشكلة، تواصل مع الدعم الفني:</span>
+        </div>
+
+        <div className="flex flex-wrap justify-center items-center gap-3">
+          {/* الرقم الأول */}
+          <a 
+            href="https://wa.me/9647888978111" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2.5 rounded-xl border border-emerald-200/60 text-xs transition-all shadow-xs"
+          >
+            <span>💬</span>
+            <span className="tracking-wider">07888978111</span>
+          </a>
+
+          {/* الرقم الثاني */}
+          <a 
+            href="https://wa.me/9647750074100" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-4 py-2.5 rounded-xl border border-slate-200 text-xs transition-all shadow-xs"
+          >
+            <span>💬</span>
+            <span className="tracking-wider">07750074100</span>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
