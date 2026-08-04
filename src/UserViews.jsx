@@ -889,29 +889,43 @@ if (user && user.role === 'driver') {
         {/* 🎓 زر أنهيت دوامي والتجميع التلقائي */}
         <button
           onClick={handleFinishShift}
-          disabled={isFinishDisabled}
+          disabled={
+            studentData?.finish_status === 'finished' ||
+            !(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()])) ||
+            studentData?.tomorrow_status === 'لا أداوم غداً' ||
+            studentData?.tomorrow_status === 'غائب'
+          }
           style={{
             width: '100%',
             padding: '12px',
             borderRadius: '10px',
             border: 'none',
-            backgroundColor: isFinishDisabled ? '#94a3b8' : '#8b5cf6',
+            backgroundColor: (
+              studentData?.finish_status === 'finished' ||
+              !(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()])) ||
+              studentData?.tomorrow_status === 'لا أداوم غداً' ||
+              studentData?.tomorrow_status === 'غائب'
+            ) ? '#94a3b8' : '#8b5cf6',
             color: '#ffffff',
             fontWeight: 'bold',
             fontSize: '13px',
-            cursor: isFinishDisabled ? 'not-allowed' : 'pointer',
-            boxShadow: isFinishDisabled ? 'none' : '0 4px 8px rgba(139, 92, 246, 0.25)',
+            cursor: (
+              studentData?.finish_status === 'finished' ||
+              !(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()])) ||
+              studentData?.tomorrow_status === 'لا أداوم غداً' ||
+              studentData?.tomorrow_status === 'غائب'
+            ) ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 8px rgba(139, 92, 246, 0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
-            opacity: isFinishDisabled && !isAlreadyFinished ? 0.7 : 1
+            gap: '6px'
           }}>
-          {isAlreadyFinished
+          {studentData?.finish_status === 'finished'
             ? 'تم تسجيل إنهاء دوامكِ اليوم ✅'
-            : !isTodayWorkDay
+            : !(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()]))
             ? 'ليس لديكِ دوام رسمي اليوم 🚫'
-            : isAbsent
+            : (studentData?.tomorrow_status === 'لا أداوم غداً' || studentData?.tomorrow_status === 'غائب')
             ? 'أنتِ مسجلة غياب اليوم ⚠️'
             : 'أنهيت دوامي (تنسيق سيارة العودة) 🎓'}
         </button>
