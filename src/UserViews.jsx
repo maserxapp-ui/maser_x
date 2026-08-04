@@ -991,18 +991,26 @@ if (user && user.role === 'driver') {
               السائق المسؤول عن عودتكِ: <b>{assignedReturnDriver.full_name || 'سائق العودة'}</b>
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-              <button 
-                onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
-                style={{ backgroundColor: '#3b82f6', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                💬 مراسلة السائق
-              </button>
-              <button 
-                onClick={() => openDriverLocation && openDriverLocation(assignedReturnDriver)}
-                style={{ backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                📍 موقع السائق
-              </button>
-            </div>
+           <button
+          onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
+          style={{
+            width: '100%',
+            backgroundColor: '#3b82f6',
+            color: '#ffffff',
+            border: 'none',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
+          }}>
+          💬 مراسلة السائق
+        </button>
           </div>
         ) : studentData?.finish_status === 'finished' ? (
           <div style={{
