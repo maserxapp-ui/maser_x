@@ -179,14 +179,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatDriverId, setActiveChatDriverId] = useState(null);
 
-  const openDriverChat = (driverObj) => {
-    const dId = driverObj?.id || driverObj;
-    if (dId) {
-      setActiveChatDriverId(dId);
-      setIsChatOpen(true);
-    } else {
-      alert("لم يتم تحديد السائق بعد!");
-    }
+ const openDriverChat = (driverObj) => {
+    // 💡 محاولة جلب ID السائق، أو سائق العودة من الحساب، أو استخدام ID افتراضي (1) للتجربة
+    const dId = driverObj?.id || driverObj || user?.return_driver_id || user?.driver_id || "1";
+
+    setActiveChatDriverId(dId);
+    setIsChatOpen(true);
   };
   useEffect(() => {
     const fetchReturnDriver = async () => {
