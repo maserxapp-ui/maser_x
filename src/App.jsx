@@ -721,7 +721,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       car_number: carNumber,
       route: route,
       capacity: parseInt(capacity, 10) || 0,
-      status: driverStatus
+      status: driverStatus,
       trip_price: Number(driverTripPrice) || 0
     };
 
