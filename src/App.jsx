@@ -8,9 +8,25 @@ export default function App() {
   const [selectedWorkDays, setSelectedWorkDays] = useState(['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
 
   // 🟢 1. جعل شاشة دخول الطلاب والسائقين هي الافتراضية
-  const [viewMode, setViewMode] = useState('user');
-  const [loginRole, setLoginRole] = useState('student');
-const [driverPassword, setDriverPassword] = useState('');
+ // 💾 حفظ واسترجاع حالة الدخول تلقائياً من ذاكرة الجهاز
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('maser_viewMode') || 'user');
+  const [loginRole, setLoginRole] = useState(() => localStorage.getItem('maser_loginRole') || 'student');
+  const [driverPassword, setDriverPassword] = useState('');
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('maser_currentUser');
+    try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
+  });
+
+  // 🔄 التحديث التلقائي للذاكرة عند تغيير المستخدم
+  useEffect(() => {
+    localStorage.setItem('maser_viewMode', viewMode);
+    localStorage.setItem('maser_loginRole', loginRole);
+    if (currentUser) {
+      localStorage.setItem('maser_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('maser_currentUser');
+    }
+  }, [viewMode, loginRole, currentUser]);
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
   // ⚡ كود المزامنة الفورية (Realtime) للإنعاش التلقائي
