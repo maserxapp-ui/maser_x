@@ -175,7 +175,19 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
   // 🚕 حالة ودالة جلب بيانات سائق العودة للطالبة
   const [assignedReturnDriver, setAssignedReturnDriver] = useState(null);
+// 💬 حالات ودالة التحكم بالمحادثة
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatDriverId, setActiveChatDriverId] = useState(null);
 
+  const openDriverChat = (driverObj) => {
+    const dId = driverObj?.id || driverObj;
+    if (dId) {
+      setActiveChatDriverId(dId);
+      setIsChatOpen(true);
+    } else {
+      alert("لم يتم تحديد السائق بعد!");
+    }
+  };
   useEffect(() => {
     const fetchReturnDriver = async () => {
       if (user?.return_driver_id) {
