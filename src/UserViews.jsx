@@ -1477,7 +1477,48 @@ function DriverView({ user, setUser, supabase }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
-      
+      {/* 💰 كشف حساب الرحلات للسائق */}
+      <div style={{
+        backgroundColor: '#1e293b',
+        color: '#ffffff',
+        borderRadius: '16px',
+        padding: '16px',
+        margin: '15px',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+        direction: 'rtl'
+      }}>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#38bdf8' }}>💰 كشف حساب الرحلات</h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+          <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px' }}>
+            <span style={{ color: '#94a3b8', display: 'block' }}>سعر الرحلة:</span>
+            <b style={{ color: '#f8fafc', fontSize: '15px' }}>
+              {(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
+            </b>
+          </div>
+
+          <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px' }}>
+            <span style={{ color: '#94a3b8', display: 'block' }}>الرحلات المكتملة:</span>
+            <b style={{ color: '#38bdf8', fontSize: '15px' }}>
+              {user?.completed_trips || 0} رحلة
+            </b>
+          </div>
+        </div>
+
+        <div style={{
+          marginTop: '12px',
+          paddingTop: '12px',
+          borderTop: '1px solid #334155',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{ color: '#cbd5e1', fontSize: '14px' }}>مجموع مستحقاتك:</span>
+          <b style={{ color: '#4ade80', fontSize: '18px' }}>
+            {((user?.completed_trips || 0) * (user?.trip_price || 0)).toLocaleString('ar-EG')} د.ع
+          </b>
+        </div>
+      </div>
       {/* ⚠️ شريط تنبيه التوزيع عند السائق */}
       {isAfter9PM && !isApprovedByAdmin && (
         <div style={{
