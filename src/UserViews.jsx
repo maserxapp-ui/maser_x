@@ -887,32 +887,48 @@ if (user && user.role === 'driver') {
         })()}
 
         {/* 🎓 زر أنهيت دوامي والتجميع التلقائي */}
-        <button
-          onClick={handleFinishShift}
-          disabled={studentData?.finish_status === 'finished'}
-          style={{
-            width: '100%',
-            padding: '12px',
-            borderRadius: '10px',
-            border: 'none',
-            backgroundColor: studentData?.finish_status === 'finished' ? '#94a3b8' : '#8b5cf6',
-            color: '#ffffff',
-            fontWeight: 'bold',
-            fontSize: '13px',
-            cursor: studentData?.finish_status === 'finished' ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 8px rgba(139, 92, 246, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}>
-          {studentData?.finish_status === 'finished' 
-            ? 'تم تسجيل إنهاء دوامكِ اليوم ✅' 
-            : 'أنهيت دوامي (تنسيق سيارة العودة) 🎓'}
-        </button>
+{(() => {
+  const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const todayName = daysOfWeek[new Date().getDay()];
+  
+  // فحص الشروط: هل اليوم ليس يوم دوامه، أو هل هو مسجل غائب، أو هل أنهى دوامه سابقاً
+  const isTodayWorkDay = studentData?.work_days && studentData.work_days.includes(todayName);
+  const isAbsent = studentData?.tomorrow_status === 'لا أداوم غداً' || studentData?.tomorrow_status === 'غائب';
+  const isAlreadyFinished = studentData?.finish_status === 'finished';
 
-      </div>
-     )}
+  const isDisabled = isAlreadyFinished || !isTodayWorkDay || isAbsent;
+
+  // تحديد النص الظاهر على الزر
+  let buttonText = 'أنهيت دوامي (تنسيق سيارة العودة) 🎓';
+  if (isAlreadyFinished) buttonText = 'تم تسجيل إنهاء دوامكِ اليوم ✅';
+  else if (!isTodayWorkDay) buttonText = 'ليس لديكِ دوام رسمي اليوم 🚫';
+  else if (isAbsent) buttonText = 'أنتِ مسجلة غياب اليوم ⚠️';
+
+  return (
+    <button
+      onClick={handleFinishShift}
+      disabled={isDisabled}
+      style={{
+        width: '100%',
+        padding: '12px',
+        borderRadius: '10px',
+        border: 'none',
+        backgroundColor: isDisabled ? '#94a3b8' : '#8b5cf6',
+        color: '#ffffff',
+        fontWeight: 'bold',
+        fontSize: '13px',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        boxShadow: isDisabled ? 'none' : '0 4px 8px rgba(139, 92, 246, 0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        opacity: isDisabled && !isAlreadyFinished ? 0.7 : 1
+      }}>
+      {buttonText}
+    </button>
+  );
+})()}
           {/* 🟢 كارت رحلة الذهاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
