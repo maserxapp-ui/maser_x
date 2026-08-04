@@ -29,6 +29,29 @@ export default function App() {
   }, [viewMode, loginRole, currentUser]);
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
+  // 📅 دالة حساب الأيام المتبقية لانتهاء الاشتراك
+export const getRemainingSubscriptionDays = (expiryDateStr) => {
+  if (!expiryDateStr) return 0;
+  const today = new Date();
+  const expiry = new Date(expiryDateStr);
+  const diffTime = expiry - today;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+// 🔄 دالة تمديد الاشتراك شهراً كاملاً
+export const calculateNewExpiryDate = (currentExpiryStr) => {
+  const today = new Date();
+  let baseDate = currentExpiryStr ? new Date(currentExpiryStr) : today;
+
+  // إذا كان الاشتراك منتهياً، يبدأ التجديد من اليوم
+  if (baseDate < today) {
+    baseDate = today;
+  }
+
+  const newExpiry = new Date(baseDate);
+  newExpiry.setMonth(newExpiry.getMonth() + 1);
+  return newExpiry.toISOString();
+};
   // ⚡ كود المزامنة الفورية (Realtime) للإنعاش التلقائي
   useEffect(() => {
     if (typeof supabase === 'undefined') return;
