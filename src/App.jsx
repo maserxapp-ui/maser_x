@@ -51,7 +51,30 @@ export default function App() {
   }, [viewMode, loginRole, currentUser]);
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
   const ADMIN_PASSWORD = '1234'; 
- 
+ // 🔄 دالة تجديد الاشتراك الشهري للطالب عند ضغط الأدمن
+  const handleRenewSubscription = async (student) => {
+    const confirmRenew = window.confirm(`هل ترغب بتجديد الاشتراك فعلاً للطالب/ـة (${student.full_name || student.name}) لمدة شهر كامل؟`);
+    if (!confirmRenew) return;
+
+    // حساب التاريخ الجديد باستخدام دالة المعرّفة في أعلى الملف
+    const newExpiryISO = calculateNewExpiryDate(student.subscription_expiry);
+    const startDate = student.subscription_start_date || new Date().toISOString();
+
+    const { error } = await supabase
+      .from('students')
+      .update({
+        subscription_start_date: startDate,
+        subscription_expiry: newExpiryISO
+      })
+      .eq('id', student.id);
+
+    if (error) {
+      alert("حدث خطأ أثناء تجديد الاشتراك: " + error.message);
+    } else {
+      alert(`تم تجديد الاشتراك بنجاح حتى تاريخ: ${new Date(newExpiryISO).toLocaleDateString('ar-EG')}`);
+      if (typeof fetchAllData === 'function') fetchAllData();
+    }
+  };
   // ⚡ كود المزامنة الفورية (Realtime) للإنعاش التلقائي
   useEffect(() => {
     if (typeof supabase === 'undefined') return;
@@ -1532,6 +1555,13 @@ else if (confirmedAttending) {
                               >
                                 ✏️ تعديل
                               </button>
+                              <button
+                        onClick={() => handleRenewSubscription(student)}
+                        className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-1.5 rounded-md font-bold text-xs"
+                        title="تجديد الاشتراك لمدة شهر"
+                      >
+                        🔄 تجديد
+                      </button>
                               <button 
                                 onClick={() => handleDeleteStudent(student.id, student.name)}
                                 className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
