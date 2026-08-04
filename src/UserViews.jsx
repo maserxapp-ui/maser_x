@@ -251,18 +251,26 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
   const remainingSubscriptionDays = getRemainingSubscriptionDays(studentData?.subscription_expiry || user?.subscription_expiry);
 
-// 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك مع تسجيل خروج حقيقي
-  if (remainingSubscriptionDays <= 0) {
-    const handleLogout = () => {
-      // 1. مسح جميع بيانات الجلسة المخزنة
-      localStorage.removeItem('maser_currentUser');
-      localStorage.clear();
+// 1️⃣ دالة حساب الأيام المتبقية (تعتبر الحساب مفعلاً 30 يوماً افتراضياً إذا لم يُحدد تاريخ بعد)
+  const getRemainingSubscriptionDays = (expiryDateStr) => {
+    if (!expiryDateStr) return 30; // 💡 تمنع قفل الحسابات الجديدة
+    const today = new Date();
+    const expiry = new Date(expiryDateStr);
+    const diffTime = expiry - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
-      // 2. إعادة إسناد الحالة إلى واجهة التسجيل الرئيسية
-      if (typeof setLoginRole === 'function') setLoginRole('');
-      
-      // 3. إعادة التوجيه الفوري للرابط الرئيسي
-      window.location.href = window.location.origin;
+  const remainingSubscriptionDays = getRemainingSubscriptionDays(
+    studentData?.subscription_expiry || user?.subscription_expiry
+  );
+
+  // 🔒 2️⃣ شاشة القفل (تظهر فقط إذا كان هناك تاريخ محدد بالفعل وانتهى رسمياً)
+  if (user && (studentData?.subscription_expiry || user?.subscription_expiry) && remainingSubscriptionDays <= 0) {
+    const handleLogout = () => {
+      // مسح كافة التخزينات وإجبار المتصفح على الانتقال للواجهة الرئيسية الخالية
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace(window.location.origin + window.location.pathname);
     };
 
     return (
@@ -296,14 +304,14 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
         </div>
 
-        {/* 🚪 زر تسجيل الخروج القسري */}
+        {/* 🚪 زر الخروج القسري المباشر */}
         <button
           onClick={handleLogout}
           style={{
             backgroundColor: '#dc2626',
             color: '#ffffff',
             border: 'none',
-            padding: '10px 24px',
+            padding: '12px 28px',
             borderRadius: '10px',
             fontSize: '14px',
             fontWeight: 'bold',
