@@ -251,8 +251,14 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
   const remainingSubscriptionDays = getRemainingSubscriptionDays(studentData?.subscription_expiry || user?.subscription_expiry);
 
-  // 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك
+  // 🔒 شاشة قفل الواجهة عند انتهاء الاشتراك مع زر تسجيل الخروج
   if (remainingSubscriptionDays <= 0) {
+    const handleLogout = () => {
+      // مسح جلسة الدخول وإعادة تحميل الصفحة للخروج فوراً
+      localStorage.removeItem('maser_currentUser');
+      window.location.reload();
+    };
+
     return (
       <div style={{
         display: 'flex',
@@ -271,16 +277,38 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         <p style={{ fontSize: '15px', color: '#94a3b8', maxWidth: '350px', lineHeight: '1.6', marginBottom: '20px' }}>
           انتهت مدة اشتراكك الشهري. يرجى دفع الأجرة للإدارة لتفعيل حسابك وتجديد الاشتراك.
         </p>
+        
         <div style={{
           backgroundColor: '#1e293b',
           border: '1px solid #334155',
           padding: '12px 20px',
           borderRadius: '12px',
           fontSize: '13px',
-          color: '#f8fafc'
+          color: '#f8fafc',
+          marginBottom: '24px'
         }}>
           📅 تاريخ بداية الاشتراك: <b>{studentData?.subscription_start_date ? new Date(studentData.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
         </div>
+
+        {/* 🚪 زر تسجيل الخروج */}
+        <button
+          onClick={handleLogout}
+          style={{
+            backgroundColor: '#dc2626',
+            color: '#ffffff',
+            border: 'none',
+            padding: '10px 24px',
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+          }}>
+          🚪 تسجيل الخروج
+        </button>
       </div>
     );
   }
