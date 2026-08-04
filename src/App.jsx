@@ -2253,7 +2253,7 @@ function AdminReturnTripsManager({ supabase }) {
       const driverObj = driversList?.find(d => String(d.id) === String(activeDriverId));
 
       const resolvedName = driverObj 
-        ? (driverObj.full_name || driverObj.name || driverObj.driver_name || 'سائق بدون اسم')
+        ? (driverObj.name || driverObj.full_name || driverObj.driver_name || 'سائق بدون اسم')
         : (activeDriverId === 'unassigned' ? 'لم يُحدد سائق بعد' : 'سائق غير معروف');
 
       if (!groups[activeDriverId]) {
@@ -2277,11 +2277,12 @@ function AdminReturnTripsManager({ supabase }) {
   const handleApproveGroup = async (driverId) => {
     const groupStudents = returnGroups[driverId]?.students || [];
     const studentIds = groupStudents.map(s => s.id);
+    const targetDriverId = (driverId === 'unassigned' || !driverId) ? null : parseInt(driverId, 10);
 
     await supabase
       .from('students')
       .update({ 
-        return_driver_id: driverId === 'unassigned' ? null : driverId, 
+        return_driver_id: targetDriverId, 
         return_approved: true 
       })
       .in('id', studentIds);
@@ -2292,10 +2293,12 @@ function AdminReturnTripsManager({ supabase }) {
 
   // إعادة تعيين السائق للطالبة
   const handleReassignStudent = async (studentId, newDriverId) => {
+    const formattedDriverId = newDriverId ? parseInt(newDriverId, 10) : null;
+
     await supabase
       .from('students')
       .update({ 
-        return_driver_id: newDriverId, 
+        return_driver_id: formattedDriverId, 
         return_approved: false 
       })
       .eq('id', studentId);
@@ -2338,18 +2341,25 @@ function AdminReturnTripsManager({ supabase }) {
                 {group.students.map(std => (
                   <div key={std.id} className="flex justify-between items-center text-xs p-2 bg-slate-50 rounded border border-slate-200">
                     <div>
-                      <strong className="block text-slate-900 font-bold">{std.full_name}</strong>
-                      <span className="text-slate-600 text-[11px]">📍 {std.district || 'القضاء غير محدد'} ({std.address || 'العنوان'})</span>
+                      {/* 💡 1. تصحيح إظهار اسم الطالبة بدعم حقل name وحقل full_name */}
+                      <strong className="block text-slate-900 font-bold text-sm">
+                        {std.name || std.full_name || 'طالبة بدون اسم'}
+                      </strong>
+                      
+                      {/* 💡 2. إظهار الجامعة والمنطقة لتسهيل التوزيع */}
+                      <span className="text-slate-600 text-[11px]">
+                        🏫 {std.university || 'الجامعة غير محددة'} | 📍 {std.district || 'المنطقة'}
+                      </span>
                     </div>
                     
                     <select 
                       value={std.return_driver_id || std.driver_id || ''} 
                       onChange={(e) => handleReassignStudent(std.id, e.target.value)}
-                      className="text-xs p-1 rounded border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none">
+                      className="text-xs p-1.5 rounded border border-slate-300 bg-white text-slate-900 font-bold focus:outline-none cursor-pointer">
                       <option value="" className="text-slate-900 bg-white">اختر السائق...</option>
                       {drivers.map(d => (
                         <option key={d.id} value={d.id} className="text-slate-900 bg-white">
-                          {d.full_name || d.name || d.driver_name || 'سائق بدون اسم'}
+                          {d.name || d.full_name || d.driver_name || 'سائق بدون اسم'}
                         </option>
                       ))}
                     </select>
