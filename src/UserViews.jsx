@@ -186,19 +186,53 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     setActiveChatDriverId(dId);
     setIsChatOpen(true);
   };
+  // 🔄 تحديث بيانات سائق العودة تلقائياً وفورياً بمجرد موافقة الإدارة
   useEffect(() => {
-    const fetchReturnDriver = async () => {
-      if (user?.return_driver_id) {
-        const { data } = await supabase
-          .from('drivers')
-          .select('*')
-          .eq('id', user.return_driver_id)
-          .single();
-        if (data) setAssignedReturnDriver(data);
+    if (!user?.id) return;
+
+    // دالة جلب بيانات سائق العودة من قاعدة البيانات
+    const fetchReturnDriverDetails = async (driverId) => {
+      if (!driverId) {
+        setAssignedReturnDriver(null);
+        return;
       }
+      const { data } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('id', driverId)
+        .single();
+
+      if (data) setAssignedReturnDriver(data);
     };
-    fetchReturnDriver();
-  }, [user]);
+
+    // 1. جلب البيانات عند تحميل الصفحة لأول مرة
+    if (user?.return_driver_id) {
+      fetchReturnDriverDetails(user.return_driver_id);
+    }
+
+    // 2. الاستماع اللحظي (Realtime): بمجرد موافقة الإدارة، ينزل السائق فوراً دون تحديث الصفحة
+    const channel = supabase
+      .channel(`student_realtime_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'students',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.new?.return_driver_id) {
+            fetchReturnDriverDetails(payload.new.return_driver_id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, supabase]);
   // 📅 حساب اسم يوم الغد تلقائيfاً بحسب تاريخ اليوم الحالي
   const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
@@ -996,31 +1030,33 @@ if (user && user.role === 'driver') {
             marginBottom: '15px',
             textAlign: 'center'
           }}>
-            <h4 style={{ color: '#1d4ed8', margin: '0 0 6px 0', fontSize: '15px' }}>🚗 رحلة العودة الخاصة بكِ جاهزة</h4>
+            <h4 style={{ color: '#1d4ed8', margin: '0 0 6px 0', fontSize: '15px' }}>
+              🚗 رحلة العودة الخاصة بكِ جاهزة
+            </h4>
             <p style={{ fontSize: '13px', color: '#1e40af', margin: '0 0 10px 0' }}>
-              السائق المسؤول عن عودتكِ: <b>{assignedReturnDriver.full_name || 'سائق العودة'}</b>
+              السائق المسؤول عن عودتكِ: <b>{assignedReturnDriver.full_name || assignedReturnDriver.name || 'سائق العودة'}</b>
             </p>
 
-           <button
-  onClick={() => handleOpenDriverChat(assignedReturnDriver || returnDriver)}
-  style={{
-    width: '100%',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    border: 'none',
-    padding: '10px 14px',
-    borderRadius: '10px',
-    fontSize: '13px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-    boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
-  }}>
-  💬 مراسلة السائق
-</button>
+            <button
+              onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
+              style={{
+                width: '100%',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
+              }}>
+              💬 مراسلة السائق
+            </button>
           </div>
         ) : studentData?.finish_status === 'finished' ? (
           <div style={{
