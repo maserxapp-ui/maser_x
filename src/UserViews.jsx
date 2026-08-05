@@ -1306,13 +1306,14 @@ if (user && user.role === 'driver') {
     </div>
   );
 }
-// 🚗 مكون واجهة السائق الشامل والمصحح
+// 🚗 مكون واجهة السائق الشامل والمصحح (مدمج مع المحفظة والشريط السفلي)
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
   const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
-  // 🟢 كود التوقيت والتحقق من موافقة الإدارة (ساعة 9 بليل)
+  
+  // 🟢 كود التوقيت والتحقق من موافقة الإدارة
   const [isApprovedByAdmin, setIsApprovedByAdmin] = React.useState(true);
   const [isAfter9PM, setIsAfter9PM] = React.useState(false);
 
@@ -1320,7 +1321,10 @@ function DriverView({ user, setUser, supabase }) {
   const [isChatWindowOpen, setIsChatWindowOpen] = React.useState(false);
   const [driverTripStatus, setDriverTripStatus] = React.useState('not_started');
 
-      // 🚗 حالات ودالة جلب باقة طالبات العودة الخاصة بالسائق
+  // 👛 1. حالة التبويب النشط (الرئيسية 'home' أو المحفظة 'wallet')
+  const [activeTab, setActiveTab] = React.useState('home');
+
+  // 🚗 حالات ودالة جلب باقة طالبات العودة الخاصة بالسائق
   const [returnTripStudents, setReturnTripStudents] = React.useState([]);
 
   const fetchDriverReturnStudents = async () => {
@@ -1339,22 +1343,22 @@ function DriverView({ user, setUser, supabase }) {
   React.useEffect(() => {
     fetchDriverReturnStudents();
   }, [user]);
+
   React.useEffect(() => {
     const checkTimeAndApproval = async () => {
       const now = new Date();
       const baghdadHour = (now.getUTCHours() + 3) % 24;
       const baghdadMinute = now.getUTCMinutes();
 
-      // 🕒 تصفير وتحديث التوزيع يومياً الساعة 6:30 مساءً (18:30)
+      // 🕒 تصفير وتحديث التوزيع يومياً الساعة 6:30 مساءً
       if (baghdadHour === 18 && baghdadMinute >= 30) {
         await supabase.from('system_settings').upsert({ key: 'trips_approved_today', value: 'false' });
-      // 2. 🚗 تصفير حالة الرحلة وصعود الطلاب لليوم الجديد (الإضافة الجديدة)
-  if (user?.id) {
-    await supabase.from('drivers').update({ trip_status: 'not_started' }).eq('id', user.id);
-    await supabase.from('students').update({ is_boarded: false }).eq('driver_id', user.id);
-    setDriverTripStatus('not_started');
-  }
-}
+        if (user?.id) {
+          await supabase.from('drivers').update({ trip_status: 'not_started' }).eq('id', user.id);
+          await supabase.from('students').update({ is_boarded: false }).eq('driver_id', user.id);
+          setDriverTripStatus('not_started');
+        }
+      }
 
       // 🕒 نافذة المراسلة مفتوحة فقط من 6:00 صباحاً إلى 9:00 صباحاً
       const canChat = baghdadHour >= 6 && baghdadHour < 9;
@@ -1383,7 +1387,6 @@ function DriverView({ user, setUser, supabase }) {
       const cleanPhone = user.phone ? String(user.phone).trim() : '';
       const cleanName = user.name ? String(user.name).trim() : '';
 
-      // 1. البحث عن بيانات السائق في جدول drivers لجلب id الخاص به وحالة الرحلة
       let realDriverId = user.id;
       const { data: driverRow } = await supabase
         .from('drivers')
@@ -1396,7 +1399,6 @@ function DriverView({ user, setUser, supabase }) {
         if (driverRow.trip_status) setDriverTripStatus(driverRow.trip_status);
       }
 
-      // 2. صياغة الاستعلام لجدول الطلاب بجميع الاحتمالات
       const conditions = [];
       if (realDriverId) conditions.push(`driver_id.eq.${realDriverId}`);
       if (cleanPhone) conditions.push(`driver_phone.eq.${cleanPhone}`);
@@ -1462,7 +1464,7 @@ function DriverView({ user, setUser, supabase }) {
     }
   };
 
-  // 📊 تصنيف الطلاب (مداومين وغائبين)
+  // 📊 تصنيف الطلاب
   const absentStudentsList = students.filter(s => 
     s.is_absent === true || 
     s.tomorrow_status === 'لا أداوم غداً' || 
@@ -1476,67 +1478,8 @@ function DriverView({ user, setUser, supabase }) {
   const absentStudents = absentStudentsList.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-12 font-sans" dir="rtl">
-      {/* 💰 كشف حساب الرحلات للسائق */}
-      <div style={{
-        backgroundColor: '#1e293b',
-        color: '#ffffff',
-        borderRadius: '16px',
-        padding: '16px',
-        margin: '15px',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-        direction: 'rtl'
-      }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#38bdf8' }}>💰 كشف حساب الرحلات</h3>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
-          <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px' }}>
-            <span style={{ color: '#94a3b8', display: 'block' }}>سعر الرحلة:</span>
-            <b style={{ color: '#f8fafc', fontSize: '15px' }}>
-              {(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
-            </b>
-          </div>
-
-          <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '10px' }}>
-            <span style={{ color: '#94a3b8', display: 'block' }}>الرحلات المكتملة:</span>
-            <b style={{ color: '#38bdf8', fontSize: '15px' }}>
-              {user?.completed_trips || 0} رحلة
-            </b>
-          </div>
-        </div>
-
-        <div style={{
-          marginTop: '12px',
-          paddingTop: '12px',
-          borderTop: '1px solid #334155',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center'
-        }}>
-          <span style={{ color: '#cbd5e1', fontSize: '14px' }}>مجموع مستحقاتك:</span>
-          <b style={{ color: '#4ade80', fontSize: '18px' }}>
-            {((user?.completed_trips || 0) * (user?.trip_price || 0)).toLocaleString('ar-EG')} د.ع
-          </b>
-        </div>
-      </div>
-      {/* ⚠️ شريط تنبيه التوزيع عند السائق */}
-      {isAfter9PM && !isApprovedByAdmin && (
-        <div style={{
-          backgroundColor: '#fffbebe6',
-          border: '2px solid #f59e0b',
-          borderRadius: '12px',
-          padding: '14px',
-          margin: '10px 15px',
-          textAlign: 'center',
-          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.15)'
-        }}>
-          <span style={{ fontSize: '18px', display: 'block', marginBottom: '4px' }}>⏳</span>
-          <strong style={{ color: '#b45309', fontSize: '14px' }}>
-            بانتظار الإدارة الموافقة أو التعديل على الطلاب كي يتم تثبيت الطلبة معك
-          </strong>
-        </div>
-      )}
-      {/* 1. الشريط العلوي */}
+    <div className="min-h-screen bg-slate-50 text-slate-800 pb-24 font-sans" dir="rtl">
+      {/* 1. الشريط العلوي (ثابت لجميع التبويبات) */}
       <div className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40 border-b border-slate-800">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1563,339 +1506,439 @@ function DriverView({ user, setUser, supabase }) {
               🔄 تحديث
             </button>
             <button
-          onClick={() => {
-            // 🗑️ مسح الذاكرة نهائياً
-            localStorage.removeItem('maser_currentUser');
-            localStorage.removeItem('maser_viewMode');
-            localStorage.removeItem('maser_loginRole');
-            // 🔄 تصفير الشاشة للخروج
-            setUser(null);
-          }}
-          className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
-        >
-          <span>خروج</span>
-          <span>🚪</span>
-        </button>
+              onClick={() => {
+                localStorage.removeItem('maser_currentUser');
+                localStorage.removeItem('maser_viewMode');
+                localStorage.removeItem('maser_loginRole');
+                setUser(null);
+              }}
+              className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 px-3 py-2 rounded-xl transition font-bold flex items-center gap-1"
+            >
+              <span>خروج</span>
+              <span>🚪</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto p-4 space-y-4">
-
-        {/* 🚗 أزرار التحكم بالرحلة (أنا في طريقي لكم / إتمام الرحلة) */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
-          <button
-            onClick={handleStartJourney}
-            disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
-              driverTripStatus === 'on_the_way' 
-                ? 'bg-emerald-600 cursor-not-allowed' 
-                : driverTripStatus === 'completed' 
-                ? 'bg-slate-400 cursor-not-allowed' 
-                : 'bg-sky-600 hover:bg-sky-700'
-            }`}
-          >
-            {driverTripStatus === 'on_the_way' ? '🟢 أنت في الطريق للطلاب' : driverTripStatus === 'completed' ? '✅ اكتملت الرحلة' : '🚗 أنا في طريقي إليكم'}
-          </button>
-
-          <button
-            onClick={handleCompleteTrip}
-            disabled={driverTripStatus === 'completed'}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
-              driverTripStatus === 'completed'
-                ? 'bg-emerald-700 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-700'
-            }`}
-          >
-            {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
-          </button>
-        </div>
-
-        {/* 2. بطاقات الإحصائيات */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
-            <span className="block text-xl font-black text-slate-800">{totalStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">إجمالي الطلاب</span>
-          </div>
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
-            <span className="block text-xl font-black text-emerald-600">{attendingStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">المداومين</span>
-          </div>
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
-            <span className="block text-xl font-black text-red-500">{absentStudents}</span>
-            <span className="text-[11px] text-slate-500 font-medium">غير المداومين</span>
-          </div>
-        </div>
-
-        {/* 3. قائمة الطلاب */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
-              <span className="text-base">🎓</span> طلاب خط السائق
-            </h3>
-            <div className="flex items-center gap-2">
-              {!isChatWindowOpen && (
-                <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
-                  🔒 المراسلة (6-9 ص)
-                </span>
-              )}
-              <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-                {students.length} مسجلين
-              </span>
-            </div>
-          </div>
-
-          {loading ? (
-            <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
-          ) : students.length === 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
-              <p className="text-2xl">📭</p>
-              <p className="text-xs font-bold">لم يتم العثور على طلاب مسجلين لهذا السائق!</p>
-              <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
-                <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
-                <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
-                <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {students.map((student, index) => {
-                const isAbsent = absentStudentsList.includes(student);
-                return (
-                  <div 
-                    key={student.id || index} 
-                    className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
-                      student.is_boarded ? 'bg-emerald-50/60 border-emerald-300' : isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                        student.is_boarded ? 'bg-emerald-100 text-emerald-700' : isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
-                      }`}>
-                        {index + 1}
-                      </span>
-                      <div>
-                        <span className="font-bold text-slate-800 text-xs block">
-                          {student.name || student.full_name}
-                        </span>
-                        <span className="text-[10px] text-slate-500 block">
-                          📍 {student.university || student.location || 'غير محدد'}
-                        </span>
-                        {isAbsent && (
-                          <span className="inline-block mt-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded font-bold">
-                            🔴 غير مداوم
-                          </span>
-                        )}
-                        {student.is_boarded && (
-                          <span className="inline-block mt-1 bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded font-bold mr-1">
-                            🙋‍♂️ صعد للمركبة
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {/* 📍 زر فتح موقع الطالب على الخريطة */}
-                      <button
-                        onClick={() => {
-                          if (!student.latitude || !student.longitude) {
-                            alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
-                            return;
-                          }
-                          window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
-                        }}
-                        className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
-                      >
-                        📍 الموقع
-                      </button>
-
-                      {/* 🙋‍♂️ زر صعد معي */}
-                      <button
-                        onClick={() => handleStudentBoarded(student.id)}
-                        disabled={student.is_boarded}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
-                          student.is_boarded 
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
-                        }`}
-                      >
-                        {student.is_boarded ? '✔️ صعد' : '🙋‍♂️ صعد معي'}
-                      </button>
-
-                      {/* 💬 زر مراسلة الطالب (مقيد بتوقيت 6:00 ص - 9:00 ص) */}
-                      <button
-                        onClick={() => {
-                          if (!isChatWindowOpen) {
-                            alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
-                            return;
-                          }
-                          setSelectedStudentForChat(student);
-                          setIsDriverChatOpen(true);
-                        }}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
-                          isChatWindowOpen 
-                            ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
-                            : 'bg-slate-300 text-slate-600 cursor-pointer'
-                        }`}
-                      >
-                        💬 مراسلة
-                      </button>
-                    </div>
-
-                  </div>
-                );
-              })}
+      {/* 🏠 2. تبويب الواجهة الرئيسية (يظهر فقط عند اختيار الرئيسية) */}
+      {activeTab === 'home' && (
+        <div className="max-w-md mx-auto p-4 space-y-4">
+          {/* ⚠️ شريط تنبيه التوزيع */}
+          {isAfter9PM && !isApprovedByAdmin && (
+            <div className="bg-amber-50 border-2 border-amber-500 rounded-2xl p-3.5 text-center shadow-xs">
+              <span className="text-lg block mb-1">⏳</span>
+              <strong className="color-[#b45309] text-xs block">
+                بانتظار الإدارة الموافقة أو التعديل على الطلاب كي يتم تثبيت الطلبة معك
+              </strong>
             </div>
           )}
-        </div>
-{/* 🎒 طلاب الرحلة الثانية (موقعه بين طلاب الخط وبين بيانات السائق) */}
-        {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 mt-5 shadow-sm" dir="rtl">
-            
-            {/* عنوان الكارت بالثيم الموحد */}
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+
+          {/* 🚗 أزرار التحكم بالرحلة */}
+          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
+            <button
+              onClick={handleStartJourney}
+              disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+                driverTripStatus === 'on_the_way' 
+                  ? 'bg-emerald-600 cursor-not-allowed' 
+                  : driverTripStatus === 'completed' 
+                  ? 'bg-slate-400 cursor-not-allowed' 
+                  : 'bg-sky-600 hover:bg-sky-700'
+              }`}
+            >
+              {driverTripStatus === 'on_the_way' ? '🟢 أنت في الطريق للطلاب' : driverTripStatus === 'completed' ? '✅ اكتملت الرحلة' : '🚗 أنا في طريقي إليكم'}
+            </button>
+
+            <button
+              onClick={handleCompleteTrip}
+              disabled={driverTripStatus === 'completed'}
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+                driverTripStatus === 'completed'
+                  ? 'bg-emerald-700 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+            >
+              {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
+            </button>
+          </div>
+
+          {/* الإحصائيات */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
+              <span className="block text-xl font-black text-slate-800">{totalStudents}</span>
+              <span className="text-[11px] text-slate-500 font-medium">إجمالي الطلاب</span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
+              <span className="block text-xl font-black text-emerald-600">{attendingStudents}</span>
+              <span className="text-[11px] text-slate-500 font-medium">المداومين</span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
+              <span className="block text-xl font-black text-red-500">{absentStudents}</span>
+              <span className="text-[11px] text-slate-500 font-medium">غير المداومين</span>
+            </div>
+          </div>
+
+          {/* قائمة الطلاب */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                <span className="text-base">🎓</span> طلاب خط السائق
+              </h3>
               <div className="flex items-center gap-2">
-                <span className="text-xl">🎒</span>
-                <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
+                {!isChatWindowOpen && (
+                  <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
+                    🔒 المراسلة (6-9 ص)
+                  </span>
+                )}
+                <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+                  {students.length} مسجلين
+                </span>
               </div>
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
-                {returnTripStudents.length} طالبات • معتمدة ✅
-              </span>
             </div>
 
-            {/* قائمة الطالبات */}
-            <div className="flex flex-col gap-3">
-              {returnTripStudents.map((std) => (
-                <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
-                  
-                  {/* بيانات الطالبة والعنوان */}
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
-                      <div className="text-xs text-slate-500">
-                        📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
+            {loading ? (
+              <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
+            ) : students.length === 0 ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
+                <p className="text-2xl">📭</p>
+                <p className="text-xs font-bold">لم يتم العثور على طلاب مسجلين لهذا السائق!</p>
+                <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
+                  <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
+                  <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
+                  <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {students.map((student, index) => {
+                  const isAbsent = absentStudentsList.includes(student);
+                  return (
+                    <div 
+                      key={student.id || index} 
+                      className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
+                        student.is_boarded ? 'bg-emerald-50/60 border-emerald-300' : isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                          student.is_boarded ? 'bg-emerald-100 text-emerald-700' : isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <div>
+                          <span className="font-bold text-slate-800 text-xs block">
+                            {student.name || student.full_name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 block">
+                            📍 {student.university || student.location || 'غير محدد'}
+                          </span>
+                          {isAbsent && (
+                            <span className="inline-block mt-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded font-bold">
+                              🔴 غير مداوم
+                            </span>
+                          )}
+                          {student.is_boarded && (
+                            <span className="inline-block mt-1 bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded font-bold mr-1">
+                              🙋‍♂️ صعد للمركبة
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        <button
+                          onClick={() => {
+                            if (!student.latitude || !student.longitude) {
+                              alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
+                              return;
+                            }
+                            window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
+                          }}
+                          className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
+                        >
+                          📍 الموقع
+                        </button>
+
+                        <button
+                          onClick={() => handleStudentBoarded(student.id)}
+                          disabled={student.is_boarded}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                            student.is_boarded 
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                          }`}
+                        >
+                          {student.is_boarded ? '✔️ صعد' : '🙋‍♂️ صعد معي'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (!isChatWindowOpen) {
+                              alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
+                              return;
+                            }
+                            setSelectedStudentForChat(student);
+                            setIsDriverChatOpen(true);
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                            isChatWindowOpen 
+                              ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
+                              : 'bg-slate-300 text-slate-600 cursor-pointer'
+                          }`}
+                        >
+                          💬 مراسلة
+                        </button>
                       </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-                  {/* الأزرار بنفس ثيم أزرار طلاب خط السائق */}
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    
-                    {/* 1. زر صعود الطالبة */}
-                    <button
-                      onClick={async () => {
-                        await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
-                        fetchDriverReturnStudents();
-                      }}
-                      className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
-                        std.is_boarded_return ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                      }`}>
-                      {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
-                    </button>
-
-                    {/* 2. زر إيصال الطالبة */}
-                    <button
-                      onClick={async () => {
-                        await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
-                        fetchDriverReturnStudents();
-                      }}
-                      className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
-                        std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                      }`}>
-                      {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
-                    </button>
-
-                    {/* 3. زر المراسلة السريعة (يرتبط بنفس نافذة رسائل السائق) */}
-                    <button
-                      onClick={() => {
-                        setSelectedStudentForChat(std);
-                        setIsDriverChatOpen(true);
-                      }}
-                      className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer flex items-center gap-1">
-                      💬 مراسلة
-                    </button>
-
-                    {/* 4. زر موقع الطالبة */}
-                    {std.latitude && std.longitude && (
-                      <a
-                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3.5 py-2 rounded-xl font-bold no-underline flex items-center gap-1">
-                        🗺️ موقع الطالبة
-                      </a>
-                    )}
-
-                  </div>
+          {/* 🎒 طلاب الرحلة الثانية */}
+          {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm" dir="rtl">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎒</span>
+                  <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
                 </div>
-              ))}
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
+                  {returnTripStudents.length} طالبات • معتمدة ✅
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {returnTripStudents.map((std) => (
+                  <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
+                        <div className="text-xs text-slate-500">
+                          📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <button
+                        onClick={async () => {
+                          await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
+                          fetchDriverReturnStudents();
+                        }}
+                        className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
+                          std.is_boarded_return ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        }`}>
+                        {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
+                          fetchDriverReturnStudents();
+                        }}
+                        className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
+                          std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                        }`}>
+                        {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedStudentForChat(std);
+                          setIsDriverChatOpen(true);
+                        }}
+                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer flex items-center gap-1">
+                        💬 مراسلة
+                      </button>
+
+                      {std.latitude && std.longitude && (
+                        <a
+                          href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3.5 py-2 rounded-xl font-bold no-underline flex items-center gap-1">
+                          🗺️ موقع الطالبة
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* بيانات السائق */}
+          <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
+            <h4 className="font-bold text-xs text-orange-400 mb-2.5 flex items-center gap-1.5">
+              <span>📋</span> بيانات الحساب والسيارة
+            </h4>
+            <div className="text-xs text-slate-300 space-y-1.5">
+              <p className="flex justify-between border-b border-slate-800 pb-1">
+                <span className="text-slate-400">رقم الموبايل:</span>
+                <span className="font-mono text-white font-bold">{user.phone}</span>
+              </p>
+              <p className="flex justify-between border-b border-slate-800 pb-1">
+                <span className="text-slate-400">نوع المركبة:</span>
+                <span className="text-white">{user.car_type || user.car_model || 'غير محدد'}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-slate-400">رقم اللوحة:</span>
+                <span className="font-mono text-amber-400 font-bold">{user.car_number || 'غير محدد'}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* الدعم الفني */}
+          <div className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm text-center space-y-3">
+            <div className="flex items-center justify-center gap-2 text-slate-700 font-bold text-sm">
+              <span className="text-emerald-500 text-lg">🎧</span>
+              <span>إذا واجهتك أي مشكلة، تواصل مع الدعم الفني:</span>
             </div>
 
+            <div className="flex flex-wrap justify-center items-center gap-3">
+              <a 
+                href="https://wa.me/9647888978111" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2.5 rounded-xl border border-emerald-200/60 text-xs transition-all shadow-xs"
+              >
+                <span>💬</span>
+                <span className="tracking-wider">07888978111</span>
+              </a>
+
+              <a 
+                href="https://wa.me/9647750074100" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-4 py-2.5 rounded-xl border border-slate-200 text-xs transition-all shadow-xs"
+              >
+                <span>💬</span>
+                <span className="tracking-wider">07750074100</span>
+              </a>
+            </div>
           </div>
-        )}
-        {/* 4. بيانات السائق */}
-        <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
-          <h4 className="font-bold text-xs text-orange-400 mb-2.5 flex items-center gap-1.5">
-            <span>📋</span> بيانات الحساب والسيارة
-          </h4>
-          <div className="text-xs text-slate-300 space-y-1.5">
-            <p className="flex justify-between border-b border-slate-800 pb-1">
-              <span className="text-slate-400">رقم الموبايل:</span>
-              <span className="font-mono text-white font-bold">{user.phone}</span>
-            </p>
-            <p className="flex justify-between border-b border-slate-800 pb-1">
-              <span className="text-slate-400">نوع المركبة:</span>
-              <span className="text-white">{user.car_type || user.car_model || 'غير محدد'}</span>
-            </p>
-            <p className="flex justify-between">
-              <span className="text-slate-400">رقم اللوحة:</span>
-              <span className="font-mono text-amber-400 font-bold">{user.car_number || 'غير محدد'}</span>
-            </p>
+        </div>
+      )}
+
+      {/* 👛 3. تبويب المحفظة (يظهر فقط عند اختيار المحفظة) */}
+      {activeTab === 'wallet' && (
+        <div className="max-w-md mx-auto p-4 space-y-4">
+          <div style={{
+            backgroundColor: '#1e293b',
+            color: '#ffffff',
+            borderRadius: '20px',
+            padding: '20px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+            textAlign: 'right'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '22px' }}>👛</span>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#38bdf8' }}>محفظة الرحلات الحالية</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ backgroundColor: '#0f172a', padding: '14px', borderRadius: '12px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>سعر الرحلة</span>
+                <b style={{ color: '#f8fafc', fontSize: '16px' }}>
+                  {(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
+                </b>
+              </div>
+
+              <div style={{ backgroundColor: '#0f172a', padding: '14px', borderRadius: '12px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>الرحلات المكتملة</span>
+                <b style={{ color: '#38bdf8', fontSize: '16px' }}>
+                  {user?.completed_trips || 0} رحلة
+                </b>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#0f172a',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              display: 'flex',
+              justify: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block' }}>مجموع مستحقاتك المحصلة:</span>
+                <b style={{ color: '#4ade80', fontSize: '20px', display: 'block', marginTop: '2px' }}>
+                  {((user?.completed_trips || 0) * (user?.trip_price || 0)).toLocaleString('ar-EG')} د.ع
+                </b>
+              </div>
+              <span style={{ fontSize: '28px' }}>💰</span>
+            </div>
           </div>
         </div>
+      )}
 
-        {selectedStudentForChat && (
-          <ChatModal
-            isOpen={isDriverChatOpen}
-            onClose={() => setIsDriverChatOpen(false)}
-            studentId={selectedStudentForChat.id}
-            driverId={user.id}
-            currentUserRole="driver"
-            supabase={supabase}
-          />
-        )}
+      {/* 📱 4. الشريط السفلي للتنقل (ثابت أسفل الشاشة) */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '65px',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e2e8f0',
+        display: 'flex',
+        justify: 'space-around',
+        alignItems: 'center',
+        zIndex: 1000,
+        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)'
+      }}>
+        <button
+          onClick={() => setActiveTab('home')}
+          style={{
+            border: 'none',
+            background: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            color: activeTab === 'home' ? '#0284c7' : '#64748b',
+            fontWeight: activeTab === 'home' ? 'bold' : 'normal',
+            cursor: 'pointer'
+          }}
+        >
+          <span style={{ fontSize: '20px' }}>🏠</span>
+          <span style={{ fontSize: '12px' }}>الرئيسية</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('wallet')}
+          style={{
+            border: 'none',
+            background: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px',
+            color: activeTab === 'wallet' ? '#0284c7' : '#64748b',
+            fontWeight: activeTab === 'wallet' ? 'bold' : 'normal',
+            cursor: 'pointer'
+          }}
+        >
+          <span style={{ fontSize: '20px' }}>👛</span>
+          <span style={{ fontSize: '12px' }}>المحفظة</span>
+        </button>
       </div>
-      {/* 🎧 قسم الدعم الفني في أسفل الواجهة */}
-      <div className="mt-8 p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm text-center space-y-3">
-        <div className="flex items-center justify-center gap-2 text-slate-700 font-bold text-sm">
-          <span className="text-emerald-500 text-lg">🎧</span>
-          <span>إذا واجهتك أي مشكلة، تواصل مع الدعم الفني:</span>
-        </div>
 
-        <div className="flex flex-wrap justify-center items-center gap-3">
-          {/* الرقم الأول */}
-          <a 
-            href="https://wa.me/9647888978111" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2.5 rounded-xl border border-emerald-200/60 text-xs transition-all shadow-xs"
-          >
-            <span>💬</span>
-            <span className="tracking-wider">07888978111</span>
-          </a>
-
-          {/* الرقم الثاني */}
-          <a 
-            href="https://wa.me/9647750074100" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold px-4 py-2.5 rounded-xl border border-slate-200 text-xs transition-all shadow-xs"
-          >
-            <span>💬</span>
-            <span className="tracking-wider">07750074100</span>
-          </a>
-        </div>
-      </div>
+      {/* نافذة المحادثة */}
+      {selectedStudentForChat && (
+        <ChatModal
+          isOpen={isDriverChatOpen}
+          onClose={() => setIsDriverChatOpen(false)}
+          studentId={selectedStudentForChat.id}
+          driverId={user.id}
+          currentUserRole="driver"
+          supabase={supabase}
+        />
+      )}
     </div>
   );
 }
