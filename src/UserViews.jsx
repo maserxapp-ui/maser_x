@@ -1306,7 +1306,7 @@ if (user && user.role === 'driver') {
     </div>
   );
 }
-// 🚗 مكون واجهة السائق الشامل والمصحح (مدمج مع المحفظة والشريط السفلي)
+// 🚗 مكون واجهة السائق الشامل والمصحح
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -1321,7 +1321,7 @@ function DriverView({ user, setUser, supabase }) {
   const [isChatWindowOpen, setIsChatWindowOpen] = React.useState(false);
   const [driverTripStatus, setDriverTripStatus] = React.useState('not_started');
 
-  // 👛 1. حالة التبويب النشط (الرئيسية 'home' أو المحفظة 'wallet')
+  // 👛 حالة التبويب النشط (الرئيسية 'home' أو المحفظة 'wallet')
   const [activeTab, setActiveTab] = React.useState('home');
 
   // 🚗 حالات ودالة جلب باقة طالبات العودة الخاصة بالسائق
@@ -1379,7 +1379,7 @@ function DriverView({ user, setUser, supabase }) {
     checkTimeAndApproval();
   }, []);
 
-  // 🔄 جلب الطلاب المرتبطين بالسائق ذكياً
+  // 🔄 جلب الطلاب المرتبطين بالسائق
   const fetchStudents = async () => {
     if (!user || !supabase) return;
     setLoading(true);
@@ -1478,8 +1478,8 @@ function DriverView({ user, setUser, supabase }) {
   const absentStudents = absentStudentsList.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-24 font-sans" dir="rtl">
-      {/* 1. الشريط العلوي (ثابت لجميع التبويبات) */}
+    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 font-sans" dir="rtl">
+      {/* 1. الشريط العلوي */}
       <div className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40 border-b border-slate-800">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1521,14 +1521,14 @@ function DriverView({ user, setUser, supabase }) {
         </div>
       </div>
 
-      {/* 🏠 2. تبويب الواجهة الرئيسية (يظهر فقط عند اختيار الرئيسية) */}
+      {/* 🏠 2. تبويب الواجهة الرئيسية */}
       {activeTab === 'home' && (
         <div className="max-w-md mx-auto p-4 space-y-4">
           {/* ⚠️ شريط تنبيه التوزيع */}
           {isAfter9PM && !isApprovedByAdmin && (
             <div className="bg-amber-50 border-2 border-amber-500 rounded-2xl p-3.5 text-center shadow-xs">
               <span className="text-lg block mb-1">⏳</span>
-              <strong className="color-[#b45309] text-xs block">
+              <strong className="text-amber-800 text-xs block">
                 بانتظار الإدارة الموافقة أو التعديل على الطلاب كي يتم تثبيت الطلبة معك
               </strong>
             </div>
@@ -1823,108 +1823,70 @@ function DriverView({ user, setUser, supabase }) {
         </div>
       )}
 
-      {/* 👛 3. تبويب المحفظة (يظهر فقط عند اختيار المحفظة) */}
+      {/* 👛 3. تبويب المحفظة */}
       {activeTab === 'wallet' && (
         <div className="max-w-md mx-auto p-4 space-y-4">
-          <div style={{
-            backgroundColor: '#1e293b',
-            color: '#ffffff',
-            borderRadius: '20px',
-            padding: '20px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-            textAlign: 'right'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '22px' }}>👛</span>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#38bdf8' }}>محفظة الرحلات الحالية</h3>
+          <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-lg space-y-4 text-right border border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">👛</span>
+              <h3 className="m-0 text-base font-bold text-sky-400">محفظة الرحلات الحالية</h3>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ backgroundColor: '#0f172a', padding: '14px', borderRadius: '12px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>سعر الرحلة</span>
-                <b style={{ color: '#f8fafc', fontSize: '16px' }}>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span className="text-slate-400 text-xs block mb-1">سعر الرحلة</span>
+                <b className="text-slate-100 text-sm">
                   {(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
                 </b>
               </div>
 
-              <div style={{ backgroundColor: '#0f172a', padding: '14px', borderRadius: '12px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>الرحلات المكتملة</span>
-                <b style={{ color: '#38bdf8', fontSize: '16px' }}>
+              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span className="text-slate-400 text-xs block mb-1">الرحلات المكتملة</span>
+                <b className="text-sky-400 text-sm">
                   {user?.completed_trips || 0} رحلة
                 </b>
               </div>
             </div>
 
-            <div style={{
-              backgroundColor: '#0f172a',
-              padding: '16px',
-              borderRadius: '12px',
-              border: '1px solid #334155',
-              display: 'flex',
-              justify: 'space-between',
-              alignItems: 'center'
-            }}>
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '12px', display: 'block' }}>مجموع مستحقاتك المحصلة:</span>
-                <b style={{ color: '#4ade80', fontSize: '20px', display: 'block', marginTop: '2px' }}>
+                <span className="text-slate-400 text-xs block">مجموع مستحقاتك المحصلة:</span>
+                <b className="text-emerald-400 text-lg block mt-0.5">
                   {((user?.completed_trips || 0) * (user?.trip_price || 0)).toLocaleString('ar-EG')} د.ع
                 </b>
               </div>
-              <span style={{ fontSize: '28px' }}>💰</span>
+              <span className="text-3xl">💰</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📱 4. الشريط السفلي للتنقل (ثابت أسفل الشاشة) */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '65px',
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        display: 'flex',
-        justify: 'space-around',
-        alignItems: 'center',
-        zIndex: 1000,
-        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)'
-      }}>
+      {/* 📱 4. الشريط السفلي للتنقل المصمم بشكل احترافي */}
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50 flex items-center justify-between h-16 px-3">
+        {/* زر الرئيسية */}
         <button
           onClick={() => setActiveTab('home')}
-          style={{
-            border: 'none',
-            background: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '3px',
-            color: activeTab === 'home' ? '#0284c7' : '#64748b',
-            fontWeight: activeTab === 'home' ? 'bold' : 'normal',
-            cursor: 'pointer'
-          }}
+          className={`flex-1 flex flex-col items-center justify-center h-full py-1 transition-all duration-200 ${
+            activeTab === 'home' 
+              ? 'text-sky-600 font-bold scale-105' 
+              : 'text-slate-400 hover:text-slate-600 font-medium'
+          }`}
         >
-          <span style={{ fontSize: '20px' }}>🏠</span>
-          <span style={{ fontSize: '12px' }}>الرئيسية</span>
+          <span className="text-xl leading-none mb-1">🏠</span>
+          <span className="text-[11px]">الرئيسية</span>
         </button>
 
+        {/* زر المحفظة */}
         <button
           onClick={() => setActiveTab('wallet')}
-          style={{
-            border: 'none',
-            background: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '3px',
-            color: activeTab === 'wallet' ? '#0284c7' : '#64748b',
-            fontWeight: activeTab === 'wallet' ? 'bold' : 'normal',
-            cursor: 'pointer'
-          }}
+          className={`flex-1 flex flex-col items-center justify-center h-full py-1 transition-all duration-200 ${
+            activeTab === 'wallet' 
+              ? 'text-sky-600 font-bold scale-105' 
+              : 'text-slate-400 hover:text-slate-600 font-medium'
+          }`}
         >
-          <span style={{ fontSize: '20px' }}>👛</span>
-          <span style={{ fontSize: '12px' }}>المحفظة</span>
+          <span className="text-xl leading-none mb-1">👛</span>
+          <span className="text-[11px]">المحفظة</span>
         </button>
       </div>
 
