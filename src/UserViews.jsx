@@ -1602,7 +1602,7 @@ function DriverView({ user, setUser, supabase }) {
             ) : students.length === 0 ? (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
                 <p className="text-2xl">📭</p>
-                <p className="text-xs font-bold">لم يتم العثور على طلاب مسجلين لهذا السائق!</p>
+                <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
                 <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
                   <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
                   <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
