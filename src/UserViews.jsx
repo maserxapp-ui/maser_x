@@ -1456,36 +1456,31 @@ const handleCompleteTrip = async () => {
     try {
       if (!user?.id) return;
 
-      // 1️⃣ جلب كافة الطلاب من قاعدة البيانات
+      // 1️⃣ جلب قائمة جميع الطلاب من قاعدة البيانات
       const { data: dbStudents, error: fetchErr } = await supabase
         .from('students')
         .select('*');
 
       if (fetchErr) throw fetchErr;
 
-      // 2️⃣ مطابقة طلاب هذا السائق بتوليف نوع البيانات (نص/رقم)
-      const currentDriverId = String(user.id);
-      
-      const myDriverStudents = (dbStudents || []).filter(s => 
-        String(s.driver_id) === currentDriverId || 
-        (user.driver_id && String(s.driver_id) === String(user.driver_id))
+      // 2️⃣ تصفية طلاب هذا السائق بأسلوب مطابقة دقيق
+      const myStudents = (dbStudents || []).filter(
+        s => String(s.driver_id).trim() === String(user.id).trim()
       );
 
-      // 3️⃣ فحص الطلاب المداومين الذين لم يتم تأكيد صعودهم (مع استثناء الغائبين)
-      const unboardedStudents = myDriverStudents.filter(s => {
-        const isBoarded = s.is_boarded === true || s.is_boarded === 'true' || s.is_boarded === 1;
-        const isAbsent = s.tomorrow_status === 'غائب' || s.finish_status === 'غائب';
-        return !isBoarded && !isAbsent;
-      });
+      // 3️⃣ فحص الطلاب الذين لم يتم الضغط على "صعد معي" لهم
+      const unboardedStudents = myStudents.filter(
+        s => !s.is_boarded && s.tomorrow_status !== 'غائب'
+      );
 
-      // 🛑 4️⃣ إذا وجد أي طالب لم يصعد، يظهر اسم الطالب ويتم إلغاء إتمام الرحلة
+      // 🛑 إذا وجد أي طالب لم يصعد، يتم إلغاء العملية وإظهار اسم الطالب
       if (unboardedStudents.length > 0) {
         const names = unboardedStudents.map(s => s.name).join('، ');
-        alert(`⚠️ لا يمكنك إتمام الرحلة!\nيوجد (${unboardedStudents.length}) طالب لم تضغط "صعد معي" لهم بعد:\n📍 الطالبات: ${names}`);
-        return; // إلغاء العملية
+        alert(`⚠️ لا يمكنك إتمام الرحلة!\nيوجد طلاب لم تضغط "صعد معي" لهم بعد:\n📍 الطالبات: (${names})`);
+        return; // إيقاف تنفيذ الدالة
       }
 
-      // 5️⃣ حساب عدد الرحلات الجديد وتحديث حالة السائق
+      // 4️⃣ حساب عدد الرحلات الجديد وتحديث قاعدة البيانات
       const newCompletedCount = (user.completed_trips || 0) + 1;
 
       const { error } = await supabase
@@ -1498,11 +1493,11 @@ const handleCompleteTrip = async () => {
 
       if (error) throw error;
 
-      // تحديث الواجهة والمحفظة
+      // 5️⃣ تحديث حالة الواجهة والمحفظة
       setDriverTripStatus('completed');
       setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
 
-      alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
+      alert('✅ تم التحقق بنجاح! أتممت الرحلة وأوصلت جميع الطلاب.');
     } catch (err) {
       alert('خطأ في إتمام الرحلة: ' + err.message);
     }
