@@ -1455,28 +1455,26 @@ function DriverView({ user, setUser, supabase }) {
 const handleCompleteTrip = async () => {
     try {
       if (user?.id) {
-        // 1️⃣ جلب طلاب هذا السائق من القائمة المتاحة
-        const allList = students || driverStudents || myStudents || [];
-        
-        const myCurrentStudents = allList.filter(
-          s => String(s.driver_id) === String(user.id)
-        );
+        // 1️⃣ جلب بيانات طلاب هذا السائق مباشرة من قاعدة البيانات
+        const { data: dbStudents, error: fetchErr } = await supabase
+          .from('students')
+          .select('id, name, is_boarded')
+          .eq('driver_id', user.id);
 
-        // 2️⃣ فحص الطلاب الذين لم يصعدوا بعد (is_boarded ليس true)
-        const unboardedStudents = myCurrentStudents.filter(
-          s => s.is_boarded !== true && s.is_boarded !== 'true'
-        );
+        if (fetchErr) throw fetchErr;
 
-        // 🛑 إذا كان هناك طالب واحد على الأقل لم يضغط "صعد معي"، يتم إلغاء العملية
+        // 🛑 2️⃣ الفحص: التأكد من عدم وجود أي طالب لم يصعد بعد (is_boarded ليست true)
+        const unboardedStudents = (dbStudents || []).filter(s => !s.is_boarded);
+
         if (unboardedStudents.length > 0) {
           alert(`⚠️ لا يمكنك إتمام الرحلة! يوجد (${unboardedStudents.length}) طالب لم تقم بالضغط على "صعد معي" لهم بعد.`);
-          return;
+          return; // إلغاء العملية وإيقاف الدالة
         }
 
-        // حساب عدد الرحلات الجديد
+        // 3️⃣ حساب عدد الرحلات الجديد
         const newCompletedCount = (user.completed_trips || 0) + 1;
 
-        // تحديث قاعدة البيانات
+        // 4️⃣ تحديث حالة السائق إلى مكتملة
         const { error } = await supabase
           .from('drivers')
           .update({ 
