@@ -1452,9 +1452,19 @@ function DriverView({ user, setUser, supabase }) {
     }
   };
 
- const handleCompleteTrip = async () => {
+const handleCompleteTrip = async () => {
     try {
       if (user?.id) {
+        // 🛑 التحقق من أن جميع طلاب السائق تم تأكيد صعودهم
+        const unboardedStudents = (students || []).filter(
+          s => String(s.driver_id) === String(user.id) && !s.is_boarded
+        );
+
+        if (unboardedStudents.length > 0) {
+          alert(`⚠️ لا يمكنك إتمام الرحلة! يوجد (${unboardedStudents.length}) طالب لم تقم بالضغط على "صعد معي" لهم بعد.`);
+          return; // إلغاء العملية
+        }
+
         // حساب عدد الرحلات الجديد
         const newCompletedCount = (user.completed_trips || 0) + 1;
 
