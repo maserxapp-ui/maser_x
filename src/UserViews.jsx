@@ -1452,12 +1452,28 @@ function DriverView({ user, setUser, supabase }) {
     }
   };
 
-  const handleCompleteTrip = async () => {
+ const handleCompleteTrip = async () => {
     try {
       if (user?.id) {
-        await supabase.from('drivers').update({ trip_status: 'completed' }).eq('id', user.id);
+        // حساب عدد الرحلات الجديد
+        const newCompletedCount = (user.completed_trips || 0) + 1;
+
+        // تحديث قاعدة البيانات
+        const { error } = await supabase
+          .from('drivers')
+          .update({ 
+            trip_status: 'completed',
+            completed_trips: newCompletedCount 
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
+
+        // تحديث الواجهة وتحديث أجر المحفظة مباشرة
         setDriverTripStatus('completed');
-        alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح.');
+        setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+
+        alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
       }
     } catch (err) {
       alert('خطأ في إتمام الرحلة: ' + err.message);
