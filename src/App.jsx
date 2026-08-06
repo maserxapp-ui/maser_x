@@ -96,7 +96,7 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, []);
-// 🔄 دالة التصفير الشاملة (تصفير الطالبات + تصفير كافة السائقين)
+// 🔄 دالة التصفير الشاملة (حفظ الأرشيف + تصفير الطالبات + تصفير كافة السائقين)
   const handleManualResetTrips = async () => {
     const confirmReset = window.confirm(
       "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
@@ -104,7 +104,37 @@ export default function App() {
     if (!confirmReset) return;
 
     try {
-      // 1️⃣ تصفير حالات جميع الطلاب
+      // 1️⃣ تنظيف الأرشيف القديم (حذف السجلات التي مضى عليها أكثر من 40 يوماً تلقائياً)
+      const fortyDaysAgo = new Date();
+      fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40);
+      const fortyDaysAgoStr = fortyDaysAgo.toISOString().split('T')[0];
+
+      await supabase
+        .from('trip_history')
+        .delete()
+        .lt('date', fortyDaysAgoStr);
+
+      // 2️⃣ جلب الطلاب الذين داوموا اليوم (صعود أو إيصال)
+      const { data: attendedStudents } = await supabase
+        .from('students')
+        .select('name, driver_id, is_boarded, is_dropped_return')
+        .or('is_boarded.eq.true,is_dropped_return.eq.true');
+
+      // 3️⃣ حفظ نسخة اليوم في جدول الأرشيف (trip_history)
+      if (attendedStudents && attendedStudents.length > 0) {
+        const todayDate = new Date().toISOString().split('T')[0];
+        
+        const logsToInsert = attendedStudents.map(std => ({
+          student_name: std.name,
+          driver_id: String(std.driver_id),
+          date: todayDate,
+          status: std.is_dropped_return ? 'أكمل الرحلتين' : 'ذهاب فقط'
+        }));
+
+        await supabase.from('trip_history').insert(logsToInsert);
+      }
+
+      // 4️⃣ تصفير حالات جميع الطلاب
       const { error: studentErr } = await supabase
         .from('students')
         .update({
@@ -121,18 +151,18 @@ export default function App() {
 
       if (studentErr) throw studentErr;
 
-      // 2️⃣ تصفير حالات جميع السائقين (مسح مكتملة / completed)
-     const { error: driverErr } = await supabase
-          .from('drivers')
-          .update({ 
-            trip_status: null,
-            completed_trips: 0 
-          })
-          .not('id', 'is', null);
+      // 5️⃣ تصفير حالات جميع السائقين (مسح مكتملة / completed)
+      const { error: driverErr } = await supabase
+        .from('drivers')
+        .update({ 
+          trip_status: null,
+          completed_trips: 0 
+        })
+        .not('id', 'is', null);
 
       if (driverErr) throw driverErr;
 
-      alert('✅ تم تصفير جميع الرحلات وحالات الطالبات والسائقين بنجاح!');
+      alert('✅ تم حفظ سجل اليوم في الأرشيف، وتنظيف السجلات القديمة، وتصفير جميع الرحلات بنجاح!');
       window.location.reload();
     } catch (err) {
       console.error(err);
