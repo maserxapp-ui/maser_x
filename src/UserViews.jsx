@@ -1455,14 +1455,22 @@ function DriverView({ user, setUser, supabase }) {
 const handleCompleteTrip = async () => {
     try {
       if (user?.id) {
-        // 🛑 التحقق من أن جميع طلاب السائق تم تأكيد صعودهم
-        const unboardedStudents = (students || []).filter(
-          s => String(s.driver_id) === String(user.id) && !s.is_boarded
+        // 1️⃣ جلب طلاب هذا السائق من القائمة المتاحة
+        const allList = students || driverStudents || myStudents || [];
+        
+        const myCurrentStudents = allList.filter(
+          s => String(s.driver_id) === String(user.id)
         );
 
+        // 2️⃣ فحص الطلاب الذين لم يصعدوا بعد (is_boarded ليس true)
+        const unboardedStudents = myCurrentStudents.filter(
+          s => s.is_boarded !== true && s.is_boarded !== 'true'
+        );
+
+        // 🛑 إذا كان هناك طالب واحد على الأقل لم يضغط "صعد معي"، يتم إلغاء العملية
         if (unboardedStudents.length > 0) {
           alert(`⚠️ لا يمكنك إتمام الرحلة! يوجد (${unboardedStudents.length}) طالب لم تقم بالضغط على "صعد معي" لهم بعد.`);
-          return; // إلغاء العملية
+          return;
         }
 
         // حساب عدد الرحلات الجديد
@@ -1489,7 +1497,7 @@ const handleCompleteTrip = async () => {
       alert('خطأ في إتمام الرحلة: ' + err.message);
     }
   };
-
+  
   // 📊 تصنيف الطلاب
   const absentStudentsList = students.filter(s => 
     s.is_absent === true || 
