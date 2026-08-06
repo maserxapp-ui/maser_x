@@ -122,10 +122,13 @@ export default function App() {
       if (studentErr) throw studentErr;
 
       // 2️⃣ تصفير حالات جميع السائقين (مسح مكتملة / completed)
-      const { error: driverErr } = await supabase
-        .from('drivers')
-        .update({ trip_status: null })
-        .not('id', 'is', null);
+     const { error: driverErr } = await supabase
+          .from('drivers')
+          .update({ 
+            trip_status: null,
+            completed_trips: 0 
+          })
+          .not('id', 'is', null);
 
       if (driverErr) throw driverErr;
 
