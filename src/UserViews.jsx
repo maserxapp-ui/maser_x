@@ -1750,11 +1750,48 @@ function DriverView({ user, setUser, supabase }) {
                         {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
                       </button>
 
-                      <button
-                        onClick={async () => {
-                          await supabase.from('students').update({ is_dropped_return: !std.is_dropped_return }).eq('id', std.id);
-                          fetchDriverReturnStudents();
-                        }}
+onClick={async () => {
+          const newStatus = !std.is_dropped_return;
+
+          // 1️⃣ تحديث حالة إيصال الطالبة
+          await supabase
+            .from('students')
+            .update({ is_dropped_return: newStatus })
+            .eq('id', std.id);
+
+          // 2️⃣ تحديث قائمة القراءة في الواجهة
+          if (typeof fetchDriverReturnStudents === 'function') {
+            await fetchDriverReturnStudents();
+          }
+
+          // 3️⃣ التحقق هل تم إيصال جميع طلاب الرحلة الثانية الآن؟
+          if (newStatus) {
+            const { data: returnStudents } = await supabase
+              .from('students')
+              .select('*')
+              .or(`driver_id.eq.${user.id},return_driver_id.eq.${user.id}`)
+              .eq('return_approved', true);
+
+            if (returnStudents && returnStudents.length > 0) {
+              const isAllDone = returnStudents.every(s => s.is_dropped_return === true);
+
+              if (isAllDone) {
+                const newCompletedCount = (user?.completed_trips || 0) + 1;
+
+                // إضافة أجر الرحلة للمحفظة في قاعدة البيانات
+                await supabase
+                  .from('drivers')
+                  .update({ completed_trips: newCompletedCount })
+                  .eq('id', user.id);
+
+                // تحديث المحفظة في الواجهة فوراً
+                setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+
+                alert('🎉 ممتاز! تم إيصال جميع الطلاب بنجاح وتمت إضافة أجر الرحلة الثانية إلى المحفظة.');
+              }
+            }
+          }
+        }}
                         className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
                           std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                         }`}>
