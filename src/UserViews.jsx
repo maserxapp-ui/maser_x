@@ -1777,7 +1777,7 @@ function DriverView({ user, setUser, supabase }) {
                               const isAllDone = returnStudents.every(s => s.is_dropped_return === true);
 
                               if (isAllDone) {
-                                const newCompletedCount = (user?.completed_trips || 0) + 1;
+                                const newCompletedCount = Number(user?.completed_trips || 0) + 1;
 
                                 // إضافة أجر الرحلة للمحفظة في قاعدة البيانات
                                 await supabase
