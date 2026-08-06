@@ -1800,11 +1800,6 @@ function DriverView({ user, setUser, supabase }) {
                         {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
                       </button>
                       
-                        className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
-                          std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                        }`}>
-                        {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
-                      </button>
 
                       <button
                         onClick={() => {
