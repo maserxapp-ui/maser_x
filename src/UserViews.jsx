@@ -257,9 +257,40 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   );
 
  
-  // 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
+// 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
   const handleFinishShift = async () => {
     try {
+      if (!user?.id) return;
+
+      // 🛑 1️⃣ التحقق من أن سائق الذهاب المخصص للطالبة قد أتم رحلته أولاً
+      const { data: studentData, error: studentErr } = await supabase
+        .from('students')
+        .select('driver_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (studentErr) throw studentErr;
+
+      if (!studentData || !studentData.driver_id) {
+        alert('⚠️ لم يتم تحديد سائق لك في رحلة الذهاب بعد!');
+        return;
+      }
+
+      const { data: driverData, error: driverErr } = await supabase
+        .from('drivers')
+        .select('trip_status')
+        .eq('id', studentData.driver_id)
+        .maybeSingle();
+
+      if (driverErr) throw driverErr;
+
+      // إلغاء العملية إذا لم تكن رحلة السائق مكتملة
+      if (driverData?.trip_status !== 'completed') {
+        alert('⚠️ لا يمكنك الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلك بإتمام رحلة الذهاب أولاً.');
+        return;
+      }
+
+      // 2️⃣ تحديث حالة الطالبة إلى أنهت الدوام
       const { error: updateErr } = await supabase
         .from('students')
         .update({ finish_status: 'finished' })
@@ -267,6 +298,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
       if (updateErr) throw updateErr;
 
+      // 3️⃣ كود التجميع التلقائي الخاص بك
       const { data: unassignedStudents, error: fetchErr } = await supabase
         .from('students')
         .select('id')
