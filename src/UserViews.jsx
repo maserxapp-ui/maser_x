@@ -1454,52 +1454,21 @@ function DriverView({ user, setUser, supabase }) {
 
 const handleCompleteTrip = async () => {
     try {
-      if (!user?.id) return;
+      // 1️⃣ جلب جميع الطلاب من جدول students
+      const { data: dbStudents } = await supabase.from('students').select('*');
 
-      // 1️⃣ جلب قائمة جميع الطلاب من قاعدة البيانات
-      const { data: dbStudents, error: fetchErr } = await supabase
-        .from('students')
-        .select('*');
+      // 2️⃣ تصفية الطلاب الذين لم يتم الضغط على "صعد معي" لهم (بغض النظر عن رقم السائق مؤقتاً)
+      const unboarded = (dbStudents || []).filter(s => s.is_boarded !== true);
 
-      if (fetchErr) throw fetchErr;
-
-      // 2️⃣ تصفية طلاب هذا السائق بأسلوب مطابقة دقيق
-      const myStudents = (dbStudents || []).filter(
-        s => String(s.driver_id).trim() === String(user.id).trim()
-      );
-
-      // 3️⃣ فحص الطلاب الذين لم يتم الضغط على "صعد معي" لهم
-      const unboardedStudents = myStudents.filter(
-        s => !s.is_boarded && s.tomorrow_status !== 'غائب'
-      );
-
-      // 🛑 إذا وجد أي طالب لم يصعد، يتم إلغاء العملية وإظهار اسم الطالب
-      if (unboardedStudents.length > 0) {
-        const names = unboardedStudents.map(s => s.name).join('، ');
-        alert(`⚠️ لا يمكنك إتمام الرحلة!\nيوجد طلاب لم تضغط "صعد معي" لهم بعد:\n📍 الطالبات: (${names})`);
-        return; // إيقاف تنفيذ الدالة
+      // 🛑 اختبار التوقيف
+      if (unboarded.length > 0) {
+        alert(`🛑 فحص النظام:\nيوجد (${unboarded.length}) طالب في النظام لم يضغطوا "صعد معي".\nتم منع إتمام الرحلة بنجاح!`);
+        return; // إيقاف إتمام الرحلة
       }
 
-      // 4️⃣ حساب عدد الرحلات الجديد وتحديث قاعدة البيانات
-      const newCompletedCount = (user.completed_trips || 0) + 1;
-
-      const { error } = await supabase
-        .from('drivers')
-        .update({ 
-          trip_status: 'completed',
-          completed_trips: newCompletedCount 
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // 5️⃣ تحديث حالة الواجهة والمحفظة
-      setDriverTripStatus('completed');
-      setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
-
-      alert('✅ تم التحقق بنجاح! أتممت الرحلة وأوصلت جميع الطلاب.');
+      alert("تم السماح بالإتمام لأن جميع الطلاب صعدوا.");
     } catch (err) {
-      alert('خطأ في إتمام الرحلة: ' + err.message);
+      alert('خطأ: ' + err.message);
     }
   };
   
