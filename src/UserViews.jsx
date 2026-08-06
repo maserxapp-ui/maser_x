@@ -179,6 +179,37 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatDriverId, setActiveChatDriverId] = useState(null);
 
+  // 🔄 الاستماع المباشر للتغيرات من لوحة الأدمن وقفل الحساب فوراً
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student_realtime_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'students',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          // 1️⃣ تحديث بيانات الطالب في الواجهة فوراً
+          setUser(prev => ({ ...prev, ...payload.new }));
+
+          // 2️⃣ إظهار تنبيه فور تحويل الحساب إلى غير مدفوع
+          if (payload.new.status === 'غير مدفوع') {
+            alert('⚠️ تم تحديث حالة حسابك إلى (غير مدفوع). يرجى التسديد لتفعيل الحساب.');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
  const openDriverChat = (driverObj) => {
     // 💡 محاولة جلب ID السائق، أو سائق العودة من الحساب، أو استخدام ID افتراضي (1) للتجربة
     const dId = driverObj?.id || driverObj || user?.return_driver_id || user?.driver_id || "1";
