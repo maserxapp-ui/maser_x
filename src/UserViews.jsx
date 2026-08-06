@@ -179,11 +179,35 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatDriverId, setActiveChatDriverId] = useState(null);
 
- // 🔄 الاستماع المباشر للتغيرات من لوحة الأدمن وقفل الحساب فوراً
+// 🔄 جلب أحدث حالة للطالب عند الـ Refresh + الاستماع للتحديث المباشر من الأدمن
   useEffect(() => {
     if (!user?.id) return;
 
-    // استخدام اسم قناة فريد لتفادي تعارض الاشتراكات عند إعادة التحميل
+    // 1️⃣ فحص أحدث بيانات الطالب فوراً عند فتح الصفحة أو عمل Refresh
+    const fetchLatestStudentStatus = async () => {
+      try {
+        const { data: dbStudent, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (dbStudent && !error) {
+          // تحديث الواجهة وتحديث الـ localStorage فوراً بالبيانات الجديدة
+          setUser(prev => {
+            const updatedUser = { ...prev, ...dbStudent };
+            localStorage.setItem('maser_currentUser', JSON.stringify(updatedUser));
+            return updatedUser;
+          });
+        }
+      } catch (err) {
+        console.error("خطأ في جلب حالة الحساب:", err);
+      }
+    };
+
+    fetchLatestStudentStatus();
+
+    // 2️⃣ الاستماع المباشر (Realtime) للتغيرات اللحظية من لوحة الأدمن
     const channelName = `student_realtime_${user.id}_${Math.random()}`;
 
     const channel = supabase
@@ -197,12 +221,16 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          // 1️⃣ تحديث بيانات الطالب مباشرة
-          setUser(prev => ({ ...prev, ...payload.new }));
+          // تحديث الواجهة وتحديث الـ localStorage لحظياً
+          setUser(prev => {
+            const updatedUser = { ...prev, ...payload.new };
+            localStorage.setItem('maser_currentUser', JSON.stringify(updatedUser));
+            return updatedUser;
+          });
 
-          // 2️⃣ تنبيه فور تحويل الحساب إلى غير مدفوع
+          // إظهار تنبيه فوراً إذا أصبحت الحالة غير مدفوع
           if (payload.new.status === 'غير مدفوع') {
-            alert('⚠️ تم تحديث حالة حسابك إلى (غير مدفوع). يرجى التسديد لتفعيل الحساب.');
+            alert('⚠️ تم تغيير حالة حسابك إلى (غير مدفوع). تم إيقاف الميزات لحين التسديد.');
           }
         }
       )
