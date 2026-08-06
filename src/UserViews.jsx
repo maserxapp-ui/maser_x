@@ -1454,21 +1454,59 @@ function DriverView({ user, setUser, supabase }) {
 
 const handleCompleteTrip = async () => {
     try {
-      // 1️⃣ جلب جميع الطلاب من جدول students
-      const { data: dbStudents } = await supabase.from('students').select('*');
+      if (!user) return;
 
-      // 2️⃣ تصفية الطلاب الذين لم يتم الضغط على "صعد معي" لهم (بغض النظر عن رقم السائق مؤقتاً)
-      const unboarded = (dbStudents || []).filter(s => s.is_boarded !== true);
+      // 1️⃣ جلب بيانات الطلاب من قاعدة البيانات
+      const { data: dbStudents, error: fetchErr } = await supabase
+        .from('students')
+        .select('*');
 
-      // 🛑 اختبار التوقيف
-      if (unboarded.length > 0) {
-        alert(`🛑 فحص النظام:\nيوجد (${unboarded.length}) طالب في النظام لم يضغطوا "صعد معي".\nتم منع إتمام الرحلة بنجاح!`);
-        return; // إيقاف إتمام الرحلة
+      if (fetchErr) throw fetchErr;
+
+      // 2️⃣ حصر جميع المعرفات المحتملة للسائق لضمان المطابقة 100%
+      const driverIds = [
+        String(user.id),
+        String(user.driver_id || ''),
+        String(user.code || '')
+      ].filter(Boolean);
+
+      // 3️⃣ تصفية طلاب هذا السائق فقط!
+      const myStudents = (dbStudents || []).filter(s => 
+        driverIds.includes(String(s.driver_id))
+      );
+
+      // 4️⃣ فحص الطلاب التابعين لهذا السائق فقط الذين لم يصعدوا بعد (وليسوا غائبين)
+      const unboardedStudents = myStudents.filter(
+        s => !s.is_boarded && s.tomorrow_status !== 'غائب' && s.finish_status !== 'غائب'
+      );
+
+      // 🛑 إذا كان هناك أي طالب لم تضغط له "صعد معي"، يتم منع الإتمام
+      if (unboardedStudents.length > 0) {
+        const names = unboardedStudents.map(s => s.name).join('، ');
+        alert(`⚠️ لا يمكنك إتمام الرحلة!\nيوجد (${unboardedStudents.length}) طالب من طلابك لم تضغط "صعد معي" لهم بعد:\n📍 الطلاب: ${names}`);
+        return; // إلغاء إتمام الرحلة
       }
 
-      alert("تم السماح بالإتمام لأن جميع الطلاب صعدوا.");
+      // 5️⃣ حساب عدد الرحلات الجديد وتحديث حالة السائق
+      const newCompletedCount = (user.completed_trips || 0) + 1;
+
+      const { error } = await supabase
+        .from('drivers')
+        .update({ 
+          trip_status: 'completed',
+          completed_trips: newCompletedCount 
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // تحديث الواجهة والمحفظة مباشرة
+      setDriverTripStatus('completed');
+      setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+
+      alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
     } catch (err) {
-      alert('خطأ: ' + err.message);
+      alert('خطأ في إتمام الرحلة: ' + err.message);
     }
   };
   
