@@ -914,7 +914,7 @@ const fetchStudentsForDriver = async (driver) => {
     } finally {
       setIsSubmittingRating(false);
     }
-  }; وتحديث الموقع على الخريطة
+  }; 
   const handleSaveLocation = () => {
     if (!navigator.geolocation) {
       alert('❌ نظام الـ GPS غير مدعوم في متصفحك');
