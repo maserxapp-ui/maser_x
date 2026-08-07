@@ -833,50 +833,51 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   };
 
 // 👨‍🎓 جلب طلاب السائق (فقط من ضغط صراحة على "أداوم غداً")
-  const fetchStudentsForDriver = async (driver) => {
-    try {
-      if (!driver) return;
+const fetchStudentsForDriver = async (driver) => {
+  try {
+    if (!driver) return;
 
-      const { data: allStudents, error } = await supabase
-        .from('students')
-        .select('*');
+    const { data: allStudents, error } = await supabase
+      .from('students')
+      .select('*');
 
-      if (error) {
-        console.error('❌ خطأ في جلب البيانات من السيرفر:', error.message);
-        return;
-      }
-
-      const loginVal = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
-
-      const myStudents = (allStudents || []).filter(student => {
-        const sDriverId = String(student.driver_id || '').trim();
-        const sDriverPhone = String(student.driver_phone || '').trim();
-        const sDriverName = String(student.driver_name || student.driver || '').trim();
-
-        // فحص التبعية للسائق
-        const isMyStudent = (
-          (sDriverId !== '' && sDriverId === loginVal) ||
-          (sDriverPhone !== '' && sDriverPhone === loginVal) ||
-          (sDriverName !== '' && sDriverName === loginVal)
-        );
-
-        // 🟢 الشرط الجديد: يجب أن يكون الطالب قد ضغط زر "أداوم غداً"
-        const hasConfirmedAttendance = 
-          student.tomorrow_status === 'أداوم غداً' || 
-          student.tomorrow_status === 'حضور';
-
-        return isMyStudent && hasConfirmedAttendance;
-      });
-
-      console.log('✅ الطلاب المؤكدون المداومون فقط عند السائق:', myStudents);
-
-      if (typeof setDriverStudents === 'function') {
-        setDriverStudents(myStudents);
-      }
-    } catch (e) {
-      console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
+    if (error) {
+      console.error('❌ خطأ في جلب البيانات من السيرفر:', error.message);
+      return;
     }
-  };
+
+    // استخراج معرفات السائق الحالية
+    const dId = String(driver.id || '').trim();
+    const dPhone = String(driver.phone || '').trim();
+    const dName = String(driver.name || driver.username || '').trim();
+
+    const myStudents = (allStudents || []).filter(student => {
+      const sDriverId = String(student.driver_id || '').trim();
+      const sDriverPhone = String(student.driver_phone || '').trim();
+      const sDriverName = String(student.driver_name || student.driver || '').trim();
+
+      // 1️⃣ مطابقة دقيقة للتبعية (سواء بـ ID أو الهاتف أو الاسم)
+      const isMyStudent = 
+        (dId !== '' && sDriverId === dId) ||
+        (dPhone !== '' && sDriverPhone === dPhone) ||
+        (dName !== '' && sDriverName === dName);
+
+      // 2️⃣ فحص الحضور الصريح من زر "أداوم غداً"
+      const status = String(student.tomorrow_status || '').trim();
+      const hasConfirmedAttendance = status === 'أداوم غداً' || status === 'حضور';
+
+      return isMyStudent && hasConfirmedAttendance;
+    });
+
+    console.log('✅ الطلاب المؤكدون المداومون فقط عند السائق:', myStudents);
+
+    if (typeof setDriverStudents === 'function') {
+      setDriverStudents(myStudents);
+    }
+  } catch (e) {
+    console.error('خطأ غير متوقع أثناء معالجة البيانات:', e);
+  }
+};
 
   // 📍 دالة جلب وتحديث الموقع على الخريطة
   const handleSaveLocation = () => {
