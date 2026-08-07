@@ -74,6 +74,123 @@ export const addDriverPoints = async (driverId, pointsToAdd, supabase) => {
     console.error("خطأ في تحديث نقاط السائق:", err);
   }
 };
+function DriverRewardsTab({ driver, supabase }) {
+  const [rewardsHistory, setRewardsHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRewardsHistory();
+  }, [driver?.id]);
+
+  const fetchRewardsHistory = async () => {
+    if (!driver?.id) return;
+    const { data } = await supabase
+      .from('driver_rewards')
+      .select('*')
+      .eq('driver_id', driver.id)
+      .order('created_at', { ascending: false });
+    
+    setRewardsHistory(data || []);
+    setLoading(false);
+  };
+
+  // احتساب النقاط والمستويات
+  const points = driver?.points || 0;
+  const currentTier = driver?.current_tier || 'برونزي';
+
+  const tierLimits = {
+    'برونزي': { max: 100, next: 'فضي', nextLimit: 101, reward: 0 },
+    'فضي': { max: 300, next: 'ذهبي', nextLimit: 301, reward: 10000 },
+    'ذهبي': { max: 600, next: 'ماسي', nextLimit: 601, reward: 15000 },
+    'ماسي': { max: 1000, next: 'المستوى الأقصى', nextLimit: 1000, reward: 25000 }
+  };
+
+  const currentInfo = tierLimits[currentTier];
+  const pointsToNext = Math.max(0, currentInfo.nextLimit - points);
+  const progressPercent = Math.min(100, (points / currentInfo.nextLimit) * 100);
+
+  // المكافأة المستحقة بانتظار الاعتماد
+  const pendingReward = rewardsHistory.find(r => r.status === 'pending');
+
+  return (
+    <div className="p-4 space-y-4 text-right dir-rtl pb-20">
+      {/* 💳 بطاقة ملخص المكافآت الرئيسي */}
+      <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-lg">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">المستوى الحالي: {currentTier}</span>
+          <span className="text-2xl">🎁</span>
+        </div>
+
+        <div className="mb-4">
+          <p className="text-xs opacity-90">المكافآت المستحقة</p>
+          <h2 className="text-3xl font-extrabold mt-1">
+            {pendingReward ? `${pendingReward.reward_amount.toLocaleString()} د.ع` : '0 د.ع'}
+          </h2>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs">
+            <span>النقاط الحالية: <b>{points} نقطة</b></span>
+            {currentTier !== 'ماسي' && <span>المتبقي للـ {currentInfo.next}: <b>{pointsToNext} نقطة</b></span>}
+          </div>
+
+          {/* شريط التقدم */}
+          <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden">
+            <div className="bg-white h-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+          </div>
+        </div>
+      </div>
+
+      {/* 📊 مستويات المكافآت */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="font-bold text-gray-800 mb-3 text-sm">جدول المستويات</h3>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 border rounded-lg bg-gray-50">🥉 برونزي: 0 - 100 (لا توجد)</div>
+          <div className="p-2 border rounded-lg bg-gray-50">🥈 فضي: 101 - 300 (10,000 د.ع)</div>
+          <div className="p-2 border rounded-lg bg-gray-50">🥇 ذهبي: 301 - 600 (15,000 د.ع)</div>
+          <div className="p-2 border rounded-lg bg-gray-50">💎 ماسي: +601 (25,000 د.ع)</div>
+        </div>
+      </div>
+
+      {/* 📜 سجل المكافآت */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="font-bold text-gray-800 mb-3 text-sm">سجل المكافآت</h3>
+        {loading ? (
+          <p className="text-xs text-gray-500">جاري التحميل...</p>
+        ) : rewardsHistory.length === 0 ? (
+          <p className="text-xs text-gray-400">لا يوجد سجل مكافآت بعد.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-right border-collapse">
+              <thead>
+                <tr className="border-b bg-gray-50 text-gray-600">
+                  <th className="p-2">التاريخ</th>
+                  <th className="p-2">السبب</th>
+                  <th className="p-2">المبلغ</th>
+                  <th className="p-2">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rewardsHistory.map((item) => (
+                  <tr key={item.id} className="border-b">
+                    <td className="p-2">{new Date(item.created_at).toLocaleDateString('ar-IQ')}</td>
+                    <td className="p-2">الوصول للمستوى {item.tier_name}</td>
+                    <td className="p-2 font-bold">{item.reward_amount.toLocaleString()} د.ع</td>
+                    <td className="p-2">
+                      {item.status === 'approved' && <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded">✅ مصروفة</span>}
+                      {item.status === 'pending' && <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded">⏳ بانتظار الاعتماد</span>}
+                      {item.status === 'rejected' && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded">❌ مرفوضة ({item.rejection_reason})</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // 🌟 نافذة التقييم التلقائية للطالب عند إتمام الرحلة
 function DriverRatingModal({ driverId, studentId, supabase, onClose }) {
@@ -2234,6 +2351,11 @@ const handleCompleteTrip = async () => {
         </div>
       )}
 
+      {/* عرض شاشة المكافآت عند اختيار التبويب */}
+      {activeTab === 'rewards' && (
+        <DriverRewardsTab driver={user} supabase={supabase} />
+      )}
+
       {/* 📱 4. الشريط السفلي للتنقل المصمم بشكل احترافي */}
       <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50 flex items-center justify-between h-16 px-3">
         {/* زر الرئيسية */}
@@ -2260,6 +2382,18 @@ const handleCompleteTrip = async () => {
         >
           <span className="text-xl leading-none mb-1">👛</span>
           <span className="text-[11px]">المحفظة</span>
+        </button>
+        {/* زر المكافآت */}
+        <button
+          onClick={() => setActiveTab('rewards')}
+          className={`flex-1 flex flex-col items-center justify-center h-full py-1 transition-all duration-200 ${
+            activeTab === 'rewards'
+              ? 'text-amber-500 font-bold scale-105'
+              : 'text-slate-400 hover:text-slate-600 font-medium'
+          }`}
+        >
+          <span className="text-xl leading-none mb-1">🎁</span>
+          <span className="text-[11px]">المكافآت</span>
         </button>
       </div>
 
