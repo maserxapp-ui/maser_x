@@ -2682,90 +2682,92 @@ export function AdminRewardsAndRatings({ supabase }) {
           </table>
         </div>
       ) : (
-       {/* 🌟 1. جدول تقييمات الطلاب للسائقين */}
-        <div className="mb-8">
-          <h3 className="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">
-            <span>⭐</span> تقييمات الطلاب للسائقين
-          </h3>
-          <div className="bg-white rounded-xl shadow border overflow-x-auto">
-            <table className="w-full text-sm text-right">
-              <thead className="bg-gray-100 text-gray-700">
-                <tr>
-                  <th className="p-3">اسم الطالب</th>
-                  <th className="p-3">اسم السائق</th>
-                  <th className="p-3">التقييم</th>
-                  <th className="p-3">الملاحظات</th>
-                  <th className="p-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ratings && ratings.length > 0 ? (
-                  ratings.map((rt) => (
-                    <tr key={rt.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{rt.students?.name || 'طالب'}</td>
-                      <td className="p-3 font-medium">{rt.drivers?.name || 'سائق'}</td>
-                      <td className="p-3 font-bold text-amber-500">{"★".repeat(rt.rating)} ({rt.rating}/5)</td>
-                      <td className="p-3 text-gray-600">{rt.comment || '-'}</td>
-                      <td className="p-3 text-gray-500">{new Date(rt.created_at).toLocaleDateString('ar-IQ')}</td>
+          <>
+            {/* 🌟 1. جدول تقييمات الطلاب للسائقين */}
+            <div className="mb-8">
+              <h3 className="text-base font-bold mb-3 text-gray-800 flex items-center gap-2">
+                <span>⭐</span> تقييمات الطلاب للسائقين
+              </h3>
+              <div className="bg-white rounded-xl shadow border overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="p-3">اسم الطالب</th>
+                      <th className="p-3">اسم السائق</th>
+                      <th className="p-3">التقييم</th>
+                      <th className="p-3">الملاحظات</th>
+                      <th className="p-3">التاريخ</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="p-4 text-center text-gray-400">لا توجد تقييمات من الطلاب حتى الآن</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody>
+                    {ratings && ratings.length > 0 ? (
+                      ratings.map((rt) => (
+                        <tr key={rt.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3 font-medium">{rt.students?.name || 'طالب'}</td>
+                          <td className="p-3 font-medium">{rt.drivers?.name || 'سائق'}</td>
+                          <td className="p-3 font-bold text-amber-500">{"★".repeat(rt.rating)} ({rt.rating}/5)</td>
+                          <td className="p-3 text-gray-600">{rt.comment || '-'}</td>
+                          <td className="p-3 text-gray-500">{new Date(rt.created_at).toLocaleDateString('ar-IQ')}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="p-4 text-center text-gray-400">لا توجد تقييمات من الطلاب حتى الآن</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-        {/* 🌟 2. جدول تقييمات السائقين للطلاب */}
-        <div>
-          <h3 className="text-base font-bold mb-3 text-purple-900 flex items-center gap-2">
-            <span>🚗</span> تقييمات السائقين للطلاب
-          </h3>
-          <div className="bg-white rounded-xl shadow border overflow-x-auto">
-            <table className="w-full text-sm text-right">
-              <thead className="bg-purple-50 text-purple-900">
-                <tr>
-                  <th className="p-3">اسم الطالب</th>
-                  <th className="p-3">اسم السائق</th>
-                  <th className="p-3">التقييم</th>
-                  <th className="p-3">الملاحظات</th>
-                  <th className="p-3">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students && students.filter(s => s.driver_rating).length > 0 ? (
-                  students
-                    .filter(s => s.driver_rating)
-                    .map((student) => (
-                      <tr key={student.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-medium text-gray-800">{student.name || student.full_name || 'طالب'}</td>
-                        <td className="p-3 font-medium text-gray-700">{student.driver_name || student.driver || 'السائق'}</td>
-                        <td className="p-3 font-bold text-amber-500">
-                          {'★'.repeat(student.driver_rating)} ({student.driver_rating}/5)
-                        </td>
-                        <td className="p-3 text-gray-600">{student.driver_notes || '-'}</td>
-                        <td className="p-3 text-gray-500 text-xs">
-                          {student.updated_at 
-                            ? new Date(student.updated_at).toLocaleDateString('ar-IQ') 
-                            : new Date().toLocaleDateString('ar-IQ')}
+            {/* 🌟 2. جدول تقييمات السائقين للطلاب */}
+            <div>
+              <h3 className="text-base font-bold mb-3 text-purple-900 flex items-center gap-2">
+                <span>🚗</span> تقييمات السائقين للطلاب
+              </h3>
+              <div className="bg-white rounded-xl shadow border overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-purple-50 text-purple-900">
+                    <tr>
+                      <th className="p-3">اسم الطالب</th>
+                      <th className="p-3">اسم السائق</th>
+                      <th className="p-3">التقييم</th>
+                      <th className="p-3">الملاحظات</th>
+                      <th className="p-3">التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students && students.filter(s => s.driver_rating).length > 0 ? (
+                      students
+                        .filter(s => s.driver_rating)
+                        .map((student) => (
+                          <tr key={student.id} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-medium text-gray-800">{student.name || student.full_name || 'طالب'}</td>
+                            <td className="p-3 font-medium text-gray-700">{student.driver_name || student.driver || 'السائق'}</td>
+                            <td className="p-3 font-bold text-amber-500">
+                              {'★'.repeat(student.driver_rating)} ({student.driver_rating}/5)
+                            </td>
+                            <td className="p-3 text-gray-600">{student.driver_notes || '-'}</td>
+                            <td className="p-3 text-gray-500 text-xs">
+                              {student.updated_at 
+                                ? new Date(student.updated_at).toLocaleDateString('ar-IQ') 
+                                : new Date().toLocaleDateString('ar-IQ')}
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="p-4 text-center text-gray-400">
+                          لا توجد تقييمات مسجلة من السائقين للطلاب حتى الآن
                         </td>
                       </tr>
-                    ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="p-4 text-center text-gray-400">
-                      لا توجد تقييمات مسجلة من السائقين للطلاب حتى الآن
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
