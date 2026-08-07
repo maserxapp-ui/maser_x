@@ -832,12 +832,11 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
 
-// 👨‍🎓 جلب طلاب السائق (تصفية آمنة في المتصفح تمنع أخطاء 400 نهائياً)
+// 👨‍🎓 جلب طلاب السائق (فقط من ضغط صراحة على "أداوم غداً")
   const fetchStudentsForDriver = async (driver) => {
     try {
       if (!driver) return;
 
-      // 1️⃣ جلب جميع الطلاب باستعلام بسيط بدون شروط سيرفر مسببة للخطأ
       const { data: allStudents, error } = await supabase
         .from('students')
         .select('*');
@@ -847,23 +846,29 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         return;
       }
 
-      // 2️⃣ استخراج معرّف دخول السائق الحالية (مثل "22")
       const loginVal = String(driver.phone || driver.username || driver.name || driver.id || '').trim();
 
-      // 3️⃣ المطابقة والفلترة بأمان داخل المتصفح
       const myStudents = (allStudents || []).filter(student => {
         const sDriverId = String(student.driver_id || '').trim();
         const sDriverPhone = String(student.driver_phone || '').trim();
         const sDriverName = String(student.driver_name || student.driver || '').trim();
 
-        return (
+        // فحص التبعية للسائق
+        const isMyStudent = (
           (sDriverId !== '' && sDriverId === loginVal) ||
           (sDriverPhone !== '' && sDriverPhone === loginVal) ||
           (sDriverName !== '' && sDriverName === loginVal)
         );
+
+        // 🟢 الشرط الجديد: يجب أن يكون الطالب قد ضغط زر "أداوم غداً"
+        const hasConfirmedAttendance = 
+          student.tomorrow_status === 'أداوم غداً' || 
+          student.tomorrow_status === 'حضور';
+
+        return isMyStudent && hasConfirmedAttendance;
       });
 
-      console.log('✅ الطلاب المكتشفون في المتصفح:', myStudents);
+      console.log('✅ الطلاب المؤكدون المداومون فقط عند السائق:', myStudents);
 
       if (typeof setDriverStudents === 'function') {
         setDriverStudents(myStudents);
