@@ -880,10 +880,7 @@ const fetchStudentsForDriver = async (driver) => {
 };
 
   // 📍 دالة جلب// 🌟 حالات ودالة تقييم الطالب للإدارة
-  const [ratingStudent, setRatingStudent] = useState(null);
-  const [ratingStars, setRatingStars] = useState(5);
-  const [ratingNotes, setRatingNotes] = useState('');
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+ 
 
   const handleSubmitRating = async () => {
     if (!ratingStudent) return;
@@ -1757,7 +1754,10 @@ function DriverView({ user, setUser, supabase }) {
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
   const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
-  
+  const [ratingStudent, setRatingStudent] = React.useState(null);
+  const [ratingStars, setRatingStars] = React.useState(5);
+  const [ratingNotes, setRatingNotes] = React.useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
   // 🟢 كود التوقيت والتحقق من موافقة الإدارة
   const [isApprovedByAdmin, setIsApprovedByAdmin] = React.useState(true);
   const [isAfter9PM, setIsAfter9PM] = React.useState(false);
