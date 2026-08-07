@@ -1448,7 +1448,7 @@ if (user && user.role === 'driver') {
         </button>
 
       </div>
-     )}
+     
           {/* 🟢 كارت رحلة الذهاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
