@@ -879,7 +879,42 @@ const fetchStudentsForDriver = async (driver) => {
   }
 };
 
-  // 📍 دالة جلب وتحديث الموقع على الخريطة
+  // 📍 دالة جلب// 🌟 حالات ودالة تقييم الطالب للإدارة
+  const [ratingStudent, setRatingStudent] = useState(null);
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingNotes, setRatingNotes] = useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  const handleSubmitRating = async () => {
+    if (!ratingStudent) return;
+    try {
+      setIsSubmittingRating(true);
+
+      const { error } = await supabase
+        .from('students')
+        .update({
+          driver_rating: ratingStars,
+          driver_notes: ratingNotes
+        })
+        .eq('id', ratingStudent.id);
+
+      if (error) throw error;
+
+      alert('✅ تم إرسال التقييم والملاحظة للإدارة بنجاح!');
+      setRatingStudent(null);
+      setRatingNotes('');
+      setRatingStars(5);
+
+      if (typeof fetchStudentsForDriver === 'function' && user) {
+        fetchStudentsForDriver(user);
+      }
+    } catch (err) {
+      console.error('خطأ التقييم:', err);
+      alert('❌ حدث خطأ أثناء إرسال التقييم: ' + err.message);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  }; وتحديث الموقع على الخريطة
   const handleSaveLocation = () => {
     if (!navigator.geolocation) {
       alert('❌ نظام الـ GPS غير مدعوم في متصفحك');
@@ -2036,123 +2071,205 @@ const handleCompleteTrip = async () => {
           </div>
 
          {/* قائمة الطلاب */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
-                <span className="text-base">🎓</span> طلاب خط السائق
-              </h3>
-              <div className="flex items-center gap-2">
-                {!isChatWindowOpen && (
-                  <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
-                    🔒 المراسلة (6-9 ص)
+<div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
+  <div className="flex items-center justify-between mb-1">
+    <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
+      <span className="text-base">🎓</span> طلاب خط السائق
+    </h3>
+    <div className="flex items-center gap-2">
+      {!isChatWindowOpen && (
+        <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
+          🔒 المراسلة (6-9 ص)
+        </span>
+      )}
+      <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+        {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length} مداومين
+      </span>
+    </div>
+  </div>
+
+  {loading ? (
+    <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
+  ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length === 0 ? (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
+      <p className="text-2xl">📭</p>
+      <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
+      <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
+        <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
+        <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
+        <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
+      </div>
+    </div>
+  ) : (
+    <div className="space-y-2">
+      {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').map((student, index) => {
+        const isAbsent = absentStudentsList.includes(student);
+        return (
+          <div 
+            key={student.id || index} 
+            className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
+              student.is_boarded ? 'bg-emerald-50/60 border-emerald-300' : isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                student.is_boarded ? 'bg-emerald-100 text-emerald-700' : isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
+              }`}>
+                {index + 1}
+              </span>
+              <div>
+                <span className="font-bold text-slate-800 text-xs block">
+                  {student.name || student.full_name}
+                </span>
+                <span className="text-[10px] text-slate-500 block">
+                  📍 {student.university || student.location || 'غير محدد'}
+                </span>
+                {student.driver_rating && (
+                  <span className="inline-block mt-0.5 text-[10px] text-amber-600 font-bold">
+                    ⭐ {student.driver_rating}/5
                   </span>
                 )}
-                <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-                  {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length} مداومين
-                </span>
+                {isAbsent && (
+                  <span className="inline-block mt-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded font-bold">
+                    🔴 غير مداوم
+                  </span>
+                )}
+                {student.is_boarded && (
+                  <span className="inline-block mt-1 bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded font-bold mr-1">
+                    🙋‍♂️ صعد للمركبة
+                  </span>
+                )}
               </div>
             </div>
 
-            {loading ? (
-              <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
-            ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length === 0 ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
-                <p className="text-2xl">📭</p>
-                <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
-                <div className="text-[11px] bg-white/80 p-2.5 rounded-xl border border-amber-200 text-right space-y-1 font-mono">
-                  <p className="font-sans font-bold text-slate-700">📌 البيانات المحثوث عنها حالياً:</p>
-                  <p>• اسم السائق: <span className="text-blue-600 font-bold">{user.name}</span></p>
-                  <p>• رقم الهاتف: <span className="text-blue-600 font-bold">{user.phone}</span></p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').map((student, index) => {
-                  const isAbsent = absentStudentsList.includes(student);
-                  return (
-                    <div 
-                      key={student.id || index} 
-                      className={`p-3 border rounded-xl flex items-center justify-between shadow-sm transition ${
-                        student.is_boarded ? 'bg-emerald-50/60 border-emerald-300' : isAbsent ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          student.is_boarded ? 'bg-emerald-100 text-emerald-700' : isAbsent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <div>
-                          <span className="font-bold text-slate-800 text-xs block">
-                            {student.name || student.full_name}
-                          </span>
-                          <span className="text-[10px] text-slate-500 block">
-                            📍 {student.university || student.location || 'غير محدد'}
-                          </span>
-                          {isAbsent && (
-                            <span className="inline-block mt-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded font-bold">
-                              🔴 غير مداوم
-                            </span>
-                          )}
-                          {student.is_boarded && (
-                            <span className="inline-block mt-1 bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded font-bold mr-1">
-                              🙋‍♂️ صعد للمركبة
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+              <button
+                onClick={() => {
+                  if (!student.latitude || !student.longitude) {
+                    alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
+                    return;
+                  }
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
+                }}
+                className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
+              >
+                📍 الموقع
+              </button>
 
-                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                        <button
-                          onClick={() => {
-                            if (!student.latitude || !student.longitude) {
-                              alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
-                              return;
-                            }
-                            window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
-                          }}
-                          className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
-                        >
-                          📍 الموقع
-                        </button>
+              <button
+                onClick={() => handleStudentBoarded(student.id)}
+                disabled={student.is_boarded}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                  student.is_boarded 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                }`}
+              >
+                {student.is_boarded ? '✔️ صعد' : '🙋‍♂️ صعد معي'}
+              </button>
 
-                        <button
-                          onClick={() => handleStudentBoarded(student.id)}
-                          disabled={student.is_boarded}
-                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
-                            student.is_boarded 
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
-                              : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
-                          }`}
-                        >
-                          {student.is_boarded ? '✔️ صعد' : '🙋‍♂️ صعد معي'}
-                        </button>
+              <button
+                onClick={() => {
+                  if (!isChatWindowOpen) {
+                    alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
+                    return;
+                  }
+                  setSelectedStudentForChat(student);
+                  setIsDriverChatOpen(true);
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+                  isChatWindowOpen 
+                    ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
+                    : 'bg-slate-300 text-slate-600 cursor-pointer'
+                }`}
+              >
+                💬 مراسلة
+              </button>
 
-                        <button
-                          onClick={() => {
-                            if (!isChatWindowOpen) {
-                              alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
-                              return;
-                            }
-                            setSelectedStudentForChat(student);
-                            setIsDriverChatOpen(true);
-                          }}
-                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
-                            isChatWindowOpen 
-                              ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
-                              : 'bg-slate-300 text-slate-600 cursor-pointer'
-                          }`}
-                        >
-                          💬 مراسلة
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              {/* 🟢 زر التقييم الجديد */}
+              <button
+                onClick={() => {
+                  setRatingStudent(student);
+                  setRatingStars(student.driver_rating || 5);
+                  setRatingNotes(student.driver_notes || '');
+                }}
+                className="bg-purple-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-purple-700 transition inline-block cursor-pointer"
+              >
+                ⭐ تقييم
+              </button>
+            </div>
           </div>
+        );
+      })}
+    </div>
+  )}
+</div>
 
+          {/* 🌟 نافذة تقييم الطالب المنبثقة */}
+      {ratingStudent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 dir-rtl">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-slate-800 text-sm">
+                ⭐ تقييم الطالب: <span className="text-purple-600">{ratingStudent.name || ratingStudent.full_name}</span>
+              </h3>
+              <button 
+                onClick={() => setRatingStudent(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* اختيار عدد النجوم */}
+            <div className="space-y-1.5 text-center">
+              <label className="text-xs font-bold text-slate-600 block">عدد النجوم:</label>
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRatingStars(star)}
+                    className={`text-2xl transition transform hover:scale-110 ${
+                      star <= ratingStars ? 'text-amber-400' : 'text-slate-200'
+                    }`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* كتابة الملاحظة */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-600 block">ملاحظات للإدارة:</label>
+              <textarea
+                value={ratingNotes}
+                onChange={(e) => setRatingNotes(e.target.value)}
+                placeholder="اكتب ملاحظاتك على الطالب للإدارة (مثلاً: التأخير، عدم الالتزام بالوقت...)"
+                className="w-full text-xs p-2.5 border rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none resize-none h-20 text-slate-700"
+              />
+            </div>
+
+            {/* أزرار الإرسال والإلغاء */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={handleSubmitRating}
+                disabled={isSubmittingRating}
+                className="flex-1 bg-purple-600 text-white font-bold py-2 rounded-xl text-xs hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                {isSubmittingRating ? 'جاري الإرسال...' : 'حفظ وإرسال للإدارة'}
+              </button>
+              <button
+                onClick={() => setRatingStudent(null)}
+                className="bg-slate-100 text-slate-600 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-200 transition"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
           {/* 🎒 طلاب الرحلة الثانية */}
           {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
             <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm" dir="rtl">
