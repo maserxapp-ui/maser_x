@@ -2543,8 +2543,15 @@ export function AdminRewardsAndRatings({ supabase }) {
   const [activeSubTab, setActiveSubTab] = useState('rewards'); // 'rewards' or 'ratings'
   const [loading, setLoading] = useState(true);
 const [students, setStudents] = useState([]);
-  useEffect(() => {
+ useEffect(() => {
     loadAdminData();
+
+    // ⚡ تحديث البيانات كل 5 ثوانٍ تلقائياً
+    const interval = setInterval(() => {
+      loadAdminData();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
  const loadAdminData = async () => {
