@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
+import { AdminRewardsAndRatings } from './UserViews';
 // 📅 دالة حساب الأيام المتبقية لانتهاء الاشتراك
 export const getRemainingSubscriptionDays = (expiryDateStr) => {
   if (!expiryDateStr) return 0;
@@ -1787,13 +1788,10 @@ else if (confirmedAttending) {
             <TripsManagement supabase={supabase} />
           )}
 
-          {(activeTab === 'expenses' || activeTab === 'reports') && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center space-y-3">
-              <div className="text-4xl">📊</div>
-              <h3 className="font-bold text-slate-800">التقارير الحسابية والمصروفات</h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">إجمالي الواردات الحالية: <span className="font-bold text-emerald-600">{totalCollectedRevenue.toLocaleString()} د.ع</span></p>
-            </div>
-          )}
+         {/* 🏆 تبويب المكافآت والمصروفات الحسابية */}
+      {(activeTab === 'expenses' || activeTab === 'rewards' || activeTab === 'reports') && (
+        <AdminRewardsAndRatings supabase={supabase} />
+      )}
 
         </main>
 
