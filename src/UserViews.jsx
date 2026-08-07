@@ -2411,3 +2411,177 @@ const handleCompleteTrip = async () => {
     </div>
   );
 }
+export function AdminRewardsAndRatings({ supabase }) {
+  const [rewards, setRewards] = useState([]);
+  const [ratings, setRatings] = useState([]);
+  const [activeSubTab, setActiveSubTab] = useState('rewards'); // 'rewards' or 'ratings'
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  const loadAdminData = async () => {
+    setLoading(true);
+    // جلب طلبات المكافآت مع بيانات السائق
+    const { data: rewardsData } = await supabase
+      .from('driver_rewards')
+      .select('*, drivers(name, phone, points, current_tier)')
+      .order('created_at', { ascending: false });
+
+    // جلب التقييمات مع بيانات الطالب والسائق
+    const { data: ratingsData } = await supabase
+      .from('driver_ratings')
+      .select('*, students(name), drivers(name)')
+      .order('created_at', { ascending: false });
+
+    setRewards(rewardsData || []);
+    setRatings(ratingsData || []);
+    setLoading(false);
+  };
+
+  // اعتماد المكافأة
+  const handleApproveReward = async (reward) => {
+    if (!confirm(`هل أنت تأكد من اعتماد مكافأة بقيمة ${reward.reward_amount.toLocaleString()} د.ع للسائق ${reward.drivers?.name}؟`)) return;
+
+    try {
+      // 1. تحديث حالة المكافأة إلى مصروفة
+      await supabase
+        .from('driver_rewards')
+        .update({ status: 'approved' })
+        .eq('id', reward.id);
+
+      // 2. تسجيلها تلقائياً في جدول المصروفات الإدارية
+      await supabase.from('expenses').insert({
+        title: `مكافأة المستوى ${reward.tier_name} - السائق ${reward.drivers?.name}`,
+        amount: reward.reward_amount,
+        category: 'مكافآت السائقين',
+        date: new Date().toISOString().split('T')[0]
+      });
+
+      alert('✅ تم اعتماد المكافأة وتحويلها لقائمة المصروفات بنجاح.');
+      loadAdminData();
+    } catch (err) {
+      alert('خطأ في العملية: ' + err.message);
+    }
+  };
+
+  // رفض المكافأة
+  const handleRejectReward = async (rewardId) => {
+    const reason = prompt('يرجى كتابة سبب رفض المكافأة:');
+    if (!reason) return;
+
+    try {
+      await supabase
+        .from('driver_rewards')
+        .update({ status: 'rejected', rejection_reason: reason })
+        .eq('id', rewardId);
+
+      alert('تم تسجيل رفض المكافأة.');
+      loadAdminData();
+    } catch (err) {
+      alert('خطأ: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="p-6 text-right dir-rtl space-y-6">
+      {/* التبويبات العلوي للقسم */}
+      <div className="flex border-b gap-4">
+        <button
+          onClick={() => setActiveSubTab('rewards')}
+          className={`pb-2 px-4 font-bold border-b-2 ${activeSubTab === 'rewards' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500'}`}
+        >
+          🎁 مكافآت السائقين
+        </button>
+        <button
+          onClick={() => setActiveSubTab('ratings')}
+          className={`pb-2 px-4 font-bold border-b-2 ${activeSubTab === 'ratings' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500'}`}
+        >
+          ⭐ سجل التقييمات
+        </button>
+      </div>
+
+      {loading ? (
+        <p>جاري تحميل البيانات...</p>
+      ) : activeSubTab === 'rewards' ? (
+        /* جدول المكافآت */
+        <div className="bg-white rounded-xl shadow border overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="p-3">اسم السائق</th>
+                <th className="p-3">المستوى الحالي</th>
+                <th className="p-3">النقاط</th>
+                <th className="p-3">المكافأة المستحقة</th>
+                <th className="p-3">السبب</th>
+                <th className="p-3">تاريخ الاستحقاق</th>
+                <th className="p-3">الحالة / الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rewards.map((r) => (
+                <tr key={r.id} className="border-b hover:bg-gray-50">
+                  <td className="p-3 font-semibold">{r.drivers?.name || 'سائق غير معروف'}</td>
+                  <td className="p-3">{r.tier_name}</td>
+                  <td className="p-3">{r.drivers?.points || 0} نقطة</td>
+                  <td className="p-3 font-bold text-emerald-600">{r.reward_amount.toLocaleString()} د.ع</td>
+                  <td className="p-3">الوصول للمستوى {r.tier_name}</td>
+                  <td className="p-3">{new Date(r.created_at).toLocaleDateString('ar-IQ')}</td>
+                  <td className="p-3">
+                    {r.status === 'pending' ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveReward(r)}
+                          className="bg-emerald-600 text-white text-xs px-3 py-1 rounded hover:bg-emerald-700"
+                        >
+                          اعتماد
+                        </button>
+                        <button
+                          onClick={() => handleRejectReward(r.id)}
+                          className="bg-rose-600 text-white text-xs px-3 py-1 rounded hover:bg-rose-700"
+                        >
+                          رفض
+                        </button>
+                      </div>
+                    ) : r.status === 'approved' ? (
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-bold">✅ تم الاعتماد والمرفوع للمصروفات</span>
+                    ) : (
+                      <span className="text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded font-bold">❌ مرفوض ({r.rejection_reason})</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* جدول تقييمات الطلاب */
+        <div className="bg-white rounded-xl shadow border overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="p-3">اسم الطالب</th>
+                <th className="p-3">اسم السائق</th>
+                <th className="p-3">التقييم</th>
+                <th className="p-3">الملاحظات</th>
+                <th className="p-3">التاريخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ratings.map((rt) => (
+                <tr key={rt.id} className="border-b hover:bg-gray-50">
+                  <td className="p-3 font-medium">{rt.students?.name || 'طالب'}</td>
+                  <td className="p-3 font-medium">{rt.drivers?.name || 'سائق'}</td>
+                  <td className="p-3 font-bold text-amber-500">{"★".repeat(rt.rating)} ({rt.rating}/5)</td>
+                  <td className="p-3 text-gray-600">{rt.comment || '-'}</td>
+                  <td className="p-3 text-gray-500">{new Date(rt.created_at).toLocaleDateString('ar-IQ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
