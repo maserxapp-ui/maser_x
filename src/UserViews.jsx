@@ -15,6 +15,150 @@ const STUDENT_QUICK_MESSAGES = [
   "👀 لا أستطيع رؤيتك.", "🅿️ أنا في الكراج.", "🏫 أنا عند البوابة الرئيسية.", "📍 أين موقعك؟", "👋 أنا بانتظارك.",
   "✅ يمكنك الانطلاق.", "🚗 هل وصلت؟", "⌛ كم تبقى على وصولك؟"
 ];
+// 🧮 دالة إضافة النقاط وفحص استحقاق المستويات والمكافآت
+export const addDriverPoints = async (driverId, pointsToAdd, supabase) => {
+  try {
+    if (!driverId || !supabase) return;
+
+    // 1️⃣ جلب بيانات السائق الحالية
+    const { data: driver } = await supabase
+      .from('drivers')
+      .select('points, current_tier')
+      .eq('id', driverId)
+      .maybeSingle();
+
+    if (!driver) return;
+
+    const currentPoints = (driver.points || 0) + pointsToAdd;
+    const finalPoints = Math.max(0, currentPoints); // منع النقاط بالسالب
+
+    // 2️⃣ تحديد المستوى الجديد بناءً على النقاط
+    let newTier = 'برونزي';
+    if (finalPoints >= 601) newTier = 'ماسي';
+    else if (finalPoints >= 301) newTier = 'ذهبي';
+    else if (finalPoints >= 101) newTier = 'فضي';
+
+    // 3️⃣ تحديث بيانات السائق في قاعدة البيانات
+    await supabase
+      .from('drivers')
+      .update({ points: finalPoints, current_tier: newTier })
+      .eq('id', driverId);
+
+    // 4️⃣ فحص استحقاق المكافآت عند فتح مستوى جديد
+    const tierRewards = {
+      'فضي': 10000,
+      'ذهبي': 15000,
+      'ماسي': 25000
+    };
+
+    if (tierRewards[newTier]) {
+      // التأكد من عدم وجود طلب مكافأة سابق لنفس المستوى
+      const { data: existingReward } = await supabase
+        .from('driver_rewards')
+        .select('id')
+        .eq('driver_id', driverId)
+        .eq('tier_name', newTier)
+        .maybeSingle();
+
+      if (!existingReward) {
+        // إنشاء طلب مكافأة جديد للإدارة
+        await supabase.from('driver_rewards').insert({
+          driver_id: driverId,
+          tier_name: newTier,
+          reward_amount: tierRewards[newTier],
+          status: 'pending'
+        });
+      }
+    }
+  } catch (err) {
+    console.error("خطأ في تحديث نقاط السائق:", err);
+  }
+};
+
+// 🌟 نافذة التقييم التلقائية للطالب عند إتمام الرحلة
+function DriverRatingModal({ driverId, studentId, supabase, onClose }) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // 1️⃣ حفظ التقييم في جدول driver_ratings
+      const { error } = await supabase.from('driver_ratings').insert({
+        student_id: studentId,
+        driver_id: driverId,
+        rating: Number(rating),
+        comment: comment
+      });
+
+      if (error) throw error;
+
+      // 2️⃣ إضافة النقاط للسائق تلقائياً حسب التقييم
+      let points = 0;
+      if (rating === 5) points = 10;
+      else if (rating === 4) points = 5;
+
+      if (points > 0) {
+        await addDriverPoints(driverId, points, supabase);
+      }
+
+      alert('🌟 شكرًا لك! تم إرسال التقييم واحتساب النقاط للسائق.');
+      onClose();
+    } catch (err) {
+      alert('حدث خطأ أثناء حفظ التقييم: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md text-right dir-rtl shadow-2xl border">
+        <h3 className="text-xl font-bold mb-2 text-gray-800">⭐ تقييم السائق</h3>
+        <p className="text-gray-500 mb-4 text-sm">أكمل السائق رحلته بنجاح! كيف كانت تجربتك معه اليوم؟</p>
+        
+        {/* اختيار النجوم من 1 إلى 5 */}
+        <div className="flex justify-center gap-2 mb-5 text-4xl cursor-pointer">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span 
+              key={star} 
+              onClick={() => setRating(star)}
+              className={star <= rating ? "text-amber-400 scale-110 transition-transform" : "text-gray-300"}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+
+        {/* خانة الملاحظات الاختيارية */}
+        <textarea 
+          placeholder="اكتب ملاحظتك عن السائق هنا (اختياري)..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl p-3 text-sm mb-4 focus:outline-none focus:border-amber-500"
+          rows={3}
+        />
+
+        <div className="flex gap-2">
+          <button 
+            onClick={handleSubmit} 
+            disabled={loading}
+            className="flex-1 bg-amber-500 text-white py-2.5 rounded-xl font-bold hover:bg-amber-600 transition"
+          >
+            {loading ? 'جاري الإرسال...' : 'إرسال التقييم'}
+          </button>
+          <button 
+            onClick={onClose}
+            className="px-4 bg-gray-100 rounded-xl font-bold text-gray-600 hover:bg-gray-200"
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ChatModal({ isOpen, onClose, studentId, driverId, currentUserRole, supabase }) {
   const [messages, setMessages] = React.useState([]);
@@ -172,13 +316,53 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
   // 🚕 حالة ودالة جلب بيانات سائق العودة للطالبة
   const [assignedReturnDriver, setAssignedReturnDriver] = useState(null);
 // 💬 حالات ودالة التحكم بالمحادثة
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatDriverId, setActiveChatDriverId] = useState(null);
+// 🌟 فحص تلقائي: إذا أتم السائق الرحلة ولم يقم الطالب بتبليغ التقييم اليوم، تفتح النافذة فوراً
+  useEffect(() => {
+    const checkDriverTripAndRating = async () => {
+      const activeDriverId = user?.driver_id || user?.return_driver_id;
+      if (!user?.id || !activeDriverId) return;
 
+      try {
+        // 1️⃣ جلب حالة رحلة السائق
+        const { data: driverData } = await supabase
+          .from('drivers')
+          .select('trip_status')
+          .eq('id', activeDriverId)
+          .maybeSingle();
+
+        // 2️⃣ إذا كانت رحلة السائق مكتملة (completed)
+        if (driverData?.trip_status === 'completed') {
+          const today = new Date().toISOString().split('T')[0];
+
+          // 3️⃣ التأكد هل قام الطالب بتقييمه اليوم؟
+          const { data: existingRating } = await supabase
+            .from('driver_ratings')
+            .select('id')
+            .eq('student_id', user.id)
+            .eq('driver_id', activeDriverId)
+            .gte('created_at', `${today}T00:00:00`)
+            .maybeSingle();
+
+          // إذا لم يقيّمه اليوم، تفتح نافذة التقييم تلقائياً
+          if (!existingRating) {
+            setShowRatingModal(true);
+          }
+        }
+      } catch (err) {
+        console.error("خطأ في فحص تقييم السائق:", err);
+      }
+    };
+
+    checkDriverTripAndRating();
+  }, [user?.id, user?.driver_id, user?.return_driver_id]);
+  
 // 🔄 جلب أحدث حالة للطالب عند الـ Refresh + الاستماع للتحديث المباشر من الأدمن
   useEffect(() => {
     if (!user?.id) return;
@@ -1397,6 +1581,15 @@ if (user && user.role === 'driver') {
   currentUserRole="student"                 // يحدد دور المستخدم كطالبة
   supabase={supabase}                       // متصفح Supabase
 />
+      {/* 🌟 نافذة تقييم السائق للطالب */}
+      {showRatingModal && (
+        <DriverRatingModal
+          driverId={user?.driver_id || user?.return_driver_id}
+          studentId={user?.id}
+          supabase={supabase}
+          onClose={() => setShowRatingModal(false)}
+        />
+      )}
     </div>
   );
 }
