@@ -882,36 +882,7 @@ const fetchStudentsForDriver = async (driver) => {
   // 📍 دالة جلب// 🌟 حالات ودالة تقييم الطالب للإدارة
  
 
-  const handleSubmitRating = async () => {
-    if (!ratingStudent) return;
-    try {
-      setIsSubmittingRating(true);
 
-      const { error } = await supabase
-        .from('students')
-        .update({
-          driver_rating: ratingStars,
-          driver_notes: ratingNotes
-        })
-        .eq('id', ratingStudent.id);
-
-      if (error) throw error;
-
-      alert('✅ تم إرسال التقييم والملاحظة للإدارة بنجاح!');
-      setRatingStudent(null);
-      setRatingNotes('');
-      setRatingStars(5);
-
-      if (typeof fetchStudentsForDriver === 'function' && user) {
-        fetchStudentsForDriver(user);
-      }
-    } catch (err) {
-      console.error('خطأ التقييم:', err);
-      alert('❌ حدث خطأ أثناء إرسال التقييم: ' + err.message);
-    } finally {
-      setIsSubmittingRating(false);
-    }
-  }; 
   const handleSaveLocation = () => {
     if (!navigator.geolocation) {
       alert('❌ نظام الـ GPS غير مدعوم في متصفحك');
@@ -1758,6 +1729,38 @@ function DriverView({ user, setUser, supabase }) {
   const [ratingStars, setRatingStars] = React.useState(5);
   const [ratingNotes, setRatingNotes] = React.useState('');
   const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
+  // 🌟 دالة حفظ وإرسال التقييم للإدارة
+  const handleSubmitRating = async () => {
+    if (!ratingStudent) return;
+    try {
+      setIsSubmittingRating(true);
+
+      const { error } = await supabase
+        .from('students')
+        .update({
+          driver_rating: ratingStars,
+          driver_notes: ratingNotes
+        })
+        .eq('id', ratingStudent.id);
+
+      if (error) throw error;
+
+      alert('✅ تم إرسال التقييم والملاحظة للإدارة بنجاح!');
+      setRatingStudent(null);
+      setRatingNotes('');
+      setRatingStars(5);
+
+      if (typeof fetchStudentsForDriver === 'function' && user) {
+        fetchStudentsForDriver(user);
+      }
+    } catch (err) {
+      console.error('خطأ التقييم:', err);
+      alert('❌ حدث خطأ أثناء إرسال التقييم: ' + err.message);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+  
   // 🟢 كود التوقيت والتحقق من موافقة الإدارة
   const [isApprovedByAdmin, setIsApprovedByAdmin] = React.useState(true);
   const [isAfter9PM, setIsAfter9PM] = React.useState(false);
