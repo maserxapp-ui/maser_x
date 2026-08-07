@@ -1729,6 +1729,26 @@ function DriverView({ user, setUser, supabase }) {
   const [ratingStars, setRatingStars] = React.useState(5);
   const [ratingNotes, setRatingNotes] = React.useState('');
   const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
+  // ⚡ تحديث بيانات السائق ونقاطه والمحفظة تلقائياً كل 5 ثوانٍ
+  React.useEffect(() => {
+    const refreshDriverData = async () => {
+      if (!user?.id) return;
+      const { data: updatedDriver } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (updatedDriver) {
+        setUser((prev) => ({ ...prev, ...updatedDriver }));
+      }
+    };
+
+    refreshDriverData();
+    const interval = setInterval(refreshDriverData, 5000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+  
   // 🌟 دالة حفظ وإرسال التقييم للإدارة
   const handleSubmitRating = async () => {
     if (!ratingStudent) return;
@@ -1788,10 +1808,17 @@ function DriverView({ user, setUser, supabase }) {
     }
   };
 
-  React.useEffect(() => {
+ React.useEffect(() => {
     fetchDriverReturnStudents();
-  }, [user]);
 
+    // ⚡ تحديث قائمة الطلاب كل 5 ثوانٍ
+    const interval = setInterval(() => {
+      fetchDriverReturnStudents();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
+  
   React.useEffect(() => {
     const checkTimeAndApproval = async () => {
       const now = new Date();
