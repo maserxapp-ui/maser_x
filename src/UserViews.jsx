@@ -2035,7 +2035,7 @@ const handleCompleteTrip = async () => {
             </div>
           </div>
 
-          {/* قائمة الطلاب */}
+         {/* قائمة الطلاب */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
@@ -2048,14 +2048,14 @@ const handleCompleteTrip = async () => {
                   </span>
                 )}
                 <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
-                  {students.length} مسجلين
+                  {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length} مداومين
                 </span>
               </div>
             </div>
 
             {loading ? (
               <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
-            ) : students.length === 0 ? (
+            ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length === 0 ? (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
                 <p className="text-2xl">📭</p>
                 <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
@@ -2067,7 +2067,7 @@ const handleCompleteTrip = async () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {students.map((student, index) => {
+                {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').map((student, index) => {
                   const isAbsent = absentStudentsList.includes(student);
                   return (
                     <div 
