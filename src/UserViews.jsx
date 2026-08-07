@@ -2542,12 +2542,12 @@ export function AdminRewardsAndRatings({ supabase }) {
   const [ratings, setRatings] = useState([]);
   const [activeSubTab, setActiveSubTab] = useState('rewards'); // 'rewards' or 'ratings'
   const [loading, setLoading] = useState(true);
-
+const [students, setStudents] = useState([]);
   useEffect(() => {
     loadAdminData();
   }, []);
 
-  const loadAdminData = async () => {
+ const loadAdminData = async () => {
     setLoading(true);
     // جلب طلبات المكافآت مع بيانات السائق
     const { data: rewardsData } = await supabase
@@ -2561,8 +2561,14 @@ export function AdminRewardsAndRatings({ supabase }) {
       .select('*, students(name), drivers(name)')
       .order('created_at', { ascending: false });
 
+    // 🌟 جلب بيانات الطلاب وتقييمات السائقين لهم
+    const { data: studentsData } = await supabase
+      .from('students')
+      .select('*');
+
     setRewards(rewardsData || []);
     setRatings(ratingsData || []);
+    setStudents(studentsData || []);
     setLoading(false);
   };
 
@@ -2737,7 +2743,7 @@ export function AdminRewardsAndRatings({ supabase }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {students && students.filter(s => s.driver_rating).length > 0 ? (
+                    {typeof students !== 'undefined' && students && students.filter(s => s.driver_rating).length > 0 ? (
                       students
                         .filter(s => s.driver_rating)
                         .map((student) => (
@@ -2758,7 +2764,7 @@ export function AdminRewardsAndRatings({ supabase }) {
                     ) : (
                       <tr>
                         <td colSpan="5" className="p-4 text-center text-gray-400">
-                          لا توجد تقييمات مسجلة من السائقين للطلاب حتى الآن
+                          لا توجد تقييمات مسجلة من السائقين حتى الآن
                         </td>
                       </tr>
                     )}
