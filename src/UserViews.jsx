@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { EmployeeView } from './EmployeeViews';
 
 // 💬 مكون نافذة المحادثة المباشرة (الرسائل السريعة فقط + لون نص أسود واضح)
 const DRIVER_QUICK_MESSAGES = [
@@ -479,7 +480,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
-  
+  const [showEmpLogin, setShowEmpLogin] = useState(false);
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
@@ -1230,7 +1231,39 @@ const handleStudentAction = async (actionType, labelText) => {
           </button>
         </div>
         </form>
+{/* 👩‍🏫 زر تسجيل دخول الموظفة */}
+<div style={{ marginTop: '15px', textAlign: 'center' }}>
+  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>هل أنتِ موظفة / معلمة؟</p>
+  <button
+    type="button"
+    onClick={() => setShowEmpLogin(true)}
+    style={{
+      width: '100%',
+      padding: '10px 15px',
+      backgroundColor: '#f59e0b',
+      color: 'white',
+      border: 'none',
+      borderRadius: '10px',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      fontSize: '14px'
+    }}
+  >
+    👩‍🏫 تسجيل الدخول ك موظفة
+  </button>
+</div>
 
+{/* النافذة المنبثقة للوجن الموظفة */}
+{showEmpLogin && (
+  <EmployeeLoginModal
+    isOpen={showEmpLogin}
+    onClose={() => setShowEmpLogin(false)}
+    onLoginSuccess={(employeeData) => {
+      setUser({ ...employeeData, role: 'employee' });
+    }}
+    supabase={supabase}
+  />
+)}
         <button onClick={onBackToAdmin} style={{ marginTop: '25px', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline', fontSize: '12px' }}>
           الرجوع للوحة الإدارة
         </button>
