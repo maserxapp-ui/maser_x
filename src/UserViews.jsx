@@ -74,24 +74,37 @@ export const addDriverPoints = async (driverId, pointsToAdd, supabase) => {
     console.error("خطأ في تحديث نقاط السائق:", err);
   }
 };
+
 function DriverRewardsTab({ driver, supabase }) {
   const [rewardsHistory, setRewardsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRewardsHistory();
+    if (!driver?.id) return;
+
+    // جلب البيانات لأول مرة مع شاشة التحميل
+    fetchRewardsHistory(true);
+
+    // ⚡ تحديث آلي صامت كل 4 ثوانٍ في الخلفية
+    const interval = setInterval(() => {
+      fetchRewardsHistory(false);
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, [driver?.id]);
 
-  const fetchRewardsHistory = async () => {
+  const fetchRewardsHistory = async (isInitial = false) => {
     if (!driver?.id) return;
+    if (isInitial) setLoading(true);
+
     const { data } = await supabase
       .from('driver_rewards')
       .select('*')
       .eq('driver_id', driver.id)
       .order('created_at', { ascending: false });
-    
+
     setRewardsHistory(data || []);
-    setLoading(false);
+    if (isInitial) setLoading(false);
   };
 
   // احتساب النقاط والمستويات
@@ -191,7 +204,6 @@ function DriverRewardsTab({ driver, supabase }) {
     </div>
   );
 }
-
 // 🌟 نافذة التقييم التلقائية للطالب عند إتمام الرحلة
 function DriverRatingModal({ driverId, studentId, supabase, onClose }) {
   const [rating, setRating] = useState(5);
