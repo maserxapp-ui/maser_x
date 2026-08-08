@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { EmployeeView } from './EmployeeViews';
+import { EmployeeView, AdminEmployeeManagement } from './EmployeeViews';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
 import { AdminRewardsAndRatings } from './UserViews';
@@ -954,14 +954,15 @@ if (viewMode === 'user') {
   </button>
 
           <nav className="p-3 space-y-1">
-            {[
-              { id: 'main', label: 'الرئيسية', icon: '🏠' },
-              { id: 'subscribers', label: 'المشتركون', icon: '👥' },
-              { id: 'drivers', label: 'السائقون والسيارات', icon: '🚗' },
-              { id: 'trips', label: 'الرحلات', icon: '🗺️' },
-              { id: 'expenses', label: 'المصروفات', icon: '💵' },
-              { id: 'reports', label: 'التقارير المالية', icon: '📊' },
-            ].map((item) => (
+           {[
+            { id: 'main', label: 'الرئيسية', icon: '🏠' },
+            { id: 'subscribers', label: 'المشتركون', icon: '👥' },
+            { id: 'drivers', label: 'السائقون والسيارات', icon: '🚘' },
+            { id: 'trips', label: 'الرحلات', icon: '🚌' },
+            { id: 'expenses', label: 'المصروفات', icon: '⚖️' },
+            { id: 'reports', label: 'التقارير المالية', icon: '📊' },
+            { id: 'employees', label: 'إدارة الموظفات', icon: '👩‍🏫' }, // 🌟 السطر الجديد
+          ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
@@ -1793,7 +1794,10 @@ else if (confirmedAttending) {
       {(activeTab === 'expenses' || activeTab === 'rewards' || activeTab === 'reports') && (
         <AdminRewardsAndRatings supabase={supabase} />
       )}
-
+{/* تبويب إدارة الموظفات */}
+{activeTab === 'employees' && (
+  <AdminEmployeeManagement supabase={supabase} />
+)}
         </main>
 
       </div>
