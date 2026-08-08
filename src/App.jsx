@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { EmployeeView } from './EmployeeViews';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
 import { AdminRewardsAndRatings } from './UserViews';
