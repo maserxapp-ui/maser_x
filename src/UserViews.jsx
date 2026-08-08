@@ -75,12 +75,12 @@ export const addDriverPoints = async (driverId, pointsToAdd, supabase) => {
   }
 };
 
-function DriverRewardsTab({ driver, supabase }) {
+function DriverRewardsTab({ driver, setUser, supabase }) {
   const [rewardsHistory, setRewardsHistory] = useState([]);
-  const [driverData, setDriverData] = useState(driver); // 🌟 حالة آلية لنقاط ومستوى السائق
+  const [driverData, setDriverData] = useState(driver);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // حالة زر التحديث اليدوي
 
-  // تحديث الحالة عند تغير الـ prop
   useEffect(() => {
     setDriverData(driver);
   }, [driver]);
@@ -88,44 +88,54 @@ function DriverRewardsTab({ driver, supabase }) {
   useEffect(() => {
     if (!driver?.id) return;
 
-    // جلب البيانات لأول مرة مع شاشة التحميل
     fetchRewardsHistory(true);
 
-    // ⚡ تحديث آلي صامت كل 4 ثوانٍ (ل النقاط + المستوى + السجل)
+    // تحديث تلقائي كل 5 ثوانٍ
     const interval = setInterval(() => {
       fetchRewardsHistory(false);
-    }, 4000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [driver?.id]);
 
-  const fetchRewardsHistory = async (isInitial = false) => {
+  // 🌟 دالة جلب وتحديث النقاط والمكافآت
+  const fetchRewardsHistory = async (showLoading = false) => {
     if (!driver?.id) return;
-    if (isInitial) setLoading(true);
+    if (showLoading) setRefreshing(true);
 
-    // 1. جلب سجل المكافآت الأحدث
-    const { data: rewards } = await supabase
-      .from('driver_rewards')
-      .select('*')
-      .eq('driver_id', driver.id)
-      .order('created_at', { ascending: false });
+    try {
+      // 1. جلب بيانات السائق والنقاط الأحدث من قاعدة البيانات
+      const { data: updatedDriver } = await supabase
+        .from('drivers')
+        .select('*')
+        .eq('id', driver.id)
+        .maybeSingle();
 
-    // 2. 🌟 جلب النقاط والمستوى الأحدث للسائق من قاعدة البيانات مباشرة
-    const { data: updatedDriver } = await supabase
-      .from('drivers')
-      .select('*')
-      .eq('id', driver.id)
-      .maybeSingle();
+      // 2. جلب سجل المكافآت
+      const { data: rewards } = await supabase
+        .from('driver_rewards')
+        .select('*')
+        .eq('driver_id', driver.id)
+        .order('created_at', { ascending: false });
 
-    setRewardsHistory(rewards || []);
-    if (updatedDriver) {
-      setDriverData(updatedDriver); // تحديث النقاط والمستوى فوراً
+      setRewardsHistory(rewards || []);
+
+      if (updatedDriver) {
+        setDriverData(updatedDriver);
+        // تحديث حساب السائق العام إذا كان متاحاً
+        if (typeof setUser === 'function') {
+          setUser((prev) => ({ ...prev, ...updatedDriver }));
+        }
+      }
+    } catch (err) {
+      console.error('خطأ في تحديث البيانات:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    if (isInitial) setLoading(false);
   };
 
-  // 🌟 احتساب النقاط والمستويات بناءً على البيانات المُحدّثة
+  // احتساب النقاط والمستويات
   const points = driverData?.points || 0;
   const currentTier = driverData?.current_tier || 'برونزي';
 
@@ -140,7 +150,6 @@ function DriverRewardsTab({ driver, supabase }) {
   const pointsToNext = Math.max(0, currentInfo.nextLimit - points);
   const progressPercent = Math.min(100, (points / currentInfo.nextLimit) * 100);
 
-  // المكافأة المستحقة بانتظار الاعتماد
   const pendingReward = rewardsHistory.find(r => r.status === 'pending');
 
   return (
@@ -148,8 +157,19 @@ function DriverRewardsTab({ driver, supabase }) {
       {/* 💳 بطاقة ملخص المكافآت الرئيسي */}
       <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-lg">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">المستوى الحالي: {currentTier}</span>
-          <span className="text-2xl">🎁</span>
+          <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-semibold">
+            المستوى الحالي: {currentTier}
+          </span>
+          
+          {/* 🔄 زر التحديث اليدوي الجديد */}
+          <button
+            onClick={() => fetchRewardsHistory(true)}
+            disabled={refreshing}
+            className="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <span className={refreshing ? 'animate-spin' : ''}>🔄</span>
+            {refreshing ? 'جاري التحديث...' : 'تحديث النقاط'}
+          </button>
         </div>
 
         <div className="mb-4">
