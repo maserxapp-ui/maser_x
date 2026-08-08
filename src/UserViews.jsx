@@ -77,7 +77,13 @@ export const addDriverPoints = async (driverId, pointsToAdd, supabase) => {
 
 function DriverRewardsTab({ driver, supabase }) {
   const [rewardsHistory, setRewardsHistory] = useState([]);
+  const [driverData, setDriverData] = useState(driver); // 🌟 حالة آلية لنقاط ومستوى السائق
   const [loading, setLoading] = useState(true);
+
+  // تحديث الحالة عند تغير الـ prop
+  useEffect(() => {
+    setDriverData(driver);
+  }, [driver]);
 
   useEffect(() => {
     if (!driver?.id) return;
@@ -85,7 +91,7 @@ function DriverRewardsTab({ driver, supabase }) {
     // جلب البيانات لأول مرة مع شاشة التحميل
     fetchRewardsHistory(true);
 
-    // ⚡ تحديث آلي صامت كل 4 ثوانٍ في الخلفية
+    // ⚡ تحديث آلي صامت كل 4 ثوانٍ (ل النقاط + المستوى + السجل)
     const interval = setInterval(() => {
       fetchRewardsHistory(false);
     }, 4000);
@@ -97,19 +103,31 @@ function DriverRewardsTab({ driver, supabase }) {
     if (!driver?.id) return;
     if (isInitial) setLoading(true);
 
-    const { data } = await supabase
+    // 1. جلب سجل المكافآت الأحدث
+    const { data: rewards } = await supabase
       .from('driver_rewards')
       .select('*')
       .eq('driver_id', driver.id)
       .order('created_at', { ascending: false });
 
-    setRewardsHistory(data || []);
+    // 2. 🌟 جلب النقاط والمستوى الأحدث للسائق من قاعدة البيانات مباشرة
+    const { data: updatedDriver } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('id', driver.id)
+      .maybeSingle();
+
+    setRewardsHistory(rewards || []);
+    if (updatedDriver) {
+      setDriverData(updatedDriver); // تحديث النقاط والمستوى فوراً
+    }
+
     if (isInitial) setLoading(false);
   };
 
-  // احتساب النقاط والمستويات
-  const points = driver?.points || 0;
-  const currentTier = driver?.current_tier || 'برونزي';
+  // 🌟 احتساب النقاط والمستويات بناءً على البيانات المُحدّثة
+  const points = driverData?.points || 0;
+  const currentTier = driverData?.current_tier || 'برونزي';
 
   const tierLimits = {
     'برونزي': { max: 100, next: 'فضي', nextLimit: 101, reward: 0 },
@@ -118,7 +136,7 @@ function DriverRewardsTab({ driver, supabase }) {
     'ماسي': { max: 1000, next: 'المستوى الأقصى', nextLimit: 1000, reward: 25000 }
   };
 
-  const currentInfo = tierLimits[currentTier];
+  const currentInfo = tierLimits[currentTier] || tierLimits['برونزي'];
   const pointsToNext = Math.max(0, currentInfo.nextLimit - points);
   const progressPercent = Math.min(100, (points / currentInfo.nextLimit) * 100);
 
@@ -204,6 +222,7 @@ function DriverRewardsTab({ driver, supabase }) {
     </div>
   );
 }
+
 // 🌟 نافذة التقييم التلقائية للطالب عند إتمام الرحلة
 function DriverRatingModal({ driverId, studentId, supabase, onClose }) {
   const [rating, setRating] = useState(5);
