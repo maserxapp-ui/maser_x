@@ -23,6 +23,7 @@ export function EmployeeLoginModal({ isOpen, onClose, onLoginSuccess, supabase }
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!supabase) return setError('خطأ في الاتصال بقاعدة البيانات');
     setLoading(true);
     setError('');
 
@@ -106,78 +107,110 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
   const [newMessage, setNewMessage] = useState('');
 
   useEffect(() => {
-    // جلب أحدث بيانات للموظفة
     const fetchLatest = async () => {
-      if (!employee?.id) return;
-      const { data } = await supabase
-        .from('employees')
-        .select('*, drivers(name, phone)')
-        .eq('id', employee.id)
-        .maybeSingle();
-      if (data) setEmpData(data);
+      if (!employee?.id || !supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*, drivers(name, phone)')
+          .eq('id', employee.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          setEmpData(data);
+        }
+      } catch (err) {
+        console.error('Fetch employee error:', err);
+      }
     };
 
     fetchLatest();
-    const interval = setInterval(fetchLatest, 4000);
+    const interval = setInterval(fetchLatest, 5000);
     return () => clearInterval(interval);
   }, [employee?.id, supabase]);
 
-  // جلب المحادثة مع السائق
   useEffect(() => {
-    if (!empData?.driver_id || !empData?.id) return;
+    if (!empData?.driver_id || !empData?.id || !supabase) {
+      setMessages([]);
+      return;
+    }
+
     const fetchChat = async () => {
-      const { data } = await supabase
-        .from('employee_messages')
-        .select('*')
-        .eq('employee_id', empData.id)
-        .order('created_at', { ascending: true });
-      setMessages(data || []);
+      try {
+        const { data, error } = await supabase
+          .from('employee_messages')
+          .select('*')
+          .eq('employee_id', empData.id)
+          .order('created_at', { ascending: true });
+
+        if (error || !Array.isArray(data)) {
+          setMessages([]);
+        } else {
+          setMessages(data);
+        }
+      } catch (err) {
+        console.error('Fetch chat error:', err);
+        setMessages([]);
+      }
     };
 
     fetchChat();
-    const chatInterval = setInterval(fetchChat, 3000);
+    const chatInterval = setInterval(fetchChat, 4000);
     return () => clearInterval(chatInterval);
   }, [empData?.id, empData?.driver_id, supabase]);
 
-  // تغيير حالة الدوام
   const toggleAttendance = async (status) => {
     if (isOfficialHoliday && !empData?.has_exception && status === true) {
       alert('عذراً، اليوم عطلة رسمية ولا يمكنك اختيار (أنا أداوم) إلا باستثناء خاص من الإدارة.');
       return;
     }
+    if (!supabase || !empData?.id) return;
 
-    const { error } = await supabase
-      .from('employees')
-      .update({ attending_status: status })
-      .eq('id', empData.id);
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ attending_status: status })
+        .eq('id', empData.id);
 
-    if (!error) {
-      setEmpData((prev) => ({ ...prev, attending_status: status }));
+      if (!error) {
+        setEmpData((prev) => ({ ...prev, attending_status: status }));
+      }
+    } catch (err) {
+      console.error('Toggle error:', err);
     }
   };
 
-  // إرسال رسالة للسائق
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !empData?.driver_id) return;
+    if (!newMessage.trim() || !empData?.driver_id || !supabase) return;
 
-    await supabase.from('employee_messages').insert({
-      employee_id: empData.id,
-      driver_id: empData.driver_id,
-      sender_type: 'employee',
-      message: newMessage.trim(),
-    });
+    try {
+      const { error } = await supabase.from('employee_messages').insert({
+        employee_id: empData.id,
+        driver_id: empData.driver_id,
+        sender_type: 'employee',
+        message: newMessage.trim(),
+      });
 
-    setNewMessage('');
+      if (!error) {
+        setNewMessage('');
+      }
+    } catch (err) {
+      console.error('Send message error:', err);
+    }
   };
-
-  const canAttend = !isOfficialHoliday || empData?.has_exception;
 
   if (!empData) return null;
 
+  // استخراج بيانات السائق بشكل آمن سواء كانت Object أو Array أو null
+  const driverInfo = Array.isArray(empData.drivers) 
+    ? empData.drivers[0] 
+    : (empData.drivers || null);
+
+  const canAttend = !isOfficialHoliday || empData?.has_exception;
+
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 dir-rtl pb-24 text-right">
-      {/* 💳 بطاقة بيانات الاشتراك والمدرسة */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-3">
         <div className="flex justify-between items-center border-b pb-3">
           <div>
@@ -196,15 +229,14 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
           <div>أيام الدوام: <b>{empData.work_days || 'غير محدد'}</b></div>
         </div>
 
-        {/* 📞 الاتصال بالسائق عبر الواتساب */}
-        {empData.drivers ? (
+        {driverInfo ? (
           <div className="flex justify-between items-center bg-amber-50 p-3 rounded-xl border border-amber-100">
             <div>
-              <p className="text-xs font-bold text-amber-900">السائق المكلف: {empData.drivers.name}</p>
-              <p className="text-xs text-amber-700">{empData.drivers.phone}</p>
+              <p className="text-xs font-bold text-amber-900">السائق المكلف: {driverInfo.name}</p>
+              <p className="text-xs text-amber-700">{driverInfo.phone}</p>
             </div>
             <button
-              onClick={() => openWhatsApp(empData.drivers.phone)}
+              onClick={() => openWhatsApp(driverInfo.phone)}
               className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-4 py-2 rounded-xl flex items-center gap-1 font-bold shadow-sm"
             >
               💬 واتساب السائق
@@ -215,7 +247,6 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
         )}
       </div>
 
-      {/* 🚌 رحلة الذهاب حالة الدوام */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
         <h3 className="font-bold text-gray-800 text-sm mb-3">حالة رحلة الذهاب والدوام اليوم</h3>
         
@@ -251,13 +282,12 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
         </div>
       </div>
 
-      {/* 💬 المحادثة المباشرة مع السائق */}
-      {empData.drivers && (
+      {driverInfo && (
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
           <h3 className="font-bold text-gray-800 text-sm border-b pb-2">المحادثة مع السائق (تتمسح عند التصفير اليومي)</h3>
           
           <div className="h-40 overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-xl text-xs">
-            {!messages || messages.length === 0 ? (
+            {!Array.isArray(messages) || messages.length === 0 ? (
               <p className="text-center text-gray-400 py-6">لا توجد رسائل بينكِ وبين السائق اليوم.</p>
             ) : (
               messages.map((m) => (
@@ -303,7 +333,6 @@ export function AdminEmployeeManagement({ supabase }) {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  // نموذج البيانات
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -321,34 +350,55 @@ export function AdminEmployeeManagement({ supabase }) {
   });
 
   const loadData = async () => {
+    if (!supabase) return setLoading(false);
     setLoading(true);
-    const { data: empData } = await supabase.from('employees').select('*, drivers(name)').order('created_at', { ascending: false });
-    const { data: drvData } = await supabase.from('drivers').select('id, name');
-    setEmployees(empData || []);
-    setDrivers(drvData || []);
-    setLoading(false);
+    try {
+      const { data: empData, error: empErr } = await supabase
+        .from('employees')
+        .select('*, drivers(name)')
+        .order('created_at', { ascending: false });
+
+      const { data: drvData, error: drvErr } = await supabase
+        .from('drivers')
+        .select('id, name');
+
+      setEmployees(Array.isArray(empData) && !empErr ? empData : []);
+      setDrivers(Array.isArray(drvData) && !drvErr ? drvData : []);
+    } catch (err) {
+      console.error('Load admin data error:', err);
+      setEmployees([]);
+      setDrivers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [supabase]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!supabase) return;
+
     const payload = {
       ...formData,
+      subscription_price: Number(formData.subscription_price) || 0,
       driver_id: formData.driver_id || null,
     };
 
-    if (editingId) {
-      await supabase.from('employees').update(payload).eq('id', editingId);
-    } else {
-      await supabase.from('employees').insert(payload);
+    try {
+      if (editingId) {
+        await supabase.from('employees').update(payload).eq('id', editingId);
+      } else {
+        await supabase.from('employees').insert(payload);
+      }
+      setShowModal(false);
+      resetForm();
+      loadData();
+    } catch (err) {
+      console.error('Submit employee error:', err);
     }
-
-    setShowModal(false);
-    resetForm();
-    loadData();
   };
 
   const handleEdit = (emp) => {
@@ -372,9 +422,13 @@ export function AdminEmployeeManagement({ supabase }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('هل أنت موافق على حذف هذه الموظفة؟')) return;
-    await supabase.from('employees').delete().eq('id', id);
-    loadData();
+    if (!supabase || !confirm('هل أنت موافق على حذف هذه الموظفة؟')) return;
+    try {
+      await supabase.from('employees').delete().eq('id', id);
+      loadData();
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
   };
 
   const resetForm = () => {
@@ -408,7 +462,6 @@ export function AdminEmployeeManagement({ supabase }) {
         </button>
       </div>
 
-      {/* جدول عرض الموظفات */}
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto border">
         <table className="w-full text-xs text-right border-collapse">
           <thead>
@@ -423,29 +476,41 @@ export function AdminEmployeeManagement({ supabase }) {
             </tr>
           </thead>
           <tbody>
-            {Array.isArray(employees) && employees.map((emp) => (
-              <tr key={emp.id} className="border-b hover:bg-gray-50">
-                <td className="p-3 font-bold">{emp.name}</td>
-                <td className="p-3">{emp.phone}</td>
-                <td className="p-3">{emp.school_name} - {emp.address}</td>
-                <td className="p-3 font-bold">{Number(emp.subscription_price || 0).toLocaleString()} د.ع</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${emp.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                    {emp.payment_status === 'paid' ? 'مدفوع ✅' : 'غير مدفوع ❌'}
-                  </span>
-                </td>
-                <td className="p-3 text-amber-700 font-semibold">{emp.drivers?.name || 'غير محدد'}</td>
-                <td className="p-3 flex gap-2">
-                  <button onClick={() => handleEdit(emp)} className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-bold">تعديل / توزيع</button>
-                  <button onClick={() => handleDelete(emp.id)} className="bg-red-50 text-red-600 px-3 py-1 rounded-lg font-bold">حذف</button>
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-400">جاري التحميل...</td>
               </tr>
-            ))}
+            ) : Array.isArray(employees) && employees.length > 0 ? (
+              employees.map((emp) => {
+                const driverObj = Array.isArray(emp.drivers) ? emp.drivers[0] : emp.drivers;
+                return (
+                  <tr key={emp.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-bold">{emp.name}</td>
+                    <td className="p-3">{emp.phone}</td>
+                    <td className="p-3">{emp.school_name} - {emp.address}</td>
+                    <td className="p-3 font-bold">{Number(emp.subscription_price || 0).toLocaleString()} د.ع</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${emp.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {emp.payment_status === 'paid' ? 'مدفوع ✅' : 'غير مدفوع ❌'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-amber-700 font-semibold">{driverObj?.name || 'غير محدد'}</td>
+                    <td className="p-3 flex gap-2">
+                      <button onClick={() => handleEdit(emp)} className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-bold">تعديل / توزيع</button>
+                      <button onClick={() => handleDelete(emp.id)} className="bg-red-50 text-red-600 px-3 py-1 rounded-lg font-bold">حذف</button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-400">لا توجد موظفات مسجلات حالياً.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* نافذة الإضافة والتعديل */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-4">
@@ -532,21 +597,35 @@ export function DriverEmployeeTab({ driver, supabase }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!driver?.id) return;
+    if (!driver?.id || !supabase) {
+      setEmployees([]);
+      setLoading(false);
+      return;
+    }
 
     const fetchEmp = async () => {
-      const { data } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('driver_id', driver.id)
-        .eq('payment_status', 'paid');
+      try {
+        const { data, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('driver_id', driver.id)
+          .eq('payment_status', 'paid');
 
-      setEmployees(data || []);
-      setLoading(false);
+        if (error || !Array.isArray(data)) {
+          setEmployees([]);
+        } else {
+          setEmployees(data);
+        }
+      } catch (err) {
+        console.error('Fetch driver employees error:', err);
+        setEmployees([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchEmp();
-    const interval = setInterval(fetchEmp, 4000);
+    const interval = setInterval(fetchEmp, 5000);
     return () => clearInterval(interval);
   }, [driver?.id, supabase]);
 
