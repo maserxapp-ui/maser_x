@@ -2430,10 +2430,10 @@ function AdminReturnTripsManager({ supabase }) {
         👑 إدارة رحلات العودة (الطالبات المنهيات للدوام)
       </h3>
 
-      {Object.keys(returnGroups).length === 0 ? (
-        <p className="text-xs text-slate-500">لا توجد طالبات أنهين الدوام حالياً.</p>
-      ) : (
-        returnGroups && typeof returnGroups === 'object' ? Object.keys(returnGroups).map(driverId => {
+      {Object.keys(returnGroups || {}).length === 0 ? (
+  <p className="text-xs text-slate-500">لا توجد طالبات أنهين الدوام حالياً</p>
+) : (
+  Object.keys(returnGroups || {}).map(driverId => {
           const group = returnGroups[driverId];
           return (
             <div key={driverId} className="border border-slate-300 bg-white p-3 rounded-lg mb-3 shadow-sm text-slate-900">
