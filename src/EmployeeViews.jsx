@@ -113,7 +113,11 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
   const [empData, setEmpData] = useState(employee);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-
+// 🔴 دالة تسجيل الخروج
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
   useEffect(() => {
     const fetchLatest = async () => {
       if (!employee?.id || !supabase) return;
@@ -232,9 +236,18 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
             <h2 className="text-lg font-extrabold text-gray-800">{empData.name}</h2>
             <p className="text-xs text-gray-500">المدرسة: {empData.school_name || 'غير محدد'}</p>
           </div>
-          <span className="bg-emerald-50 text-emerald-600 text-xs px-3 py-1 rounded-full font-bold">
-            اشتراك فعال ✅
-          </span>
+          // ✅ الكود الجديد المصحح:
+<div className="flex items-center gap-2">
+  <span className="bg-emerald-50 text-emerald-600 text-xs px-3 py-1 rounded-full font-bold">
+    اشتراك فعال ✅
+  </span>
+  <button
+    onClick={handleLogout}
+    className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow-sm transition-all cursor-pointer"
+  >
+    🚪 تسجيل الخروج
+  </button>
+</div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-xl">
