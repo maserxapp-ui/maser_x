@@ -2750,6 +2750,20 @@ const handleCompleteTrip = async () => {
           <span className="text-xl leading-none mb-1">👛</span>
           <span className="text-[11px]">المحفظة</span>
         </button>
+
+        {/* زر اشتراك الموظفات */}
+<button
+  onClick={() => setActiveTab('employee_line')}
+  className={`flex-1 flex flex-col items-center justify-center h-full py-1 transition-all duration-200 ${
+    activeTab === 'employee_line'
+      ? 'text-sky-600 font-bold scale-105'
+      : 'text-slate-400 hover:text-slate-600 font-medium'
+  }`}
+>
+  <span className="text-xl leading-none mb-1">👩‍🏫</span>
+  <span className="text-[11px]">اشتراك الموظفات</span>
+</button>
+        
         {/* زر المكافآت */}
         <button
           onClick={() => setActiveTab('rewards')}
