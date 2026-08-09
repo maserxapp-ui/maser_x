@@ -257,7 +257,7 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
             {messages.length === 0 ? (
               <p className="text-center text-gray-400 py-6">لا توجد رسائل بينكِ وبين السائق اليوم.</p>
             ) : (
-              {messages?.map((m) => (
+              messages?.map((m) => (
                 <div
                   key={m.id}
                   className={`p-2.5 rounded-xl max-w-[80%] text-xs ${
