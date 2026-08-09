@@ -1258,9 +1258,14 @@ const handleStudentAction = async (actionType, labelText) => {
   <EmployeeLoginModal
     isOpen={showEmpLogin}
     onClose={() => setShowEmpLogin(false)}
-    onLoginSuccess={(employeeData) => {
-      setUser({ ...employeeData, role: 'employee' });
-    }}
+    // ✅ الكود المصحح:
+onLoginSuccess={(employeeData) => {
+  const empUser = { ...employeeData, role: 'employee' };
+  localStorage.setItem('userRole', 'employee');
+  localStorage.setItem('userData', JSON.stringify(empUser));
+  setUser(empUser);
+  setShowEmpLogin(false);
+}}
     supabase={supabase}
   />
 )}
