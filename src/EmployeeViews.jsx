@@ -108,6 +108,7 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
   useEffect(() => {
     // جلب أحدث بيانات للموظفة
     const fetchLatest = async () => {
+      if (!employee?.id) return;
       const { data } = await supabase
         .from('employees')
         .select('*, drivers(name, phone)')
@@ -119,11 +120,11 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
     fetchLatest();
     const interval = setInterval(fetchLatest, 4000);
     return () => clearInterval(interval);
-  }, [employee.id]);
+  }, [employee?.id, supabase]);
 
   // جلب المحادثة مع السائق
   useEffect(() => {
-    if (!empData?.driver_id) return;
+    if (!empData?.driver_id || !empData?.id) return;
     const fetchChat = async () => {
       const { data } = await supabase
         .from('employee_messages')
@@ -136,11 +137,11 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
     fetchChat();
     const chatInterval = setInterval(fetchChat, 3000);
     return () => clearInterval(chatInterval);
-  }, [empData?.id, empData?.driver_id]);
+  }, [empData?.id, empData?.driver_id, supabase]);
 
   // تغيير حالة الدوام
   const toggleAttendance = async (status) => {
-    if (isOfficialHoliday && !empData.has_exception && status === true) {
+    if (isOfficialHoliday && !empData?.has_exception && status === true) {
       alert('عذراً، اليوم عطلة رسمية ولا يمكنك اختيار (أنا أداوم) إلا باستثناء خاص من الإدارة.');
       return;
     }
@@ -158,7 +159,7 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
   // إرسال رسالة للسائق
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !empData.driver_id) return;
+    if (!newMessage.trim() || !empData?.driver_id) return;
 
     await supabase.from('employee_messages').insert({
       employee_id: empData.id,
@@ -170,7 +171,9 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
     setNewMessage('');
   };
 
-  const canAttend = !isOfficialHoliday || empData.has_exception;
+  const canAttend = !isOfficialHoliday || empData?.has_exception;
+
+  if (!empData) return null;
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 dir-rtl pb-24 text-right">
@@ -254,10 +257,10 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
           <h3 className="font-bold text-gray-800 text-sm border-b pb-2">المحادثة مع السائق (تتمسح عند التصفير اليومي)</h3>
           
           <div className="h-40 overflow-y-auto space-y-2 p-2 bg-gray-50 rounded-xl text-xs">
-            {messages.length === 0 ? (
+            {!messages || messages.length === 0 ? (
               <p className="text-center text-gray-400 py-6">لا توجد رسائل بينكِ وبين السائق اليوم.</p>
             ) : (
-              messages?.map((m) => (
+              messages.map((m) => (
                 <div
                   key={m.id}
                   className={`p-2.5 rounded-xl max-w-[80%] text-xs ${
@@ -369,7 +372,7 @@ export function AdminEmployeeManagement({ supabase }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('هل انت أوافق على حذف هذه الموظفة؟')) return;
+    if (!confirm('هل أنت موافق على حذف هذه الموظفة؟')) return;
     await supabase.from('employees').delete().eq('id', id);
     loadData();
   };
@@ -420,12 +423,12 @@ export function AdminEmployeeManagement({ supabase }) {
             </tr>
           </thead>
           <tbody>
-            {employees?.map((emp) => (
+            {Array.isArray(employees) && employees.map((emp) => (
               <tr key={emp.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-bold">{emp.name}</td>
                 <td className="p-3">{emp.phone}</td>
                 <td className="p-3">{emp.school_name} - {emp.address}</td>
-                <td className="p-3 font-bold">{Number(emp.subscription_price).toLocaleString()} د.ع</td>
+                <td className="p-3 font-bold">{Number(emp.subscription_price || 0).toLocaleString()} د.ع</td>
                 <td className="p-3">
                   <span className={`px-2 py-1 rounded text-xs font-bold ${emp.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                     {emp.payment_status === 'paid' ? 'مدفوع ✅' : 'غير مدفوع ❌'}
@@ -491,7 +494,9 @@ export function AdminEmployeeManagement({ supabase }) {
                 <label className="block mb-1 font-bold">توزيع السائق المكلف</label>
                 <select value={formData.driver_id} onChange={(e) => setFormData({...formData, driver_id: e.target.value})} className="w-full p-2.5 border rounded-xl">
                   <option value="">بدون سائق</option>
-                  {drivers?.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {Array.isArray(drivers) && drivers.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -543,11 +548,11 @@ export function DriverEmployeeTab({ driver, supabase }) {
     fetchEmp();
     const interval = setInterval(fetchEmp, 4000);
     return () => clearInterval(interval);
-  }, [driver?.id]);
+  }, [driver?.id, supabase]);
 
   if (loading) return <div className="p-6 text-center text-xs text-gray-500">جاري التحميل...</div>;
 
-  if (!employees || employees.length === 0) {
+  if (!Array.isArray(employees) || employees.length === 0) {
     return (
       <div className="p-8 text-center dir-rtl">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-6 space-y-2">
@@ -561,9 +566,11 @@ export function DriverEmployeeTab({ driver, supabase }) {
 
   return (
     <div className="p-4 space-y-3 dir-rtl text-right pb-20">
-      <h2 className="font-extrabold text-gray-800 text-sm mb-2">🚍 قائمة الموظفات المعينات لحافلتك ({employees?.length || 0})</h2>
+      <h2 className="font-extrabold text-gray-800 text-sm mb-2">
+        🚍 قائمة الموظفات المعينات لحافلتك ({employees.length})
+      </h2>
 
-      {employees?.map((emp) => (
+      {employees.map((emp) => (
         <div key={emp.id} className="bg-white p-4 rounded-2xl shadow-sm border space-y-2">
           <div className="flex justify-between items-center">
             <div>
