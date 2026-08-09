@@ -277,9 +277,9 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     const tomorrowDay = daysArabic[baghdadTomorrow.getDay()];
 
     // 3️⃣ تصفية الطلاب المداومين واستبعاد الغائبين/المعتذرين
-const eligibleStudents = (Array.isArray(studentsData) ? studentsData : []).filter(student => {
-  const fullText = student && typeof student === 'object' ? Object.values(student).map(v => String(v || '')).join(' ') : '';
-  const statusStr = String(student?.tomorrow_status || '');
+    const eligibleStudents = studentsData.filter(student => {
+      const fullText = Object.values(student).map(v => String(v || '')).join(' ');
+      const statusStr = String(student.tomorrow_status || '');
       
       // استبعاد الغائبين
       const isAbsent = 
@@ -2430,10 +2430,10 @@ function AdminReturnTripsManager({ supabase }) {
         👑 إدارة رحلات العودة (الطالبات المنهيات للدوام)
       </h3>
 
-      {Object.keys(returnGroups || {}).length === 0 ? (
-  <p className="text-xs text-slate-500">لا توجد طالبات أنهين الدوام حالياً</p>
-) : (
-  Object.keys(returnGroups || {}).map(driverId => {
+      {Object.keys(returnGroups).length === 0 ? (
+        <p className="text-xs text-slate-500">لا توجد طالبات أنهين الدوام حالياً.</p>
+      ) : (
+        Object.keys(returnGroups).map(driverId => {
           const group = returnGroups[driverId];
           return (
             <div key={driverId} className="border border-slate-300 bg-white p-3 rounded-lg mb-3 shadow-sm text-slate-900">
