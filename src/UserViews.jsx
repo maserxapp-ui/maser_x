@@ -534,7 +534,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   
 // 🔄 جلب أحدث حالة للطالب عند الـ Refresh + الاستماع للتحديث المباشر من الأدمن
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || user?.role === 'employee' || localStorage.getItem('userRole') === 'employee') return;
 
     // 1️⃣ فحص أحدث بيانات الطالب فوراً عند فتح الصفحة أو عمل Refresh
     const fetchLatestStudentStatus = async () => {
