@@ -159,22 +159,26 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
     return () => clearInterval(chatInterval);
   }, [empData?.id, empData?.driver_id, supabase]);
 
-  const toggleAttendance = async (status) => {
+ const toggleAttendance = async (status) => {
     if (isOfficialHoliday && !empData?.has_exception && status === true) {
-      alert('عذراً، اليوم عطلة رسمية ولا يمكنك اختيار (أنا أداوم) إلا باستثناء خاص من الإدارة.');
+      alert('عذراً، اليوم عطلة رسمية ولا يمكنك اختيار (أنا أداوم) إلا باستثناء خاص من الإدارة!.');
       return;
     }
-    if (!supabase || !empData?.id) return;
+    if (!supabase || (!empData?.phone && !user?.phone)) return;
 
     try {
       const { error } = await supabase
         .from('employees')
         .update({ attending_status: status })
-        .eq('id', empData.id);
+        .eq('phone', empData?.phone || user?.phone);
 
-      if (!error) {
-        setEmpData((prev) => ({ ...prev, attending_status: status }));
+      if (error) {
+        console.error('Update error:', error);
+        alert('حدث خطأ أثناء التحديث: ' + error.message);
+        return;
       }
+
+      setEmpData((prev) => ({ ...prev, attending_status: status }));
     } catch (err) {
       console.error('Toggle error:', err);
     }
