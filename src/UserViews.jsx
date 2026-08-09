@@ -1355,7 +1355,7 @@ if (user && user.role === 'driver') {
         <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#475569' }}>📌 أيام دوامك المسجلة: </span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px', justifyContent: 'flex-start' }}>
-            {(user?.work_days && user.work_days.length > 0 ? user.work_days : ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']).map((day, idx) => (
+            {(user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0 ? user.work_days : ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']).map((day, idx) => (
               <span key={idx} style={{ backgroundColor: '#e2e8f0', color: '#1e293b', fontSize: '11px', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
                 {day}
               </span>
