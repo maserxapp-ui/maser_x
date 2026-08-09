@@ -1775,16 +1775,6 @@ if (user && user.role === 'driver') {
           <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
         </button>
 
-        {/* زر اشتراك الموظفات - يظهر للسائق فقط */}
-{(user?.role === 'driver' || currentUserRole === 'driver' || user?.is_driver) && (
-  <button
-    onClick={() => setActiveTab('employee_line')}
-    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'employee_line' ? '#2563eb' : '#64748b' }}
-  >
-    <span style={{ fontSize: '22px' }}>👩‍🏫</span>
-    <span style={{ fontSize: '12px', fontWeight: activeTab === 'employee_line' ? 'bold' : 'normal' }}>اشتراك الموظفات</span>
-  </button>
-)}
         
         <button 
           onClick={() => setActiveTab('settings')}
