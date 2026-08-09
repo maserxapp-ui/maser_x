@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { EmployeeView, AdminEmployeeManagement } from './EmployeeViews';
+import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
 const logoImg = '/logo.png';
 import UserViews from './UserViews';
 import { AdminRewardsAndRatings } from './UserViews';
