@@ -257,7 +257,7 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
             {messages.length === 0 ? (
               <p className="text-center text-gray-400 py-6">لا توجد رسائل بينكِ وبين السائق اليوم.</p>
             ) : (
-              messages.map((m) => (
+              (messages || []).map((m) => (
                 <div
                   key={m.id}
                   className={`p-2.5 rounded-xl max-w-[80%] text-xs ${
@@ -420,7 +420,7 @@ export function AdminEmployeeManagement({ supabase }) {
             </tr>
           </thead>
           <tbody>
-            {employees.map((emp) => (
+            (employees || []).map((emp) => (
               <tr key={emp.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-bold">{emp.name}</td>
                 <td className="p-3">{emp.phone}</td>
@@ -491,7 +491,7 @@ export function AdminEmployeeManagement({ supabase }) {
                 <label className="block mb-1 font-bold">توزيع السائق المكلف</label>
                 <select value={formData.driver_id} onChange={(e) => setFormData({...formData, driver_id: e.target.value})} className="w-full p-2.5 border rounded-xl">
                   <option value="">بدون سائق</option>
-                  {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {(drivers || []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div>
@@ -561,9 +561,9 @@ export function DriverEmployeeTab({ driver, supabase }) {
 
   return (
     <div className="p-4 space-y-3 dir-rtl text-right pb-20">
-      <h2 className="font-extrabold text-gray-800 text-sm mb-2">👩‍🏫 قائمة الموظفات المعينات لحافلتك ({employees.length})</h2>
+      <h2 className="font-extrabold text-gray-800 text-sm mb-2">👩‍🏫 قائمة الموظفات المعينات لحافلتك {(employees || []).length}</h2>
 
-      {employees.map((emp) => (
+      {(employees || []).map((emp) => (
         <div key={emp.id} className="bg-white p-4 rounded-2xl shadow-sm border space-y-2">
           <div className="flex justify-between items-center">
             <div>
