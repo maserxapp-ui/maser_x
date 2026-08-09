@@ -1764,161 +1764,7 @@ if (user && user.role === 'driver') {
   currentUserRole="student"
   supabase={supabase}
 />
-      {/* واجهة اشتراك الموظفات */}
-{activeTab === 'employee_line' && (
-  <div style={{ padding: '16px', direction: 'rtl', paddingBottom: '90px' }}>
-    
-    {/* تنبيه الاستقطاع 15% */}
-    <div style={{
-      backgroundColor: '#fffbe6',
-      border: '1px solid #ffe58f',
-      padding: '12px 16px',
-      borderRadius: '12px',
-      marginBottom: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      color: '#8c6b00',
-      fontSize: '13px',
-      fontWeight: 'bold'
-    }}>
-      <span style={{ fontSize: '18px' }}>💡</span>
-      <span>ملاحظة للسائق: نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي **15%**.</span>
-    </div>
-
-    {/* بطاقة عرض المعلمات والرحلات */}
-    <div style={{
-      backgroundColor: '#ffffff',
-      borderRadius: '16px',
-      padding: '18px',
-      border: '1px solid #e2e8f0',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-    }}>
-      {(() => {
-        // فلترة المعلمات المربوطات بهذا السائق فقط
-        const assignedEmployees = Array.isArray(employees)
-          ? employees.filter(emp => 
-              (emp.driver_id && emp.driver_id === user?.id) || 
-              (emp.driver_phone && emp.driver_phone === user?.phone) ||
-              (emp.driver_name && emp.driver_name === user?.name) ||
-              (emp.driver && emp.driver === user?.name)
-            )
-          : [];
-
-        // حساب اسم يوم غدٍ تلقائياً
-        const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'السبت', 'الجمعة'];
-        const tomorrowIndex = (new Date().getDay() + 1) % 7;
-        const tomorrowName = daysMap[tomorrowIndex];
-
-        // المعلمات المداومات غداً
-        const tomorrowEmployees = assignedEmployees.filter(emp => 
-          Array.isArray(emp.work_days) && emp.work_days.includes(tomorrowName)
-        );
-
-        return (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
-                👩‍🏫 المعلمات المداومات غداً ({tomorrowName})
-              </h3>
-              <span style={{
-                backgroundColor: '#dbeafe',
-                color: '#1e40af',
-                padding: '4px 12px',
-                borderRadius: '16px',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                العدد: {tomorrowEmployees.length} معلمات
-              </span>
-            </div>
-
-            {tomorrowEmployees.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', fontSize: '14px' }}>
-                ☕ لا يوجد دوام للمعلمات المخصصات لك غداً ({tomorrowName}).
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {tomorrowEmployees.map((emp, idx) => {
-                  const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
-                  const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
-                  const whatsappUrl = `https://wa.me/${waPhone}`;
-
-                  return (
-                    <div key={idx} style={{
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
-                            {emp.name || 'معلمة'}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
-                            🏫 المدرسة/العنوان: <b>{emp.school_name || emp.address || 'غير محدد'}</b>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                          <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                            🌅 ذهاب
-                          </span>
-                          <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                            🌆 عودة
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        display: 'flex',
-                        justify: 'space-between',
-                        alignItems: 'center',
-                        borderTop: '1px solid #e2e8f0',
-                        paddingTop: '10px',
-                        marginTop: '2px'
-                      }}>
-                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
-                          📞 {emp.phone || 'لا يوجد رقم'}
-                        </span>
-
-                        {emp.phone && (
-                          <a 
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              backgroundColor: '#25D366',
-                              color: '#ffffff',
-                              textDecoration: 'none',
-                              padding: '6px 14px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: 'bold',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            💬 مراسلة واتساب
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        );
-      })()}
-    </div>
-  </div>
-)}
+     
       {/* 🔻 الشريط السفلي */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
         
@@ -1928,13 +1774,8 @@ if (user && user.role === 'driver') {
           <span style={{ fontSize: '22px' }}>🏠</span>
           <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
         </button>
-<button
-  onClick={() => setActiveTab('employee_line')}
-  style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'employee_line' ? '#2563eb' : '#64748b' }}
->
-  <span style={{ fontSize: '22px' }}>👩‍🏫</span>
-  <span style={{ fontSize: '12px', fontWeight: activeTab === 'employee_line' ? 'bold' : 'normal' }}>اشتراك الموظفات</span>
-</button>
+
+        
         <button 
           onClick={() => setActiveTab('settings')}
           style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
@@ -2683,6 +2524,161 @@ const handleCompleteTrip = async () => {
           </div>
         </div>
       )}
+
+      {/* ================= 4. تبويب اشتراك الموظفات ================= */}
+{activeTab === 'employee_line' && (user?.role === 'driver' || currentUserRole === 'driver' || user?.is_driver) && (
+  <div className="max-w-m-md mx-auto p-4 space-y-4" style={{ direction: 'rtl', paddingBottom: '90px' }}>
+
+    {/* شريط تنبيه نسبة الاستقطاع 15% */}
+    <div style={{
+      backgroundColor: '#fffbe6',
+      border: '1px solid #ffe58f',
+      padding: '12px 16px',
+      borderRadius: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      color: '#8c6b00',
+      fontSize: '13px',
+      fontWeight: 'bold'
+    }}>
+      <span style={{ fontSize: '18px' }}>💡</span>
+      <span>ملاحظة للسائق: نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي **15%**.</span>
+    </div>
+
+    {/* بطاقة عرض المعلمات والرحلات */}
+    <div style={{
+      backgroundColor: '#ffffff',
+      borderRadius: '16px',
+      padding: '18px',
+      border: '1px solid #e2e8f0',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+    }}>
+      {(() => {
+        // فلترة المعلمات المربوطات بهذا السائق فقط
+        const assignedEmployees = Array.isArray(employees)
+          ? employees.filter(emp => 
+              (emp.driver_id && emp.driver_id === user?.id) || 
+              (emp.driver_phone && emp.driver_phone === user?.phone) ||
+              (emp.driver_name && emp.driver_name === user?.name) ||
+              (emp.driver && emp.driver === user?.name)
+            )
+          : [];
+
+        // حساب اسم يوم غدٍ تلقائياً
+        const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'السبت', 'الجمعة'];
+        const tomorrowIndex = (new Date().getDay() + 1) % 7;
+        const tomorrowName = daysMap[tomorrowIndex];
+
+        // المعلمات المداومات غداً
+        const tomorrowEmployees = assignedEmployees.filter(emp => 
+          Array.isArray(emp.work_days) && emp.work_days.includes(tomorrowName)
+        );
+
+        return (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
+                👩‍🏫 المعلمات المداومات غداً ({tomorrowName})
+              </h3>
+              <span style={{
+                backgroundColor: '#dbeafe',
+                color: '#1e40af',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                العدد: {tomorrowEmployees.length} معلمات
+              </span>
+            </div>
+
+            {tomorrowEmployees.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', fontSize: '14px' }}>
+                ☕ لا يوجد دوام للمعلمات المخصصات لك غداً ({tomorrowName}).
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {tomorrowEmployees.map((emp, idx) => {
+                  const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
+                  const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
+                  const whatsappUrl = `https://wa.me/${waPhone}`;
+
+                  return (
+                    <div key={idx} style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
+                            {emp.name || 'معلمة'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                            🏫 المدرسة/العنوان: <b>{emp.school_name || emp.address || 'غير محدد'}</b>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                          <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+                            🌅 ذهاب
+                          </span>
+                          <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+                            🌆 عودة
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderTop: '1px solid #e2e8f0',
+                        paddingTop: '10px',
+                        marginTop: '2px'
+                      }}>
+                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
+                          📞 {emp.phone || 'لا يوجد رقم'}
+                        </span>
+
+                        {emp.phone && (
+                          <a 
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              backgroundColor: '#25D366',
+                              color: '#ffffff',
+                              textDecoration: 'none',
+                              padding: '6px 14px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            💬 مراسلة واتساب
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        );
+      })()}
+    </div>
+  </div>
+)}
 
       {/* 👛 3. تبويب المحفظة */}
       {activeTab === 'wallet' && (
