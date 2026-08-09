@@ -1130,9 +1130,12 @@ const handleStudentAction = async (actionType, labelText) => {
       </div>
     );
   }
-// 🟢 الشرط المصحح:
-if (user && (user.role === 'employee' || localStorage.getItem('userRole') === 'employee')) {
-  return <EmployeeView empData={user} supabase={supabase} isOfficialHoliday={false} />;
+const storedRole = localStorage.getItem('userRole');
+const storedData = JSON.parse(localStorage.getItem('employeeData') || localStorage.getItem('userData') || 'null');
+const activeEmp = user || storedData;
+
+if (storedRole === 'employee' && activeEmp && activeEmp.id) {
+  return <EmployeeView empData={activeEmp} employee={activeEmp} supabase={supabase} isOfficialHoliday={false} />;
 }
 // 1️⃣ شاشة تسجيل الدخول
   if (!user) {
