@@ -2525,7 +2525,7 @@ const handleCompleteTrip = async () => {
         </div>
       )}
 
-      {/* ================= 4. تبويب اشتراك الموظفات ================= */}
+     {/* ================= 4. تبويب اشتراك الموظفات ================= */}
 {activeTab === 'employee_line' && (user?.role === 'driver' || currentUserRole === 'driver' || user?.is_driver) && (
   <div className="max-w-m-md mx-auto p-4 space-y-4" style={{ direction: 'rtl', paddingBottom: '90px' }}>
 
@@ -2543,7 +2543,7 @@ const handleCompleteTrip = async () => {
       fontWeight: 'bold'
     }}>
       <span style={{ fontSize: '18px' }}>💡</span>
-      <span>ملاحظة للسائق: نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي **15%**.</span>
+      <span>ملاحظة للسائق: نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي <b>15%</b>.</span>
     </div>
 
     {/* بطاقة عرض المعلمات والرحلات */}
@@ -2555,15 +2555,18 @@ const handleCompleteTrip = async () => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
       {(() => {
+        // فحص آمن لمنع خطأ ReferenceError
+        const rawEmployeesList = (typeof employees !== 'undefined' && Array.isArray(employees)) 
+          ? employees 
+          : ((typeof employeesData !== 'undefined' && Array.isArray(employeesData)) ? employeesData : []);
+
         // فلترة المعلمات المربوطات بهذا السائق فقط
-        const assignedEmployees = Array.isArray(employees)
-          ? employees.filter(emp => 
-              (emp.driver_id && emp.driver_id === user?.id) || 
-              (emp.driver_phone && emp.driver_phone === user?.phone) ||
-              (emp.driver_name && emp.driver_name === user?.name) ||
-              (emp.driver && emp.driver === user?.name)
-            )
-          : [];
+        const assignedEmployees = rawEmployeesList.filter(emp => 
+          (emp.driver_id && emp.driver_id === user?.id) || 
+          (emp.driver_phone && emp.driver_phone === user?.phone) ||
+          (emp.driver_name && emp.driver_name === user?.name) ||
+          (emp.driver && emp.driver === user?.name)
+        );
 
         // حساب اسم يوم غدٍ تلقائياً
         const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'السبت', 'الجمعة'];
