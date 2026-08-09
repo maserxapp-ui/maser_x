@@ -45,8 +45,16 @@ export function EmployeeLoginModal({ isOpen, onClose, onLoginSuccess, supabase }
         return;
       }
 
-      onLoginSuccess(employee);
-      onClose();
+      // 🟢 حفظ نوع الحساب كـ موظفة في الذاكرة لتوجيه الواجهة فوراً
+localStorage.setItem('userRole', 'employee');
+localStorage.setItem('userType', 'employee');
+localStorage.setItem('employeeData', JSON.stringify(employee));
+
+if (onLoginSuccess) {
+  onLoginSuccess(employee, 'employee');
+}
+
+onClose();
     } catch (err) {
       setError('حدث خطأ في الاتصال بالخادم');
     } finally {
