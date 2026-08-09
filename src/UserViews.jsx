@@ -1130,7 +1130,11 @@ const handleStudentAction = async (actionType, labelText) => {
       </div>
     );
   }
-  // 1️⃣ شاشة تسجيل الدخول
+// 🟢 إذا كانت المستخدمة معلمة/موظفة ومسجلة دخول، افتح واجهة المعلمات فوراً:
+if (user && (user.role === 'employee' || localStorage.getItem('userRole') === 'employee')) {
+  return <EmployeeView employee={user} supabase={supabase} isOfficialHoliday={isOfficialHoliday} />;
+}
+// 1️⃣ شاشة تسجيل الدخول
   if (!user) {
     return (
       <div style={{ maxWidth: '400px', margin: '40px auto', padding: '30px 20px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontFamily: 'sans-serif', backgroundColor: '#ffffff', direction: 'rtl' }}>
