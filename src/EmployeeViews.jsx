@@ -215,6 +215,9 @@ export function EmployeeView({ employee, supabase, isOfficialHoliday }) {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 dir-rtl pb-24 text-right">
+      <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '12px', textAlign: 'center', fontWeight: 'bold' }}>
+  🚨 اختبار: أنت الآن تشاهد كود (EmployeeViews.jsx) الخاص بالمعلمات
+</div>
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-3">
         <div className="flex justify-between items-center border-b pb-3">
           <div>
