@@ -1130,9 +1130,9 @@ const handleStudentAction = async (actionType, labelText) => {
       </div>
     );
   }
-// 🟢 إذا كانت المستخدمة معلمة/موظفة ومسجلة دخول، افتح واجهة المعلمات فوراً:
+// 🟢 الشرط المصحح:
 if (user && (user.role === 'employee' || localStorage.getItem('userRole') === 'employee')) {
-  return <EmployeeView employee={user} supabase={supabase} isOfficialHoliday={isOfficialHoliday} />;
+  return <EmployeeView empData={user} supabase={supabase} isOfficialHoliday={false} />;
 }
 // 1️⃣ شاشة تسجيل الدخول
   if (!user) {
