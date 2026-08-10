@@ -481,19 +481,34 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
-  // 🟢 جلب الموظفات باسم متغير فريد لمنع التعارض
+  // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
 
   useEffect(() => {
-    const fetchEmployeesData = async () => {
-      if (supabase) {
-        const { data, error } = await supabase.from('employees').select('*');
-        if (!error && data) {
-          setFetchedEmployeesList(data);
+    const loadEmployees = async () => {
+      const client = supabase || (typeof window !== 'undefined' ? window.supabase : null);
+      console.log('🔄 جاري محاولة جلب الموظفات...', { hasClient: !!client });
+
+      if (client) {
+        try {
+          const { data, error } = await client.from('employees').select('*');
+          console.log('📥 استجابة السيرفر لجلب الموظفات:', { data, error });
+
+          if (!error && data && data.length > 0) {
+            console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
+            setFetchedEmployeesList(data);
+          } else if (error) {
+            console.error('❌ خطأ من Supabase:', error.message);
+          }
+        } catch (err) {
+          console.error('❌ استثناء أثناء جلب البيانات:', err);
         }
+      } else {
+        console.error('❌ لم يتم العثور على كائن supabase متصل بالصفحة!');
       }
     };
-    fetchEmployeesData();
+
+    loadEmployees();
   }, [supabase]);
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
@@ -2581,7 +2596,9 @@ const handleCompleteTrip = async () => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
       {(() => {
-    const rawEmployeesList = fetchedEmployeesList;
+    const rawEmployeesList = (Array.isArray(fetchedEmployeesList) && fetchedEmployeesList.length > 0)
+          ? fetchedEmployeesList
+          : ((typeof employees !== 'undefined' && Array.isArray(employees)) ? employees : []);
         const currentDriverId = user?.id || user?.driver_id;
 
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
