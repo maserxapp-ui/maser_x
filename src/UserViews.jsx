@@ -2738,6 +2738,31 @@ const handleCompleteTrip = async () => {
                             💬 مراسلة واتساب
                           </a>
                         )}
+                        <button
+  onClick={() => {
+    if (emp.location_url) {
+      window.open(emp.location_url, '_blank');
+    } else {
+      alert('⚠️ لم تقم هذه الموظفة بتحديد موقع منزلها حتى الآن.');
+    }
+  }}
+  style={{
+    backgroundColor: emp.location_url ? '#2563eb' : '#9ca3af',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '6px 14px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginRight: '8px'
+  }}
+>
+  📍 موقع المنزل
+</button>
                       </div>
                     </div>
                   );
