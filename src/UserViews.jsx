@@ -481,6 +481,20 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
+  // 🟢 جلب الموظفات من Supabase مباشرة
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    const fetchEmployeesData = async () => {
+      if (supabase) {
+        const { data, error } = await supabase.from('employees').select('*');
+        if (!error && data) {
+          setEmployees(data);
+        }
+      }
+    };
+    fetchEmployeesData();
+  }, [supabase]);
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
@@ -2567,23 +2581,7 @@ const handleCompleteTrip = async () => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
       {(() => {
-    console.log('🔍 فحص المتغيرات المتاحة بالصفحة:', {
-          employees: typeof employees !== 'undefined' ? employees : 'غير معرف',
-          employeesData: typeof employeesData !== 'undefined' ? employeesData : 'غير معرف',
-          user: typeof user !== 'undefined' ? user : 'غير معرف'
-        });
-        // 1. تحديد قائمة الموظفات الخام بأسلوب آمن
-let rawEmployeesList = [];
-if (typeof employees !== 'undefined' && Array.isArray(employees)) {
-  rawEmployeesList = employees;
-} else if (typeof employeesData !== 'undefined' && Array.isArray(employeesData)) {
-  rawEmployeesList = employeesData;
-}
-
-// 2. طلب جلب البيانات بأمان دون إيقاف الكود
-if (rawEmployeesList.length === 0 && typeof fetchEmp === 'function') {
-  setTimeout(() => { fetchEmp(); }, 100);
-}
+    const rawEmployeesList = employees;
         const currentDriverId = user?.id || user?.driver_id;
 
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
