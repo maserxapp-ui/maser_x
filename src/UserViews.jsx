@@ -481,19 +481,16 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
-  // 🟢 جلب الموظفات من Supabase مباشرة
-  const [employees, setEmployees] = useState([]);
+  // 🟢 جلب الموظفات باسم متغير فريد لمنع التعارض
+  const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
 
   useEffect(() => {
     const fetchEmployeesData = async () => {
       if (supabase) {
         const { data, error } = await supabase.from('employees').select('*');
-        console.log('📊 نتيجة الجلب من Supabase:', { data, error });
         if (!error && data) {
-          setEmployees(data);
+          setFetchedEmployeesList(data);
         }
-      } else {
-        console.log('❌ كائن supabase غير معرف بالصفحة');
       }
     };
     fetchEmployeesData();
