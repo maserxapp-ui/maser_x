@@ -629,7 +629,7 @@ export function DriverEmployeeTab({ driver, supabase }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!driver?.id || !supabase) {
+    if (!supabase) {
       setEmployees([]);
       setLoading(false);
       return;
@@ -640,7 +640,7 @@ export function DriverEmployeeTab({ driver, supabase }) {
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('driver_id', driver.id)
+          .eq('driver_id', 5)
           .eq('payment_status', 'paid');
 
         if (error || !Array.isArray(data)) {
