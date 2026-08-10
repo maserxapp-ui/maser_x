@@ -250,6 +250,51 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
               >
                 💬 واتساب السائق
               </button>
+
+              <button
+  onClick={() => {
+    if (!navigator.geolocation) {
+      alert('المتصفح لا يدعم تحديد الموقع الجغرافي.');
+      return;
+    }
+    alert('جاري تحديد موقعك الجغرافي، يرجى الموافقة على صلاحية الموقع إذا ظهرت...');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+
+        const empId = typeof user !== 'undefined' ? (user?.id || user?.emp_id) : null;
+        const userPhone = typeof user !== 'undefined' ? user?.phone : null;
+
+        if (supabase) {
+          let error = null;
+          if (empId) {
+            const res = await supabase.from('employees').update({ location_url: mapUrl }).eq('id', empId);
+            error = res.error;
+          } else if (userPhone) {
+            const res = await supabase.from('employees').update({ location_url: mapUrl }).eq('phone', userPhone);
+            error = res.error;
+          }
+
+          if (!error) {
+            alert('✅ تم حفظ موقع منزلِك بنجاح! يمكن للسائق الآن رؤيته.');
+          } else {
+            alert('❌ حدث خطأ أثناء حفظ الموقع في قاعدة البيانات.');
+          }
+        }
+      },
+      (err) => {
+        alert('⚠️ يرجى تفعيل الـ GPS والسماح بالوصول للموقع في المتصفح.');
+      },
+      { enableHighAccuracy: true }
+    );
+  }}
+  className="bg-sky-600 hover:bg-sky-500 text-white text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all shadow-md mt-2 w-full justify-center"
+>
+  📍 تحديد موقع المنزل
+</button>
+              
             </div>
           ) : (
             <div className="bg-[#0b1329] border border-[#233554] p-3 rounded-xl text-xs text-[#f97316] text-center font-semibold">
