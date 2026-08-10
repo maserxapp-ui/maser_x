@@ -384,9 +384,11 @@ const toggleDaySelection = (dayName) => {
     try {
       if (editingId) {
         await supabase.from('employees').update(payload).eq('id', editingId);
-      } else {
-        await supabase.from('employees').insert(payload);
-      }
+      // ✅ الكود المعدّل
+} else {
+  const { id, ...dataToInsert } = payload;
+  await supabase.from('employees').insert(dataToInsert);
+}
       setShowModal(false);
       resetForm();
       loadData();
