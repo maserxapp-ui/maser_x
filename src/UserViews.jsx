@@ -2571,7 +2571,10 @@ const handleCompleteTrip = async () => {
         const rawEmployeesList = (typeof employees !== 'undefined' && Array.isArray(employees)) 
           ? employees 
           : ((typeof employeesData !== 'undefined' && Array.isArray(employeesData)) ? employeesData : []);
-
+// 👈 استدعاء جلب البيانات فوراً إذا كانت القائمة فارغة
+  if (rawEmployeesList.length === 0 && typeof fetchEmp === 'function') {
+    fetchEmp();
+  }
         const currentDriverId = user?.id || user?.driver_id;
 
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
