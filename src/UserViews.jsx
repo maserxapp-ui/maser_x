@@ -2572,23 +2572,33 @@ const handleCompleteTrip = async () => {
           ? employees 
           : ((typeof employeesData !== 'undefined' && Array.isArray(employeesData)) ? employeesData : []);
 
-        // فلترة المعلمات المربوطات بهذا السائق فقط
-       const assignedEmployees = (rawEmployeesList || []).filter(emp => 
-    (emp.driver_id && String(emp.driver_id) === String(user?.id)) ||
-    (emp.driver_phone && String(emp.driver_phone) === String(user?.phone)) ||
-    (emp.driver_name && emp.driver_name === user?.name) ||
-    (emp.driver && emp.driver === user?.name)
-  );
+        // 1. جلب ID السائق سواء كان مخزناً كـ id أو driver_id
+  const currentDriverId = user?.id || user?.driver_id;
 
-  // حساب اسم يوم غدٍ تلقائياً (مع ترتيب الأيام الصحيح)
+  // 2. فلترة الموظفات المرتبطات بهذا السائق مرونة عالية
+  const assignedEmployees = (rawEmployeesList || []).filter(emp => {
+    const matchId = emp.driver_id && currentDriverId && String(emp.driver_id).trim() === String(currentDriverId).trim();
+    const matchName = (emp.driver_name && user?.name && emp.driver_name.trim() === user?.name.trim()) ||
+                      (emp.driver && user?.name && emp.driver.trim() === user?.name.trim());
+    const matchPhone = emp.driver_phone && user?.phone && String(emp.driver_phone).trim() === String(user?.phone).trim();
+    
+    return matchId || matchName || matchPhone;
+  });
+
+  // 3. حساب اسم يوم غدٍ تلقائياً
   const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
   const tomorrowName = daysMap[tomorrowIndex];
 
-        // المعلمات المداومات غداً
-        const tomorrowEmployees = assignedEmployees.filter(emp => 
-          String(emp.work_days || '').includes(tomorrowName)
-        );
+  // 4. فلترة معلمات الغد
+  const tomorrowEmployees = assignedEmployees.filter(emp => {
+    const days = Array.isArray(emp.work_days) ? emp.work_days.join(',') : String(emp.work_days || '');
+    return days.includes(tomorrowName);
+  });
+
+  // طباعة للتشخيص في Console
+  console.log('بيانات السائق:', user);
+  console.log('الموظفات المربوطات بالسائق:', assignedEmployees);
 
         return (
           <>
