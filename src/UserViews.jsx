@@ -2596,16 +2596,34 @@ const handleCompleteTrip = async () => {
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
                 👩‍🏫 المعلمات المداومات غداً ({tomorrowName})
               </h3>
-              <span style={{
-                backgroundColor: '#dbeafe',
-                color: '#1e40af',
-                padding: '4px 12px',
-                borderRadius: '16px',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
-                العدد: {tomorrowEmployees.length} معلمات
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button 
+          onClick={() => typeof fetchEmp === 'function' ? fetchEmp() : window.location.reload()} 
+          style={{
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            border: 'none',
+            padding: '5px 12px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          🔄 تحديث
+        </button>
+
+        <span style={{
+          backgroundColor: '#dbeafe',
+          color: '#1e40af',
+          padding: '4px 12px',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}>
+          العدد: {tomorrowEmployees.length} معلمات
+        </span>
+      </div>
             </div>
 
             {tomorrowEmployees.length === 0 ? (
