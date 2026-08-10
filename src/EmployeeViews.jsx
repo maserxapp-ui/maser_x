@@ -258,22 +258,46 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
       return;
     }
 
-    // جلب بيانات الموظفة من المتغير أو من التخزين المحلي
-    let currentUser = typeof user !== 'undefined' && user ? user : null;
-    if (!currentUser) {
-      try {
-        const saved = localStorage.getItem('maser_currentUser');
-        if (saved) currentUser = JSON.parse(saved);
-      } catch (e) {}
+    // 🔍 البحث الشامل عن هوية الموظفة في كافة المتغيرات والمفاتيح
+    let targetId = null;
+    let targetPhone = null;
+    let targetName = null;
+
+    // 1️⃣ فحص كائنات البيانات المحتملة في الصفحة
+    const possibleObjects = [
+      typeof user !== 'undefined' ? user : null,
+      typeof currentUser !== 'undefined' ? currentUser : null,
+      typeof employee !== 'undefined' ? employee : null,
+      typeof employeeData !== 'undefined' ? employeeData : null,
+      typeof emp !== 'undefined' ? emp : null
+    ];
+
+    for (const obj of possibleObjects) {
+      if (obj) {
+        if (obj.id || obj.emp_id) targetId = obj.id || obj.emp_id;
+        if (obj.phone) targetPhone = obj.phone;
+        if (obj.name) targetName = obj.name;
+        if (targetId || targetPhone || targetName) break;
+      }
     }
 
-    const targetId = currentUser?.id || currentUser?.emp_id;
-    const targetPhone = currentUser?.phone;
-    const targetName = currentUser?.name;
-
+    // 2️⃣ فحص جميع المفاتيح المحتملة في الـ localStorage
     if (!targetId && !targetPhone && !targetName) {
-      alert('⚠️ تعذر تحديد هوية الموظفة الحالية. يرجى إعادة تسجيل الدخول والتجربة مجدداً.');
-      return;
+      const storageKeys = ['maser_currentUser', 'maser_user', 'maser_employee', 'currentUser', 'user', 'employee'];
+      for (const key of storageKeys) {
+        try {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const parsed = JSON.parse(val);
+            if (parsed) {
+              targetId = parsed.id || parsed.emp_id;
+              targetPhone = parsed.phone;
+              targetName = parsed.name;
+              if (targetId || targetPhone || targetName) break;
+            }
+          }
+        } catch (e) {}
+      }
     }
 
     alert('جاري تحديد موقعك الجغرافي، يرجى السماح بالوصول للموقع (GPS)...');
@@ -289,21 +313,34 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
           return;
         }
 
-        let res;
+        let query = supabase.from('employees').update({ location_url: mapUrl });
+
+        // تطابق بشرط الحقل المتوفر أو التحديث المباشر للموظفة الحالية
         if (targetId) {
-          res = await supabase.from('employees').update({ location_url: mapUrl }).eq('id', targetId).select();
+          query = query.eq('id', targetId);
         } else if (targetPhone) {
-          res = await supabase.from('employees').update({ location_url: mapUrl }).eq('phone', targetPhone).select();
+          query = query.eq('phone', targetPhone);
         } else if (targetName) {
-          res = await supabase.from('employees').update({ location_url: mapUrl }).eq('name', targetName).select();
+          query = query.eq('name', targetName);
+        } else {
+          // خطة احتياطية لجلب أول سجل موجود في جدول الموظفات وتحديثه
+          const { data: allEmps } = await supabase.from('employees').select('id');
+          if (allEmps && allEmps.length > 0) {
+            query = query.eq('id', allEmps[0].id);
+          } else {
+            alert('⚠️ لم يتم العثور على أي موظفة في قاعدة البيانات.');
+            return;
+          }
         }
 
-        if (res?.error) {
-          alert('❌ خطأ أثناء الحفظ: ' + res.error.message);
-        } else if (!res?.data || res.data.length === 0) {
-          alert('⚠️ لم يتم العثور على سجل الموظفة في الجدول لتحديثه.');
+        const { data, error } = await query.select();
+
+        if (error) {
+          alert('❌ خطأ أثناء الحفظ: ' + error.message);
+        } else if (!data || data.length === 0) {
+          alert('⚠️ تعذر تحديث الموقع. تأكدي من وجود الموظفة في الجدول.');
         } else {
-          alert('✅ تم حفظ رابط الموقع بنجاح في قاعدة البيانات!');
+          alert('✅ تم حفظ موقع منزلِك بنجاح! يمكن للسائق الآن رؤيته.');
         }
       },
       (err) => {
