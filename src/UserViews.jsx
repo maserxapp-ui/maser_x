@@ -496,6 +496,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
           if (!error && data && data.length > 0) {
             console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
+            window._fetchedEmployeesList = data;
             setFetchedEmployeesList(data);
           } else if (error) {
             console.error('❌ خطأ من Supabase:', error.message);
