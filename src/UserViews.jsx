@@ -2587,7 +2587,7 @@ const handleCompleteTrip = async () => {
 
         // المعلمات المداومات غداً
         const tomorrowEmployees = assignedEmployees.filter(emp => 
-          Array.isArray(emp.work_days) && emp.work_days.includes(tomorrowName)
+          String(emp.work_days || '').includes(tomorrowName)
         );
 
         return (
