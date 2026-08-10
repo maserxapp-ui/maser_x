@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+const DAYS_OF_WEEK = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 // 📱 دالة المساعدة للاتصال عبر الواتساب
 export const openWhatsApp = (phone) => {
   if (!phone) return alert('رقم الهاتف غير متوفر');
@@ -328,7 +328,21 @@ export function AdminEmployeeManagement({ supabase }) {
     driver_id: '',
     has_exception: false,
   });
+const toggleDaySelection = (dayName) => {
+    const selectedDays = formData.work_days
+      ? formData.work_days.split(', ').map((d) => d.trim()).filter(Boolean)
+      : [];
 
+    const updatedDays = selectedDays.includes(dayName)
+      ? selectedDays.filter((d) => d !== dayName)
+      : [...selectedDays, dayName];
+
+    setFormData({ ...formData, work_days: updatedDays.join(', ') });
+  };
+
+  const activeSelectedDays = formData.work_days
+    ? formData.work_days.split(', ').map((d) => d.trim())
+    : [];
   const loadData = async () => {
     if (!supabase) return setLoading(false);
     setLoading(true);
@@ -520,10 +534,48 @@ export function AdminEmployeeManagement({ supabase }) {
                 <label className="block mb-1 font-bold text-gray-300">أوقات الدوام (مثلاً 8 ص - 2 ظ)</label>
                 <input type="text" value={formData.work_hours} onChange={(e) => setFormData({...formData, work_hours: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
               </div>
-              <div>
-                <label className="block mb-1 font-bold text-gray-300">كم يوم بالأسبوع</label>
-                <input type="text" value={formData.work_days} onChange={(e) => setFormData({...formData, work_days: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
-              </div>
+              <div className="col-span-2 space-y-2 bg-[#0b1329] p-3 rounded-xl border border-[#233554]">
+  <div className="flex justify-between items-center mb-1">
+    <label className="font-bold text-[#f97316] text-xs">أيام الدوام الأسبوعية:</label>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => setFormData({ ...formData, work_days: 'الأحد, الإثنين, الثلاثاء, الأربعاء, الخميس' })}
+        className="text-[10px] bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-2.5 py-1 rounded-lg border border-blue-500/30 font-bold cursor-pointer"
+      >
+        أحد - خميس
+      </button>
+      <button
+        type="button"
+        onClick={() => setFormData({ ...formData, work_days: '' })}
+        className="text-[10px] bg-gray-700/50 text-gray-400 hover:bg-gray-700 px-2 py-1 rounded-lg border border-gray-600 cursor-pointer"
+      >
+        مسح الكل
+      </button>
+    </div>
+  </div>
+
+  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 pt-1">
+    {DAYS_OF_WEEK.map((day) => {
+      const isSelected = activeSelectedDays.includes(day);
+      return (
+        <button
+          key={day}
+          type="button"
+          onClick={() => toggleDaySelection(day)}
+          className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
+            isSelected
+              ? 'bg-[#f97316] text-white border-[#f97316] shadow-md shadow-orange-500/20'
+              : 'bg-[#162238] text-gray-400 border-[#233554] hover:border-gray-500'
+          }`}
+        >
+          <span>{isSelected ? '✓' : '+'}</span>
+          <span>{day}</span>
+        </button>
+      );
+    })}
+  </div>
+</div>
               <div>
                 <label className="block mb-1 font-bold text-gray-300">سعر الاشتراك</label>
                 <input type="number" value={formData.subscription_price} onChange={(e) => setFormData({...formData, subscription_price: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
