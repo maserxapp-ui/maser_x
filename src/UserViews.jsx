@@ -488,9 +488,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     const fetchEmployeesData = async () => {
       if (supabase) {
         const { data, error } = await supabase.from('employees').select('*');
+        console.log('📊 نتيجة الجلب من Supabase:', { data, error });
         if (!error && data) {
           setEmployees(data);
         }
+      } else {
+        console.log('❌ كائن supabase غير معرف بالصفحة');
       }
     };
     fetchEmployeesData();
