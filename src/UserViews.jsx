@@ -2567,14 +2567,18 @@ const handleCompleteTrip = async () => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
       {(() => {
-        // فحص آمن لمنع خطأ ReferenceError
-        const rawEmployeesList = (typeof employees !== 'undefined' && Array.isArray(employees)) 
-          ? employees 
-          : ((typeof employeesData !== 'undefined' && Array.isArray(employeesData)) ? employeesData : []);
-// 👈 استدعاء جلب البيانات فوراً إذا كانت القائمة فارغة
-  if (rawEmployeesList.length === 0 && typeof fetchEmp === 'function') {
-    fetchEmp();
-  }
+        // 1. تحديد قائمة الموظفات الخام بأسلوب آمن
+let rawEmployeesList = [];
+if (typeof employees !== 'undefined' && Array.isArray(employees)) {
+  rawEmployeesList = employees;
+} else if (typeof employeesData !== 'undefined' && Array.isArray(employeesData)) {
+  rawEmployeesList = employeesData;
+}
+
+// 2. طلب جلب البيانات بأمان دون إيقاف الكود
+if (rawEmployeesList.length === 0 && typeof fetchEmp === 'function') {
+  setTimeout(() => { fetchEmp(); }, 100);
+}
         const currentDriverId = user?.id || user?.driver_id;
 
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
