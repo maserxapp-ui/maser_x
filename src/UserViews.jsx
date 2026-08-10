@@ -2581,7 +2581,7 @@ const handleCompleteTrip = async () => {
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
       {(() => {
-    const rawEmployeesList = (typeof employees !== 'undefined' && Array.isArray(employees)) ? employees : [];
+    const rawEmployeesList = fetchedEmployeesList;
         const currentDriverId = user?.id || user?.driver_id;
 
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
