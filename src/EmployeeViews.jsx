@@ -257,35 +257,44 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
       alert('المتصفح لا يدعم تحديد الموقع الجغرافي.');
       return;
     }
-    alert('جاري تحديد موقعك الجغرافي، يرجى الموافقة على صلاحية الموقع إذا ظهرت...');
+    alert('جاري تحديد موقعك الجغرافي، يرجى السماح بالوصول للموقع (GPS)...');
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
-        const empId = typeof user !== 'undefined' ? (user?.id || user?.emp_id) : null;
-        const userPhone = typeof user !== 'undefined' ? user?.phone : null;
+        if (!supabase) {
+          alert('❌ تعذر الاتصال بقاعدة البيانات.');
+          return;
+        }
 
-        if (supabase) {
-          let error = null;
-          if (empId) {
-            const res = await supabase.from('employees').update({ location_url: mapUrl }).eq('id', empId);
-            error = res.error;
-          } else if (userPhone) {
-            const res = await supabase.from('employees').update({ location_url: mapUrl }).eq('phone', userPhone);
-            error = res.error;
-          }
+        const empId = user?.id || user?.emp_id;
+        const empPhone = user?.phone;
+        const empName = user?.name;
 
-          if (!error) {
-            alert('✅ تم حفظ موقع منزلِك بنجاح! يمكن للسائق الآن رؤيته.');
-          } else {
-            alert('❌ حدث خطأ أثناء حفظ الموقع في قاعدة البيانات.');
-          }
+        let query = supabase.from('employees').update({ location_url: mapUrl });
+
+        if (empId) {
+          query = query.eq('id', empId);
+        } else if (empPhone) {
+          query = query.eq('phone', empPhone);
+        } else if (empName) {
+          query = query.eq('name', empName);
+        }
+
+        const { data, error } = await query.select();
+
+        if (error) {
+          alert('❌ خطأ أثناء الحفظ: ' + error.message);
+        } else if (!data || data.length === 0) {
+          alert('⚠️ لم يتم العثور على صف الموظفة في الجدول لتحديثه. تأكدي من معرف الموظفة (ID) أو رقم الهاتف.');
+        } else {
+          alert('✅ تم حفظ رابط الموقع بنجاح في قاعدة البيانات!');
         }
       },
       (err) => {
-        alert('⚠️ يرجى تفعيل الـ GPS والسماح بالوصول للموقع في المتصفح.');
+        alert('⚠️ يرجى تفعيل الـ GPS والسماح للمتصفح بقراءة الموقع.');
       },
       { enableHighAccuracy: true }
     );
