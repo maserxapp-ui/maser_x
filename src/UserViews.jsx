@@ -2679,134 +2679,167 @@ const tomorrowEmployees = assignedEmployees.filter(emp => {
             ) : (
               <div style={{ display: 'grid', gap: '12px' }}>
                 {tomorrowEmployees.map((emp, idx) => {
-                  const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
-                  const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
-                  const whatsappUrl = `https://wa.me/${waPhone}`;
+  const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
+  const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
+  const whatsappUrl = `https://wa.me/${waPhone}`;
 
-                  return (
-                    <div key={idx} style={{
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
-                            {emp.name || 'معلمة'}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
-                            🏫 المدرسة/العنوان: <b>{emp.school_name || emp.address || 'غير محدد'}</b>
-                          </div>
-                        </div>
+  // 1️⃣ تجهيز أوقات وأيام الدوام الصباحي والمسائي
+  const mDays = Array.isArray(emp.morning_days) ? emp.morning_days.join('، ') : (emp.morning_days || '');
+  const eDays = Array.isArray(emp.evening_days) ? emp.evening_days.join('، ') : (emp.evening_days || '');
+  const oldDays = Array.isArray(emp.work_days) ? emp.work_days.join('، ') : (emp.work_days || '');
 
-                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                          <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                            🌅 ذهاب
-                          </span>
-                          <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                            🌆 عودة
-                          </span>
-                        </div>
-                      </div>
+  return (
+    <div key={emp.id || idx} style={{
+      backgroundColor: '#ffffff',
+      border: '1px solid #e2e8f0',
+      borderRadius: '12px',
+      padding: '14px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px'
+    }}>
+      {/* 2️⃣ الجزء العلوي: الاسم + أزرار الذهاب والعودة + المدرسة والسكن */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
+            {emp.name || 'معلمة'}
+          </div>
 
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderTop: '1px solid #e2e8f0',
-                        paddingTop: '10px',
-                        marginTop: '2px'
-                      }}>
-                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
-                          📞 {emp.phone || 'لا يوجد رقم'}
-                        </span>
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+            <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+              🌅 ذهاب
+            </span>
+            <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+              🌆 عودة
+            </span>
+          </div>
+        </div>
 
-                        {emp.phone && (
-                          <a 
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              backgroundColor: '#25D366',
-                              color: '#ffffff',
-                              textDecoration: 'none',
-                              padding: '6px 14px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: 'bold',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            💬 مراسلة واتساب
-                          </a>
-                        )}
-                        <button
-  onClick={() => {
-    if (emp.location_url) {
-      window.open(emp.location_url, '_blank');
-    } else {
-      alert('⚠️ لم تقم هذه الموظفة بتحديد موقع منزلها حتى الآن.');
-    }
-  }}
-  style={{
-    backgroundColor: emp.location_url ? '#2563eb' : '#9ca3af',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '6px 14px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    marginRight: '8px'
-  }}
->
-  📍 موقع المنزل
-</button>
-                        {/* زر تقييم الموظفة */}
-<button
-  onClick={() => {
-    const empName = emp?.name || 'الموظفة';
-    const driverName = user?.name || 'السائق';
-    const ratingStr = prompt(`⭐ تقييم الموظفة (${empName}):\nأدخل التقييم من 1 إلى 5:`, '5');
-    if (!ratingStr) return;
-    
-    const ratingVal = parseInt(ratingStr);
-    if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
-      alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
-      return;
-    }
+        {/* عرض اسم المدرسة وعنوان السكن بصورة منفصلة */}
+        <div style={{ fontSize: '12px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+          <span>🏫 المدرسة: <b>{emp.school_name || 'غير محددة'}</b></span>
+          <span>📍 السكن: <b style={{ color: '#0284c7' }}>{emp.address || 'غير محدد'}</b></span>
+        </div>
+      </div>
 
-    const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن الموظفة (${empName}):`, '') || '';
+      {/* 3️⃣ تفاصيل أيام وأوقات الدوام (الصباحي والمسائي) */}
+      <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}>
+        {mDays && (
+          <div style={{ color: '#d97706', fontWeight: 'bold', marginBottom: '2px' }}>
+            ☀️ الدوام الصباحي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({mDays})</span> {emp.morning_time && <span style={{ color: '#b45309' }}>🕒 {emp.morning_time}</span>}
+          </div>
+        )}
+        {eDays && (
+          <div style={{ color: '#7c3aed', fontWeight: 'bold', marginBottom: '2px' }}>
+            🌙 الدوام المسائي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({eDays})</span> {emp.evening_time && <span style={{ color: '#6d28d9' }}>🕒 {emp.evening_time}</span>}
+          </div>
+        )}
+        {!mDays && !eDays && (
+          <div style={{ color: '#475569' }}>
+            📅 أيام الدوام: <b>{oldDays || 'غير محددة'}</b> {emp.work_hours && <span>| 🕒 {emp.work_hours}</span>}
+          </div>
+        )}
+      </div>
 
-    supabase.from('ratings').insert([{
-      evaluator_role: 'سائق',
-      evaluator_name: driverName,
-      target_role: 'معلمة',
-      target_name: empName,
-      rating: ratingVal,
-      comment: note
-    }]).then(({ error }) => {
-      if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
-      else alert('✅ تم إرسال تقييمك للموظفة بنجاح!');
-    });
-  }}
-  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center gap-1"
->
-  ⭐ تقييم الموظفة
-</button>
-                      </div>
-                    </div>
-                  );
-                })}
+      {/* 4️⃣ الأزرار السفليّة (رقم الهاتف، واتساب، موقع المنزل، التقييم) */}
+      <div style={{
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        borderTop: '1px solid #e2e8f0',
+        paddingTop: '10px',
+        marginTop: '2px',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
+          📞 {emp.phone || 'لا يوجد رقم'}
+        </span>
+
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {emp.phone && (
+            <a 
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#25D366',
+                color: '#ffffff',
+                textDecoration: 'none',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              💬 مراسلة
+            </a>
+          )}
+
+          <button
+            onClick={() => {
+              if (emp.location_url) {
+                window.open(emp.location_url, '_blank');
+              } else {
+                alert('⚠️ لم تقم هذه الموظفة بتحديد موقع منزلها حتى الآن.');
+              }
+            }}
+            style={{
+              backgroundColor: emp.location_url ? '#2563eb' : '#9ca3af',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            📍 الموقع
+          </button>
+
+          <button
+            onClick={() => {
+              const empName = emp?.name || 'الموظفة';
+              const driverName = user?.name || 'السائق';
+              const ratingStr = prompt(`⭐ تقييم الموظفة (${empName}):\nأدخل التقييم من 1 إلى 5:`, '5');
+              if (!ratingStr) return;
+              
+              const ratingVal = parseInt(ratingStr);
+              if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
+                alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
+                return;
+              }
+
+              const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن الموظفة (${empName}):`, '') || '';
+
+              supabase.from('ratings').insert([{
+                evaluator_role: 'سائق',
+                evaluator_name: driverName,
+                target_role: 'معلمة',
+                target_name: empName,
+                rating: ratingVal,
+                comment: note
+              }]).then(({ error }) => {
+                if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
+                else alert('✅ تم إرسال تقييمك للموظفة بنجاح!');
+              });
+            }}
+            className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center gap-1"
+          >
+            ⭐ تقييم
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+})}
               </div>
             )}
           </>
