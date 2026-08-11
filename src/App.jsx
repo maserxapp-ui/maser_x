@@ -959,7 +959,7 @@ if (viewMode === 'user') {
             { id: 'subscribers', label: 'المشتركون', icon: '👥' },
             { id: 'drivers', label: 'السائقون والسيارات', icon: '🚘' },
             { id: 'trips', label: 'الرحلات', icon: '🚌' },
-            { id: 'expenses', label: 'المصروفات', icon: '⚖️' },
+            { id: 'expenses', label: 'المكافات والتقييمات', icon: '⚖️' },
             { id: 'reports', label: 'التقارير المالية', icon: '📊' },
             { id: 'employees', label: 'إدارة الموظفات', icon: '👩‍🏫' }, // 🌟 السطر الجديد
           ].map((item) => (
