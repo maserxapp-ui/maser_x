@@ -746,8 +746,9 @@ export function DriverEmployeeTab({ driver, supabase }) {
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('driver_id', 5)
-          .eq('payment_status', 'paid');
+          .eq('driver_id', driver?.id || 5)
+          .eq('payment_status', 'paid')
+          .eq('attending_status', true); // 👈 إضافة هذا السطر يستبعد أي موظفة سجلت غياباً
 
         if (error || !Array.isArray(data)) {
           setEmployees([]);
