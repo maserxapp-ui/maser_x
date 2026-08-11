@@ -560,20 +560,16 @@ const handleConfirmRenewal = async () => {
   e.preventDefault();
   if (!supabase) return;
 
-  // 1️⃣ تنظيف البيانات وتحويل النصوص الفارغة "" إلى null لتجنب خطأ 400
+  // إرسال الأيام كمصفوفة (Array) متوافقة مع نوع العمود في Supabase
   const payload = {
     name: formData.name,
     phone: formData.phone,
     password: formData.password || null,
     address: formData.address || null,
     school_name: formData.school_name || null,
-    morning_days: Array.isArray(formData.morning_days) && formData.morning_days.length > 0 
-      ? formData.morning_days.join(', ') 
-      : null,
+    morning_days: Array.isArray(formData.morning_days) ? formData.morning_days : [],
     morning_time: formData.morning_time || null,
-    evening_days: Array.isArray(formData.evening_days) && formData.evening_days.length > 0 
-      ? formData.evening_days.join(', ') 
-      : null,
+    evening_days: Array.isArray(formData.evening_days) ? formData.evening_days : [],
     evening_time: formData.evening_time || null,
     subscription_price: Number(formData.subscription_price) || 0,
     payment_status: formData.payment_status || 'unpaid',
@@ -585,7 +581,6 @@ const handleConfirmRenewal = async () => {
 
   try {
     if (editingId) {
-      // 2️⃣ التقاط الـ error الصادر من Supabase والتأكد من نجاح العملية
       const { error } = await supabase.from('employees').update(payload).eq('id', editingId);
       if (error) throw error;
     } else {
@@ -599,7 +594,7 @@ const handleConfirmRenewal = async () => {
     alert('تم حفظ بيانات الموظفة بنجاح ✅');
   } catch (err) {
     console.error('Submit employee error:', err);
-    alert('فشل الحفظ: ' + (err.message || 'تأكد من وجود الأعمدة الجديدة في Supabase'));
+    alert('فشل الحفظ: ' + (err.message || 'يرجى التأكد من البيانات'));
   }
 };
 
