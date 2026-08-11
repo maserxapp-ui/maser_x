@@ -2577,7 +2577,7 @@ export function FinancialReportsCalculator({ supabase }) {
   const [managerPercentage, setManagerPercentage] = useState(15);
   const [loading, setLoading] = useState(true);
 
-  // جلب إجمالي أرباح الطلاب من قاعدة البيانات وإعادة الضبط الشهرية
+  // جلب إجمالي أرباح الطلاب من حقل price
   useEffect(() => {
     const fetchFinancialData = async () => {
       if (!supabase) return;
@@ -2586,23 +2586,32 @@ export function FinancialReportsCalculator({ supabase }) {
         const currentMonth = new Date().getMonth();
         const savedMonth = localStorage.getItem('calc_saved_month');
         if (savedMonth !== null && Number(savedMonth) !== currentMonth) {
-          setExpenses([]); // تصفير الحقول المضافة
+          setExpenses([]); 
           localStorage.setItem('calc_saved_month', currentMonth);
         } else if (savedMonth === null) {
           localStorage.setItem('calc_saved_month', currentMonth);
         }
 
-        // 2. جلب مجموع مبالغ إشتراكات الطلاب تلقائياً
+        // 2. جلب حقل price لجميع الطلاب بدون استثناء وحساب المجموع
         const { data, error } = await supabase
           .from('students')
-          .select('price, subscription_price, amount');
+          .select('price');
 
         if (!error && data) {
-          const total = data.reduce((acc, std) => {
-            const val = Number(std.price || std.subscription_price || std.amount || 0);
+          const totalSum = data.reduce((acc, std) => {
+            const rawVal = std.price;
+            let val = 0;
+            if (typeof rawVal === 'number') {
+              val = rawVal;
+            } else if (typeof rawVal === 'string') {
+              val = parseFloat(rawVal.replace(/[^0-9.-]+/g, '')) || 0;
+            }
             return acc + val;
           }, 0);
-          setStudentRevenue(total);
+
+          setStudentRevenue(totalSum);
+        } else if (error) {
+          console.error("خطأ في جلب المبالغ:", error);
         }
       } catch (e) {
         console.error(e);
@@ -2732,7 +2741,7 @@ export function FinancialReportsCalculator({ supabase }) {
               <span className="text-xs text-slate-400 block">
                 💰 مجموع صافي الأرباح النهائي للطلاب:
               </span>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px] text-slate-500 block">
                 (المبلغ الكلي - الاستقطاعات {totalExpenses.toLocaleString()} د.ع)
               </span>
             </div>
