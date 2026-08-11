@@ -444,37 +444,86 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
 // ==========================================
 export function AdminEmployeeManagement({ supabase }) {
   const [employees, setEmployees] = useState([]);
+  const [renewModalData, setRenewModalData] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    password: '',
-    address: '',
-    school_name: '',
-    work_days: '',
-    work_hours: '',
-    subscription_price: 0,
-    payment_status: 'unpaid',
-    subscription_start_date: '',
-    subscription_end_date: '',
-    driver_id: '',
-    has_exception: false,
+ const [formData, setFormData] = useState({
+  name: '',
+  phone: '',
+  password: '',
+  address: '',
+  school_name: '',
+  morning_days: [],
+  morning_time: '8:00 ص - 12:00 ظ',
+  evening_days: [],
+  evening_time: '2:00 ظ - 6:00 م',
+  subscription_price: 0,
+  payment_status: 'unpaid',
+  subscription_start_date: '',
+  subscription_end_date: '',
+  driver_id: '',
+  has_exception: false,
+});
+  
+// 1. تحديد الأيام للصباحي/المسائي
+const toggleDay = (type, day) => {
+  const key = type === 'morning' ? 'morning_days' : 'evening_days';
+  const currentDays = Array.isArray(formData[key]) ? formData[key] : [];
+  if (currentDays.includes(day)) {
+    setFormData({ ...formData, [key]: currentDays.filter((d) => d !== day) });
+  } else {
+    setFormData({ ...formData, [key]: [...currentDays, day] });
+  }
+};
+
+// 2. حساب تاريخ الانتهاء تلقائياً عند اختيار تاريخ البدء (+ شهر)
+const handleStartDateChange = (val) => {
+  let calculatedEnd = '';
+  if (val) {
+    const d = new Date(val);
+    d.setMonth(d.getMonth() + 1);
+    calculatedEnd = d.toISOString().split('T')[0];
+  }
+  setFormData({
+    ...formData,
+    subscription_start_date: val,
+    subscription_end_date: calculatedEnd,
   });
-const toggleDaySelection = (dayName) => {
-    const selectedDays = formData.work_days
-      ? formData.work_days.split(', ').map((d) => d.trim()).filter(Boolean)
-      : [];
+};
 
-    const updatedDays = selectedDays.includes(dayName)
-      ? selectedDays.filter((d) => d !== dayName)
-      : [...selectedDays, dayName];
+// 3. تأكيد تجديد الاشتراك
+const handleConfirmRenewal = async () => {
+  if (!renewModalData || !supabase) return;
 
-    setFormData({ ...formData, work_days: updatedDays.join(', ') });
-  };
+  let baseDate = renewModalData.subscription_end_date
+    ? new Date(renewModalData.subscription_end_date)
+    : (renewModalData.subscription_start_date ? new Date(renewModalData.subscription_start_date) : new Date());
+
+  baseDate.setMonth(baseDate.getMonth() + 1);
+  const newEndDateStr = baseDate.toISOString().split('T')[0];
+
+  try {
+    const { error } = await supabase
+      .from('employees')
+      .update({
+        subscription_end_date: newEndDateStr,
+        payment_status: 'paid',
+      })
+      .eq('id', renewModalData.id);
+
+    if (!error) {
+      setRenewModalData(null);
+      loadData();
+    } else {
+      alert('حدث خطأ أثناء التجديد: ' + error.message);
+    }
+  } catch (err) {
+    console.error('Renewal error:', err);
+  }
+};
 
   const activeSelectedDays = formData.work_days
     ? formData.work_days.split(', ').map((d) => d.trim())
@@ -508,80 +557,83 @@ const toggleDaySelection = (dayName) => {
   }, [supabase]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!supabase) return;
+  e.preventDefault();
+  if (!supabase) return;
 
-    const payload = {
-      ...formData,
-      subscription_price: Number(formData.subscription_price) || 0,
-      driver_id: formData.driver_id || null,
-    };
+  const payload = {
+    ...formData,
+    morning_days: Array.isArray(formData.morning_days) ? formData.morning_days.join(', ') : formData.morning_days,
+    evening_days: Array.isArray(formData.evening_days) ? formData.evening_days.join(', ') : formData.evening_days,
+    subscription_price: Number(formData.subscription_price) || 0,
+    driver_id: formData.driver_id || null,
+  };
 
-    try {
-      if (editingId) {
-        await supabase.from('employees').update(payload).eq('id', editingId);
-      // ✅ الكود المعدّل
-} else {
-  const { id, ...dataToInsert } = payload;
-  await supabase.from('employees').insert(dataToInsert);
-}
-      setShowModal(false);
-      resetForm();
-      loadData();
-    } catch (err) {
-      console.error('Submit employee error:', err);
+  try {
+    if (editingId) {
+      await supabase.from('employees').update(payload).eq('id', editingId);
+    } else {
+      const { id, ...dataToInsert } = payload;
+      await supabase.from('employees').insert(dataToInsert);
     }
-  };
+    setShowModal(false);
+    resetForm();
+    loadData();
+  } catch (err) {
+    console.error('Submit employee error:', err);
+  }
+};
 
-  const handleEdit = (emp) => {
-    setEditingId(emp.id);
-    setFormData({
-      name: emp.name || '',
-      phone: emp.phone || '',
-      password: emp.password || '',
-      address: emp.address || '',
-      school_name: emp.school_name || '',
-      work_days: emp.work_days || '',
-      work_hours: emp.work_hours || '',
-      subscription_price: emp.subscription_price || 0,
-      payment_status: emp.payment_status || 'unpaid',
-      subscription_start_date: emp.subscription_start_date || '',
-      subscription_end_date: emp.subscription_end_date || '',
-      driver_id: emp.driver_id || '',
-      has_exception: emp.has_exception || false,
-    });
-    setShowModal(true);
-  };
+const handleEdit = (emp) => {
+  setEditingId(emp.id);
+  const mDays = emp.morning_days ? (typeof emp.morning_days === 'string' ? emp.morning_days.split(', ') : emp.morning_days) : [];
+  const eDays = emp.evening_days ? (typeof emp.evening_days === 'string' ? emp.evening_days.split(', ') : emp.evening_days) : [];
 
-  const handleDelete = async (id) => {
-    if (!supabase || !confirm('هل أنت موافق على حذف هذه الموظفة؟')) return;
-    try {
-      await supabase.from('employees').delete().eq('id', id);
-      loadData();
-    } catch (err) {
-      console.error('Delete error:', err);
-    }
-  };
+  setFormData({
+    name: emp.name || '',
+    phone: emp.phone || '',
+    password: emp.password || '',
+    address: emp.address || '',
+    school_name: emp.school_name || '',
+    morning_days: mDays,
+    morning_time: emp.morning_time || '8:00 ص - 12:00 ظ',
+    evening_days: eDays,
+    evening_time: emp.evening_time || '2:00 ظ - 6:00 م',
+    subscription_price: emp.subscription_price || 0,
+    payment_status: emp.payment_status || 'unpaid',
+    subscription_start_date: emp.subscription_start_date || '',
+    subscription_end_date: emp.subscription_end_date || '',
+    driver_id: emp.driver_id || '',
+    has_exception: emp.has_exception || false,
+  });
+  setShowModal(true);
+};
 
-  const resetForm = () => {
-    setEditingId(null);
-    setFormData({
-      name: '',
-      phone: '',
-      password: '',
-      address: '',
-      school_name: '',
-      work_days: '',
-      work_hours: '',
-      subscription_price: 0,
-      payment_status: 'unpaid',
-      subscription_start_date: '',
-      subscription_end_date: '',
-      driver_id: '',
-      has_exception: false,
-    });
-  };
+// 3. التصفير
+const resetForm = () => {
+  setEditingId(null);
+  const today = new Date().toISOString().split('T')[0];
+  const defaultEnd = new Date();
+  defaultEnd.setMonth(defaultEnd.getMonth() + 1);
 
+  setFormData({
+    name: '',
+    phone: '',
+    password: '',
+    address: '',
+    school_name: '',
+    morning_days: [],
+    morning_time: '8:00 ص - 12:00 ظ',
+    evening_days: [],
+    evening_time: '2:00 ظ - 6:00 م',
+    subscription_price: 0,
+    payment_status: 'unpaid',
+    subscription_start_date: today,
+    subscription_end_date: defaultEnd.toISOString().split('T')[0],
+    driver_id: '',
+    has_exception: false,
+  });
+};
+  
   return (
     <div className="p-4 space-y-4 dir-rtl text-right font-sans">
       <div className="flex justify-between items-center bg-[#162238] border border-[#233554] p-4 rounded-xl shadow-md text-white">
@@ -596,51 +648,86 @@ const toggleDaySelection = (dayName) => {
 
       <div className="bg-[#162238] border border-[#233554] rounded-xl shadow-md overflow-x-auto text-white">
         <table className="w-full text-xs text-right border-collapse">
-          <thead>
-            <tr className="bg-[#0b1329] border-b border-[#233554] text-gray-300">
-              <th className="p-3">اسم الموظفة</th>
-              <th className="p-3">رقم الهاتف</th>
-              <th className="p-3">المدرسة / السكن</th>
-              <th className="p-3">سعر الاشتراك</th>
-              <th className="p-3">حالة الدفع</th>
-              <th className="p-3">السائق المكلف</th>
-              <th className="p-3">التحكم والتوزيع</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="7" className="p-4 text-center text-gray-400">جاري التحميل...</td>
-              </tr>
-            ) : Array.isArray(employees) && employees.length > 0 ? (
-              employees.map((emp) => {
-                const driverObj = Array.isArray(emp.drivers) ? emp.drivers[0] : emp.drivers;
-                return (
-                  <tr key={emp.id} className="border-b border-[#233554] hover:bg-[#0b1329]/50 transition-colors">
-                    <td className="p-3 font-bold text-white">{emp.name}</td>
-                    <td className="p-3 text-gray-300">{emp.phone}</td>
-                    <td className="p-3 text-gray-300">{emp.school_name} - {emp.address}</td>
-                    <td className="p-3 font-bold text-[#f97316]">{Number(emp.subscription_price || 0).toLocaleString()} د.ع</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${emp.payment_status === 'paid' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
-                        {emp.payment_status === 'paid' ? 'مدفوع ✅' : 'غير مدفوع ❌'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-amber-400 font-semibold">{driverObj?.name || 'غير محدد'}</td>
-                    <td className="p-3 flex gap-2">
-                      <button onClick={() => handleEdit(emp)} className="bg-blue-500/20 border border-blue-500/40 text-blue-300 px-3 py-1 rounded-lg font-bold hover:bg-blue-500/30 cursor-pointer">تعديل / توزيع</button>
-                      <button onClick={() => handleDelete(emp.id)} className="bg-red-500/20 border border-red-500/40 text-red-300 px-3 py-1 rounded-lg font-bold hover:bg-red-500/30 cursor-pointer">حذف</button>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan="7" className="p-4 text-center text-gray-400">لا توجد موظفات مسجلات حالياً.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+  <thead>
+    <tr className="bg-[#0b1329] border-b border-[#233554] text-gray-300">
+      <th className="p-3">اسم الموظفة</th>
+      <th className="p-3">رقم الهاتف</th>
+      <th className="p-3">المدرسة / السكن</th>
+      <th className="p-3">أوقات الدوام</th>
+      <th className="p-3">تاريخ الانتهاء</th>
+      <th className="p-3">سعر الاشتراك</th>
+      <th className="p-3">حالة الدفع</th>
+      <th className="p-3">السائق المكلف</th>
+      <th className="p-3 text-center">التحكم والتوزيع</th>
+    </tr>
+  </thead>
+  <tbody>
+    {loading ? (
+      <tr>
+        <td colSpan="9" className="p-4 text-center text-gray-400">جاري التحميل...</td>
+      </tr>
+    ) : Array.isArray(employees) && employees.length > 0 ? (
+      employees.map((emp) => {
+        const driverObj = Array.isArray(emp.drivers) ? emp.drivers[0] : emp.drivers;
+        const endDate = emp.subscription_end_date;
+        const isExpired = endDate && new Date() > new Date(endDate);
+
+        return (
+          <tr key={emp.id} className="border-b border-[#233554] hover:bg-[#0b1329]/50 transition-colors">
+            <td className="p-3 font-bold text-white">{emp.name}</td>
+            <td className="p-3 text-gray-300">{emp.phone}</td>
+            <td className="p-3 text-gray-300">{emp.school_name} - {emp.address}</td>
+            <td className="p-3 space-y-1">
+              {emp.morning_days && (
+                <div className="text-[10px] text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  ☀️ <b>صباحي:</b> ({emp.morning_days}) 🕒 {emp.morning_time}
+                </div>
+              )}
+              {emp.evening_days && (
+                <div className="text-[10px] text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                  🌙 <b>مسائي:</b> ({emp.evening_days}) 🕒 {emp.evening_time}
+                </div>
+              )}
+              {!emp.morning_days && !emp.evening_days && (
+                <span className="text-gray-500">غير محدد</span>
+              )}
+            </td>
+            <td className="p-3 font-mono font-bold text-emerald-400">
+              {endDate || 'غير محدد'}
+            </td>
+            <td className="p-3 font-bold text-[#f97316]">{Number(emp.subscription_price || 0).toLocaleString()} د.ع</td>
+            <td className="p-3">
+              {isExpired ? (
+                <span className="bg-rose-500/10 border border-rose-500/30 text-rose-400 px-2 py-1 rounded text-xs font-bold">
+                  منتهي (مغلق) 🔒
+                </span>
+              ) : (
+                <span className={`px-2 py-1 rounded text-xs font-bold ${emp.payment_status === 'paid' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
+                  {emp.payment_status === 'paid' ? 'مدفوع ✅' : 'غير مدفوع ❌'}
+                </span>
+              )}
+            </td>
+            <td className="p-3 text-amber-400 font-semibold">{driverObj?.name || 'غير محدد'}</td>
+            <td className="p-3 flex items-center justify-center gap-1">
+              <button 
+                onClick={() => setRenewModalData(emp)} 
+                className="bg-purple-600/30 border border-purple-500/50 text-purple-300 hover:bg-purple-600/50 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer"
+              >
+                🔄 تجديد
+              </button>
+              <button onClick={() => handleEdit(emp)} className="bg-blue-500/20 border border-blue-500/40 text-blue-300 px-2.5 py-1 rounded-lg font-bold hover:bg-blue-500/30 cursor-pointer">تعديل</button>
+              <button onClick={() => handleDelete(emp.id)} className="bg-red-500/20 border border-red-500/40 text-red-300 px-2.5 py-1 rounded-lg font-bold hover:bg-red-500/30 cursor-pointer">حذف</button>
+            </td>
+          </tr>
+        );
+      })
+    ) : (
+      <tr>
+        <td colSpan="9" className="p-4 text-center text-gray-400">لا توجد موظفات مسجلات حالياً.</td>
+      </tr>
+    )}
+  </tbody>
+</table>
       </div>
 
       {showModal && (
@@ -668,51 +755,62 @@ const toggleDaySelection = (dayName) => {
                 <label className="block mb-1 font-bold text-gray-300">اسم المدرسة</label>
                 <input type="text" value={formData.school_name} onChange={(e) => setFormData({...formData, school_name: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
               </div>
-              <div>
-                <label className="block mb-1 font-bold text-gray-300">أوقات الدوام (مثلاً 8 ص - 2 ظ)</label>
-                <input type="text" value={formData.work_hours} onChange={(e) => setFormData({...formData, work_hours: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
-              </div>
-              <div className="col-span-2 space-y-2 bg-[#0b1329] p-3 rounded-xl border border-[#233554]">
-  <div className="flex justify-between items-center mb-1">
-    <label className="font-bold text-[#f97316] text-xs">أيام الدوام الأسبوعية:</label>
-    <div className="flex gap-2">
-      <button
-        type="button"
-        onClick={() => setFormData({ ...formData, work_days: 'الأحد, الإثنين, الثلاثاء, الأربعاء, الخميس' })}
-        className="text-[10px] bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-2.5 py-1 rounded-lg border border-blue-500/30 font-bold cursor-pointer"
-      >
-        أحد - خميس
-      </button>
-      <button
-        type="button"
-        onClick={() => setFormData({ ...formData, work_days: '' })}
-        className="text-[10px] bg-gray-700/50 text-gray-400 hover:bg-gray-700 px-2 py-1 rounded-lg border border-gray-600 cursor-pointer"
-      >
-        مسح الكل
-      </button>
-    </div>
-  </div>
-
-  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 pt-1">
+        {/* ☀️ دوام صباحي */}
+<div className="col-span-2 bg-[#0b1329] p-3 rounded-xl border border-amber-500/30 space-y-2">
+  <label className="font-bold text-amber-400 text-xs block">☀️ أيام وأوقات الدوام الصباحي:</label>
+  <div className="flex gap-1 flex-wrap">
     {DAYS_OF_WEEK.map((day) => {
-      const isSelected = activeSelectedDays.includes(day);
+      const isSel = Array.isArray(formData.morning_days) && formData.morning_days.includes(day);
       return (
         <button
-          key={day}
           type="button"
-          onClick={() => toggleDaySelection(day)}
-          className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
-            isSelected
-              ? 'bg-[#f97316] text-white border-[#f97316] shadow-md shadow-orange-500/20'
-              : 'bg-[#162238] text-gray-400 border-[#233554] hover:border-gray-500'
+          key={`m-${day}`}
+          onClick={() => toggleDay('morning', day)}
+          className={`px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer transition-all ${
+            isSel ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-[#162238] text-gray-400 border-[#233554]'
           }`}
         >
-          <span>{isSelected ? '✓' : '+'}</span>
-          <span>{day}</span>
+          {isSel ? '✓' : '+'} {day}
         </button>
       );
     })}
   </div>
+  <input
+    type="text"
+    placeholder="وقت الدوام الصباحي (مثلاً: 8:00 ص - 12:00 ظ)"
+    value={formData.morning_time}
+    onChange={(e) => setFormData({ ...formData, morning_time: e.target.value })}
+    className="w-full p-2 bg-[#162238] border border-[#233554] rounded-lg text-white text-xs"
+  />
+</div>
+
+{/* 🌙 دوام مسائي */}
+<div className="col-span-2 bg-[#0b1329] p-3 rounded-xl border border-purple-500/30 space-y-2">
+  <label className="font-bold text-purple-400 text-xs block">🌙 أيام وأوقات الدوام المسائي:</label>
+  <div className="flex gap-1 flex-wrap">
+    {DAYS_OF_WEEK.map((day) => {
+      const isSel = Array.isArray(formData.evening_days) && formData.evening_days.includes(day);
+      return (
+        <button
+          type="button"
+          key={`e-${day}`}
+          onClick={() => toggleDay('evening', day)}
+          className={`px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer transition-all ${
+            isSel ? 'bg-purple-600 text-white border-purple-400' : 'bg-[#162238] text-gray-400 border-[#233554]'
+          }`}
+        >
+          {isSel ? '✓' : '+'} {day}
+        </button>
+      );
+    })}
+  </div>
+  <input
+    type="text"
+    placeholder="وقت الدوام المسائي (مثلاً: 2:00 ظ - 6:00 م)"
+    value={formData.evening_time}
+    onChange={(e) => setFormData({ ...formData, evening_time: e.target.value })}
+    className="w-full p-2 bg-[#162238] border border-[#233554] rounded-lg text-white text-xs"
+  />
 </div>
               <div>
                 <label className="block mb-1 font-bold text-gray-300">سعر الاشتراك</label>
@@ -734,14 +832,25 @@ const toggleDaySelection = (dayName) => {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block mb-1 font-bold text-gray-300">تاريخ البداية</label>
-                <input type="date" value={formData.subscription_start_date} onChange={(e) => setFormData({...formData, subscription_start_date: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
-              </div>
-              <div>
-                <label className="block mb-1 font-bold text-gray-300">تاريخ الانتهاء</label>
-                <input type="date" value={formData.subscription_end_date} onChange={(e) => setFormData({...formData, subscription_end_date: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
-              </div>
+              {/* التواريخ المحدثة تلقائياً */}
+<div>
+  <label className="block mb-1 font-bold text-gray-300">تاريخ البداية</label>
+  <input 
+    type="date" 
+    value={formData.subscription_start_date} 
+    onChange={(e) => handleStartDateChange(e.target.value)} 
+    className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" 
+  />
+</div>
+<div>
+  <label className="block mb-1 font-bold text-gray-300">تاريخ الانتهاء (+شهر تلقائياً)</label>
+  <input 
+    type="date" 
+    value={formData.subscription_end_date} 
+    onChange={(e) => setFormData({...formData, subscription_end_date: e.target.value})} 
+    className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" 
+  />
+</div>
               <div className="col-span-2 flex items-center gap-2 pt-2">
                 <input type="checkbox" id="ex" checked={formData.has_exception} onChange={(e) => setFormData({...formData, has_exception: e.target.checked})} className="accent-[#f97316]" />
                 <label htmlFor="ex" className="font-bold text-[#f97316]">منح استثناء للدوام في العطل الرسمية</label>
@@ -755,6 +864,51 @@ const toggleDaySelection = (dayName) => {
           </div>
         </div>
       )}
+      {/* نافذة تأكيد التجديد */}
+{renewModalData && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 dir-rtl">
+    <div className="bg-[#162238] border border-purple-500/40 rounded-2xl p-6 w-full max-w-md text-center space-y-4 shadow-2xl">
+      <h3 className="text-lg font-bold text-purple-400">🔄 تأكيد تجديد الاشتراك الشهري</h3>
+      <p className="text-xs text-gray-300 leading-relaxed">
+        هل أنتِ متاكدة من تجديد الاشتراك لمدة شهر إضافي للموظفة:{' '}
+        <span className="font-bold text-[#f97316]">{renewModalData.name}</span>؟
+      </p>
+      <div className="bg-[#0b1329] p-3 rounded-xl border border-[#233554] text-xs text-gray-400 space-y-1 text-right">
+        <div>
+          تاريخ الانتهاء الحالي:{' '}
+          <span className="text-white font-bold">{renewModalData.subscription_end_date || 'غير محدد'}</span>
+        </div>
+        <div>
+          تاريخ الانتهاء الجديد:{' '}
+          <span className="text-emerald-400 font-bold">
+            {(() => {
+              let d = renewModalData.subscription_end_date
+                ? new Date(renewModalData.subscription_end_date)
+                : new Date();
+              d.setMonth(d.getMonth() + 1);
+              return d.toISOString().split('T')[0];
+            })()}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button
+          onClick={handleConfirmRenewal}
+          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl transition cursor-pointer shadow-lg shadow-purple-600/20 text-xs"
+        >
+          نعم، تأكيد التجديد
+        </button>
+        <button
+          onClick={() => setRenewModalData(null)}
+          className="bg-gray-700/50 hover:bg-gray-700 text-gray-300 px-4 py-2.5 rounded-xl border border-gray-600 text-xs cursor-pointer"
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -766,8 +920,11 @@ export function DriverEmployeeTab({ driver, supabase }) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // استخراج المعرّف بشكل آمن
+  const driverId = driver?.id || (typeof driver === 'number' || typeof driver === 'string' ? driver : null);
+
   useEffect(() => {
-    if (!supabase) {
+    if (!supabase || !driverId) {
       setEmployees([]);
       setLoading(false);
       return;
@@ -778,9 +935,9 @@ export function DriverEmployeeTab({ driver, supabase }) {
         const { data, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('driver_id', driver?.id || 5)
+          .eq('driver_id', driverId)
           .eq('payment_status', 'paid')
-          .eq('attending_status', true); // 👈 إضافة هذا السطر يستبعد أي موظفة سجلت غياباً
+          .eq('attending_status', true); // يستبعد الموظفة التي سجلت غياباً
 
         if (error || !Array.isArray(data)) {
           setEmployees([]);
@@ -798,7 +955,7 @@ export function DriverEmployeeTab({ driver, supabase }) {
     fetchEmp();
     const interval = setInterval(fetchEmp, 5000);
     return () => clearInterval(interval);
-  }, [driver?.id, supabase]);
+  }, [driverId, supabase]);
 
   if (loading) return <div className="p-6 text-center text-xs text-gray-400">جاري التحميل...</div>;
 
@@ -807,8 +964,8 @@ export function DriverEmployeeTab({ driver, supabase }) {
       <div className="p-8 text-center dir-rtl font-sans">
         <div className="bg-[#162238] border border-[#233554] text-white rounded-2xl p-6 space-y-2 shadow-xl">
           <span className="text-3xl">🚫</span>
-          <h3 className="font-bold text-sm text-[#f97316]">أنت غير مسجل بهذا النظام</h3>
-          <p className="text-xs text-gray-300">لم يتم تخصيص أي موظفات أو معلمات لحافلتك حتى الآن من قبل الإدارة.</p>
+          <h3 className="font-bold text-sm text-[#f97316]">لا توجد موظفات حاضرة حالياً</h3>
+          <p className="text-xs text-gray-300">لم يتم تخصيص موظفات مدفوعات الاشتراك وحاضرات اليوم لحافلتك.</p>
         </div>
       </div>
     );
@@ -817,34 +974,62 @@ export function DriverEmployeeTab({ driver, supabase }) {
   return (
     <div className="p-4 space-y-3 dir-rtl text-right pb-20 font-sans">
       <h2 className="font-extrabold text-[#f97316] text-sm mb-2">
-        🚍 قائمة الموظفات المعينات لحافلتك ({employees.length})
+        🚍 قائمة الموظفات الحاضرات لحافلتك اليوم ({employees.length})
       </h2>
 
       {employees.map((emp) => {
         const isAttending = emp.attending_status !== false;
+        const cleanPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
+
         return (
           <div key={emp.id} className="bg-[#162238] p-4 rounded-2xl border border-[#233554] text-white space-y-3 shadow-xl">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-white text-sm">{emp.name}</h3>
-                <p className="text-xs text-gray-400">{emp.school_name} - {emp.address}</p>
+                <p className="text-xs text-gray-400">{emp.school_name || 'بدون مدرسة'} - {emp.address || 'بدون عنوان'}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${isAttending ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
                 {isAttending ? '✅ تداوم اليوم' : '❌ لا تداوم اليوم'}
               </span>
             </div>
 
-            <div className="text-xs text-gray-300 bg-[#0b1329] p-2.5 rounded-xl border border-[#233554] grid grid-cols-2 gap-1">
-              <div>ساعات الدوام: <b className="text-white">{emp.work_hours || '-'}</b></div>
-              <div>الأيام: <b className="text-white">{emp.work_days || '-'}</b></div>
+            {/* عرض أوقات الدوام الصباحي والمسائي المحدثة */}
+            <div className="text-xs text-gray-300 bg-[#0b1329] p-3 rounded-xl border border-[#233554] space-y-1.5">
+              {emp.morning_days && (
+                <div className="text-amber-300 font-medium">
+                  ☀️ <b>صباحي:</b> ({emp.morning_days}) 🕒 {emp.morning_time}
+                </div>
+              )}
+              {emp.evening_days && (
+                <div className="text-purple-300 font-medium">
+                  🌙 <b>مسائي:</b> ({emp.evening_days}) 🕒 {emp.evening_time}
+                </div>
+              )}
+              {!emp.morning_days && !emp.evening_days && (
+                <div className="grid grid-cols-2 gap-1 text-gray-400">
+                  <div>ساعات الدوام: <b className="text-white">{emp.work_hours || '-'}</b></div>
+                  <div>الأيام: <b className="text-white">{emp.work_days || '-'}</b></div>
+                </div>
+              )}
             </div>
 
-            <button
-              onClick={() => openWhatsApp(emp.phone)}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-            >
-              💬 التواصل عبر الواتساب ({emp.phone})
-            </button>
+            {/* أزرار الاتصال والواتساب المباشر */}
+            <div className="flex gap-2 pt-1">
+              <a
+                href={`tel:${emp.phone}`}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
+              >
+                📞 اتصال
+              </a>
+              <a
+                href={`https://wa.me/${cleanPhone}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow-md transition-all"
+              >
+                💬 واتساب ({emp.phone})
+              </a>
+            </div>
           </div>
         );
       })}
