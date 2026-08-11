@@ -2768,6 +2768,38 @@ const handleCompleteTrip = async () => {
 >
   📍 موقع المنزل
 </button>
+                        {/* زر تقييم الموظفة */}
+<button
+  onClick={() => {
+    const empName = emp?.name || 'الموظفة';
+    const driverName = user?.name || 'السائق';
+    const ratingStr = prompt(`⭐ تقييم الموظفة (${empName}):\nأدخل التقييم من 1 إلى 5:`, '5');
+    if (!ratingStr) return;
+    
+    const ratingVal = parseInt(ratingStr);
+    if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
+      alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
+      return;
+    }
+
+    const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن الموظفة (${empName}):`, '') || '';
+
+    supabase.from('ratings').insert([{
+      evaluator_role: 'سائق',
+      evaluator_name: driverName,
+      target_role: 'معلمة',
+      target_name: empName,
+      rating: ratingVal,
+      comment: note
+    }]).then(({ error }) => {
+      if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
+      else alert('✅ تم إرسال تقييمك للموظفة بنجاح!');
+    });
+  }}
+  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center gap-1"
+>
+  ⭐ تقييم الموظفة
+</button>
                       </div>
                     </div>
                   );
