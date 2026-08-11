@@ -3174,4 +3174,74 @@ const [students, setStudents] = useState([]);
       </div>
     );
   }
+// 🟢 أضيفي هذا الكود في نهاية ملف src/UserViews.jsx
+export function RatingsTab({ supabase }) {
+  const [ratings, setRatings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const fetchRatings = async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setRatings(data);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRatings();
+    const interval = setInterval(() => {
+      fetchRatings();
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [supabase]);
+
+  return (
+    <div className="p-4 bg-slate-900 text-white rounded-2xl shadow-xl mt-4 dir-rtl">
+      <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+        <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
+          ⭐ سجل تقييمات السائقين والموظفات
+        </h3>
+        <span className="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full">
+          🔄 يتحديث تلقائياً كل 20 ثانية
+        </span>
+      </div>
+
+      {loading ? (
+        <p className="text-center py-6 text-slate-400">جاري تحميل التقييمات...</p>
+      ) : ratings.length === 0 ? (
+        <p className="text-center py-6 text-slate-400">لا توجد تقييمات مسجلة حتى الآن.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {ratings.map((item) => (
+            <div key={item.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${item.evaluator_role === 'سائق' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'bg-purple-600/30 text-purple-400 border border-purple-500/30'}`}>
+                  {item.evaluator_role}: {item.evaluator_name} ➔ {item.target_role}: {item.target_name}
+                </span>
+                <span className="text-amber-400 text-sm font-bold">
+                  {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
+                </span>
+              </div>
+
+              {item.comment && (
+                <p className="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                  💬 "{item.comment}"
+                </p>
+              )}
+
+              <span className="text-[10px] text-slate-500 self-end">
+                {new Date(item.created_at).toLocaleString('ar-EG')}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
