@@ -3167,6 +3167,8 @@ const [students, setStudents] = useState([]);
                 </table>
               </div>
             </div>
+            {/* 🟢 سجل تقييمات السائقين والموظفات الجديد */}
+<RatingsTab supabase={supabase} />
           </>
         )}
       </div>
