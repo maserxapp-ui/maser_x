@@ -2937,7 +2937,7 @@ const [students, setStudents] = useState([]);
     // ⚡ تحديث البيانات كل 5 ثوانٍ تلقائياً
     const interval = setInterval(() => {
       loadAdminData();
-    }, 5000);
+    }, 25000);
 
     return () => clearInterval(interval);
   }, []);
