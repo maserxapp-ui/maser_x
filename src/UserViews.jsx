@@ -2603,17 +2603,22 @@ const handleCompleteTrip = async () => {
   console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
 
   const assignedEmployees = rawEmployeesList.filter(emp => {
-    if (!emp) return false;
+  if (!emp) return false;
 
-    const empDriverId = emp.driver_id != null ? String(emp.driver_id).trim() : '';
-    const driverId = currentDriverId != null ? String(currentDriverId).trim() : '';
+  // 🔴 شرط إخفاء الموظفة إذا كانت غائبة
+  if (emp.attending_status === false || emp.attending_status === 'FALSE' || emp.attending_status === 'false') {
+    return false;
+  }
 
-    console.log(`فحص الموظفة (${emp.name}): driver_id = "${empDriverId}" | id السائق = "${driverId}"`);
+  const empDriverId = emp.driver_id != null ? String(emp.driver_id).trim() : '';
+  const driverId = currentDriverId != null ? String(currentDriverId).trim() : '';
 
-    return (empDriverId !== '' && empDriverId === driverId) ||
-           (emp.driver_phone && user?.phone && String(emp.driver_phone).trim() === String(user?.phone).trim()) ||
-           (emp.driver_name && user?.name && emp.driver_name.trim() === user?.name.trim());
-  });
+  console.log(`فحص الموظفة (${emp.name}): driver_id = "${empDriverId}" | id السائق = "${driverId}"`);
+
+  return (empDriverId !== '' && empDriverId === driverId) ||
+         (emp.driver_phone && user?.phone && String(emp.driver_phone).trim() === String(user?.phone).trim()) ||
+         (emp.driver_name && user?.name && emp.driver_name.trim() === user?.name.trim());
+});
 
   // حساب اسم يوم غدٍ تلقائياً
   const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
