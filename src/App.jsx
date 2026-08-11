@@ -1790,10 +1790,14 @@ else if (confirmedAttending) {
             <TripsManagement supabase={supabase} />
           )}
 
-         {/* 🏆 تبويب المكافآت والمصروفات الحسابية */}
-      {(activeTab === 'expenses' || activeTab === 'rewards' || activeTab === 'reports') && (
-        <AdminRewardsAndRatings supabase={supabase} />
-      )}
+         {/* تبويب المكافآت والمصروفات الحسابية 🏆 */}
+{(activeTab === 'expenses' || activeTab === 'rewards') && (
+  <AdminRewardsAndRatings supabase={supabase} />
+)}
+
+{/* 🟢 تبويب التقارير المالية بالحاسبة الجديدة */}
+{activeTab === 'reports' && <FinancialReportsCalculator supabase={supabase} />}
+        
         {/* تبويب سجل التقييمات */}
 {activeTab === 'ratings' && <RatingsTab supabase={supabase} />}
 {/* تبويب إدارة الموظفات */}
@@ -2560,6 +2564,237 @@ export function RatingsTab({ supabase }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+// 🟢 مكون الحاسبة المالية المستقل لتبويب التقارير المالية
+export function FinancialReportsCalculator({ supabase }) {
+  const [studentRevenue, setStudentRevenue] = useState(0);
+  const [expenses, setExpenses] = useState([
+    { id: 1, name: 'أجرة السائق والرحلات اليومية', amount: '' }
+  ]);
+  const [employeeTotal, setEmployeeTotal] = useState('');
+  const [managerPercentage, setManagerPercentage] = useState(15);
+  const [loading, setLoading] = useState(true);
+
+  // جلب إجمالي أرباح الطلاب من قاعدة البيانات وإعادة الضبط الشهرية
+  useEffect(() => {
+    const fetchFinancialData = async () => {
+      if (!supabase) return;
+      try {
+        // 1. فحص التصفير التلقائي بداية كل شهر للاستقطاعات
+        const currentMonth = new Date().getMonth();
+        const savedMonth = localStorage.getItem('calc_saved_month');
+        if (savedMonth !== null && Number(savedMonth) !== currentMonth) {
+          setExpenses([]); // تصفير الحقول المضافة
+          localStorage.setItem('calc_saved_month', currentMonth);
+        } else if (savedMonth === null) {
+          localStorage.setItem('calc_saved_month', currentMonth);
+        }
+
+        // 2. جلب مجموع مبالغ إشتراكات الطلاب تلقائياً
+        const { data, error } = await supabase
+          .from('students')
+          .select('price, subscription_price, amount');
+
+        if (!error && data) {
+          const total = data.reduce((acc, std) => {
+            const val = Number(std.price || std.subscription_price || std.amount || 0);
+            return acc + val;
+          }, 0);
+          setStudentRevenue(total);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFinancialData();
+  }, [supabase]);
+
+  // إضافة حقل استقطاع جديد
+  const addExpenseRow = () => {
+    setExpenses([...expenses, { id: Date.now(), name: '', amount: '' }]);
+  };
+
+  // حذف حقل استقطاع
+  const removeExpenseRow = (id) => {
+    setExpenses(expenses.filter((item) => item.id !== id));
+  };
+
+  // تحديث بيانات حقل الاستقطاع
+  const updateExpense = (id, field, value) => {
+    setExpenses(
+      expenses.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  // الحسابات المالية التلقائية
+  const totalExpenses = expenses.reduce(
+    (sum, item) => sum + (Number(item.amount) || 0),
+    0
+  );
+  const netStudentProfit = studentRevenue - totalExpenses;
+  const managerProfitFromEmployees =
+    (Number(employeeTotal) || 0) * ((Number(managerPercentage) || 0) / 100);
+
+  return (
+    <div className="p-6 bg-slate-900 text-white rounded-2xl shadow-xl mt-4 dir-rtl space-y-6">
+      {/* هيدر الصفحة */}
+      <div className="border-b border-slate-700 pb-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-amber-400 flex items-center gap-2">
+            🧮 الحاسبة المالية وإحصائيات الأرباح
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            حساب صافي أرباح الطلاب، الخصومات المتغيرة، ونسبة المدير من الموظفات
+          </p>
+        </div>
+        <span className="bg-slate-800 text-amber-300 text-xs px-3 py-1.5 rounded-full border border-amber-500/20">
+          🔄 تتصفّر الحقول المضافة تلقائياً بداية كل شهر
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* الخانة الأولى: أرباح واستقطاعات الطلاب */}
+        <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
+          <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2 border-b border-slate-700 pb-2">
+            🚌 1. حاسبة أرباح وإستقطاعات الطلاب
+          </h3>
+
+          {/* المبلغ الكلي للطلاب المجلوب تلقائياً */}
+          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+            <div>
+              <span className="text-xs text-slate-400 block">
+                إجمالي مبالغ الطلاب (مجموع أرباح الطلاب بالرئيسية):
+              </span>
+              <span className="text-2xl font-black text-emerald-400">
+                {loading ? 'جاري التحميل...' : `${studentRevenue.toLocaleString()} د.ع`}
+              </span>
+            </div>
+          </div>
+
+          {/* إضافة استقطاعات وخصومات متغيرة */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold text-slate-300">
+                ➖ الاستقطاعات والخصومات (أجرة السائق، عدد الرحلات، إلخ):
+              </label>
+              <button
+                onClick={addExpenseRow}
+                className="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition"
+              >
+                ➕ إضافة حقل جديد
+              </button>
+            </div>
+
+            {expenses.length === 0 ? (
+              <p className="text-xs text-slate-500 text-center py-2">
+                لا توجد استقطاعات مضافة.
+              </p>
+            ) : (
+              expenses.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="flex gap-2 items-center bg-slate-900/60 p-2 rounded-xl border border-slate-700"
+                >
+                  <input
+                    type="text"
+                    placeholder="اسم الاستقطاع (مثلاً: أجرة السائق)"
+                    value={exp.name}
+                    onChange={(e) => updateExpense(exp.id, 'name', e.target.value)}
+                    className="flex-1 bg-slate-800 text-xs text-white p-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-400"
+                  />
+                  <input
+                    type="number"
+                    placeholder="السعر (د.ع)"
+                    value={exp.amount}
+                    onChange={(e) => updateExpense(exp.id, 'amount', e.target.value)}
+                    className="w-32 bg-slate-800 text-xs text-white p-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-400"
+                  />
+                  <button
+                    onClick={() => removeExpenseRow(exp.id)}
+                    className="text-red-400 hover:text-red-300 font-bold text-sm px-2 py-1"
+                    title="حذف الحقل"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* المجموع النهائي للطلاب */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex justify-between items-center mt-4">
+            <div>
+              <span className="text-xs text-slate-400 block">
+                💰 مجموع صافي الأرباح النهائي للطلاب:
+              </span>
+              <span className="text-[10px] text-slate-500">
+                (المبلغ الكلي - الاستقطاعات {totalExpenses.toLocaleString()} د.ع)
+              </span>
+            </div>
+            <span className="text-2xl font-black text-amber-400">
+              {netStudentProfit.toLocaleString()} د.ع
+            </span>
+          </div>
+        </div>
+
+        {/* الخانة الثانية: أرباح الموظفات ونسبة المدير */}
+        <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
+          <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2 border-b border-slate-700 pb-2">
+            👩‍💼 2. حاسبة أرباح ونسبة المدير من الموظفات
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                مجموع مبالغ الطالبات / الموظفات الكلي:
+              </label>
+              <input
+                type="number"
+                placeholder="أدخلي مجموع مبالغ الطالبات (د.ع)"
+                value={employeeTotal}
+                onChange={(e) => setEmployeeTotal(e.target.value)}
+                className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                نسبة المدير المخصومة (%):
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  placeholder="أدخلي النسبية (مثلاً: 15)"
+                  value={managerPercentage}
+                  onChange={(e) => setManagerPercentage(e.target.value)}
+                  className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+                />
+                <span className="text-lg font-bold text-purple-400">%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* نتيجة أرباح المدير الصافية من النسب */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
+            <div>
+              <span className="text-xs text-slate-400 block">
+                👑 مجموع أرباحك الصافية (النسب المخصومة للمدير):
+              </span>
+              <span className="text-[10px] text-purple-400 block mt-0.5">
+                ({managerPercentage || 0}% مخصومة من إجمالي {Number(employeeTotal || 0).toLocaleString()} د.ع)
+              </span>
+            </div>
+            <span className="text-2xl font-black text-emerald-400">
+              {managerProfitFromEmployees.toLocaleString()} د.ع
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
