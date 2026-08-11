@@ -560,26 +560,46 @@ const handleConfirmRenewal = async () => {
   e.preventDefault();
   if (!supabase) return;
 
+  // 1️⃣ تنظيف البيانات وتحويل النصوص الفارغة "" إلى null لتجنب خطأ 400
   const payload = {
-    ...formData,
-    morning_days: Array.isArray(formData.morning_days) ? formData.morning_days.join(', ') : formData.morning_days,
-    evening_days: Array.isArray(formData.evening_days) ? formData.evening_days.join(', ') : formData.evening_days,
+    name: formData.name,
+    phone: formData.phone,
+    password: formData.password || null,
+    address: formData.address || null,
+    school_name: formData.school_name || null,
+    morning_days: Array.isArray(formData.morning_days) && formData.morning_days.length > 0 
+      ? formData.morning_days.join(', ') 
+      : null,
+    morning_time: formData.morning_time || null,
+    evening_days: Array.isArray(formData.evening_days) && formData.evening_days.length > 0 
+      ? formData.evening_days.join(', ') 
+      : null,
+    evening_time: formData.evening_time || null,
     subscription_price: Number(formData.subscription_price) || 0,
-    driver_id: formData.driver_id || null,
+    payment_status: formData.payment_status || 'unpaid',
+    subscription_start_date: formData.subscription_start_date || null,
+    subscription_end_date: formData.subscription_end_date || null,
+    driver_id: formData.driver_id ? Number(formData.driver_id) : null,
+    has_exception: Boolean(formData.has_exception),
   };
 
   try {
     if (editingId) {
-      await supabase.from('employees').update(payload).eq('id', editingId);
+      // 2️⃣ التقاط الـ error الصادر من Supabase والتأكد من نجاح العملية
+      const { error } = await supabase.from('employees').update(payload).eq('id', editingId);
+      if (error) throw error;
     } else {
-      const { id, ...dataToInsert } = payload;
-      await supabase.from('employees').insert(dataToInsert);
+      const { error } = await supabase.from('employees').insert([payload]);
+      if (error) throw error;
     }
+
     setShowModal(false);
     resetForm();
     loadData();
+    alert('تم حفظ بيانات الموظفة بنجاح ✅');
   } catch (err) {
     console.error('Submit employee error:', err);
+    alert('فشل الحفظ: ' + (err.message || 'تأكد من وجود الأعمدة الجديدة في Supabase'));
   }
 };
 
