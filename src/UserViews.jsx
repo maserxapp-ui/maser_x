@@ -2625,11 +2625,14 @@ const handleCompleteTrip = async () => {
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
   const tomorrowName = daysMap[tomorrowIndex];
 
-  // فلترة معلمات الغد
-  const tomorrowEmployees = assignedEmployees.filter(emp => {
-    const days = Array.isArray(emp.work_days) ? emp.work_days.join(',') : String(emp.work_days || '');
-    return days.includes(tomorrowName);
-  });
+ // فلترة معلمات الغد (يدعم الدوام الصباحي والمسائي والقديم)
+const tomorrowEmployees = assignedEmployees.filter(emp => {
+  const mDays = Array.isArray(emp.morning_days) ? emp.morning_days.join(',') : String(emp.morning_days || '');
+  const eDays = Array.isArray(emp.evening_days) ? emp.evening_days.join(',') : String(emp.evening_days || '');
+  const oldDays = Array.isArray(emp.work_days) ? emp.work_days.join(',') : String(emp.work_days || '');
+
+  return mDays.includes(tomorrowName) || eDays.includes(tomorrowName) || oldDays.includes(tomorrowName);
+});
 
   console.log('الموظفات المربوطات بالسائق:', assignedEmployees);
 
