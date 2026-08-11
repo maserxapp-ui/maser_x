@@ -250,6 +250,38 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
               >
                 💬 واتساب السائق
               </button>
+             {/* زر تقييم السائق */}
+<button
+  onClick={() => {
+    const driverName = driverInfo?.name || 'السائق المكلف';
+    const empName = user?.name || 'معلمة';
+    const ratingStr = prompt(`⭐ تقييم السائق (${driverName}):\nأدخلي التقييم من 1 إلى 5:`, '5');
+    if (!ratingStr) return;
+    
+    const ratingVal = parseInt(ratingStr);
+    if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
+      alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
+      return;
+    }
+
+    const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن السائق (${driverName}):`, '') || '';
+
+    supabase.from('ratings').insert([{
+      evaluator_role: 'معلمة',
+      evaluator_name: empName,
+      target_role: 'سائق',
+      target_name: driverName,
+      rating: ratingVal,
+      comment: note
+    }]).then(({ error }) => {
+      if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
+      else alert('✅ تم إرسال تقييمك للسائق بنجاح!');
+    });
+  }}
+  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all shadow-md mt-2 flex items-center justify-center gap-1 w-full"
+>
+  ⭐ تقييم السائق
+</button>
 
               <button
   onClick={() => {
