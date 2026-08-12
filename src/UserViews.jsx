@@ -516,6 +516,10 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingVal, setRatingVal] = useState(5);
+  const [ratingNote, setRatingNote] = useState('');
+  const [targetEmp, setTargetEmp] = useState(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
   // 🚕 حالة ودالة جلب بيانات سائق العودة للطالبة
   const [assignedReturnDriver, setAssignedReturnDriver] = useState(null);
@@ -1859,24 +1863,40 @@ function DriverView({ user, setUser, supabase }) {
   const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
   // 🌟 دالة حفظ وإرسال التقييم للإدارة
   const handleSubmitRating = async () => {
-    if (!ratingStudent) return;
+    if (!targetEmp) return;
     try {
       setIsSubmittingRating(true);
 
+      // 1. إرسال التقييم إلى جدول التقييمات (ليظهر في لوحة الإدارة)
       const { error } = await supabase
-        .from('students')
-        .update({
-          driver_rating: ratingStars,
-          driver_notes: ratingNotes
-        })
-        .eq('id', ratingStudent.id);
+        .from('ratings')
+        .insert([{
+          evaluator_role: 'سائق',
+          evaluator_name: user?.name || 'سائق',
+          target_role: 'معلمة',
+          target_name: targetEmp?.name || targetEmp?.student_name || 'الموظفة',
+          rating: ratingVal,
+          comment: ratingNote.trim()
+        }]);
 
       if (error) throw error;
 
-      alert('✅ تم إرسال التقييم والملاحظة للإدارة بنجاح!');
-      setRatingStudent(null);
-      setRatingNotes('');
-      setRatingStars(5);
+      // 2. تحديث بيانات الموظفة/الطالبة في جدول الطلاب (إن كان مستخدماً للبيانات المحلية)
+      await supabase
+        .from('students')
+        .update({
+          driver_rating: ratingVal,
+          driver_notes: ratingNote.trim()
+        })
+        .eq('id', targetEmp.id);
+
+      alert('✅ تم إرسال التقييم والملاحظة بنجاح!');
+
+      // إغلاق النافذة وتصفير القيم
+      setShowRatingModal(false);
+      setTargetEmp(null);
+      setRatingNote('');
+      setRatingVal(5);
 
       if (typeof fetchStudentsForDriver === 'function' && user) {
         fetchStudentsForDriver(user);
@@ -2804,37 +2824,17 @@ const tomorrowEmployees = assignedEmployees.filter(emp => {
             📍 الموقع
           </button>
 
-          <button
-            onClick={() => {
-              const empName = emp?.name || 'الموظفة';
-              const driverName = user?.name || 'السائق';
-              const ratingStr = prompt(`⭐ تقييم الموظفة (${empName}):\nأدخل التقييم من 1 إلى 5:`, '5');
-              if (!ratingStr) return;
-              
-              const ratingVal = parseInt(ratingStr);
-              if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
-                alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
-                return;
-              }
-
-              const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن الموظفة (${empName}):`, '') || '';
-
-              supabase.from('ratings').insert([{
-                evaluator_role: 'سائق',
-                evaluator_name: driverName,
-                target_role: 'معلمة',
-                target_name: empName,
-                rating: ratingVal,
-                comment: note
-              }]).then(({ error }) => {
-                if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
-                else alert('✅ تم إرسال تقييمك للموظفة بنجاح!');
-              });
-            }}
-            className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center gap-1"
-          >
-            ⭐ تقييم
-          </button>
+         <button
+  onClick={() => {
+    setTargetEmp(emp);
+    setRatingVal(5);
+    setRatingNote('');
+    setShowRatingModal(true);
+  }}
+  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-1"
+>
+  ⭐ تقييم
+</button>
         </div>
       </div>
     </div>
@@ -2891,7 +2891,120 @@ const tomorrowEmployees = assignedEmployees.filter(emp => {
       {activeTab === 'rewards' && (
         <DriverRewardsTab driver={user} supabase={supabase} />
       )}
+{/* نافذة تقييم الموظفة التفاعلية */}
+      {showRatingModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '400px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            direction: 'rtl'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center' }}>
+              ⭐ تقييم الموظفة ({targetEmp?.name || targetEmp?.student_name || 'الموظفة'})
+            </h3>
 
+            {/* اختيار عدد النجوم */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRatingVal(star)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
+                    filter: star <= ratingVal ? 'none' : 'grayscale(100%) opacity(0.3)',
+                    transform: star <= ratingVal ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+
+            {/* حقل الملاحظة الاختياري */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '6px' }}>
+                ✍️ ملاحظة أو انطباع (اختياري):
+              </label>
+              <textarea
+                rows="3"
+                value={ratingNote}
+                onChange={(e) => setRatingNote(e.target.value)}
+                placeholder="اكتب أي ملاحظة ترغب بإيصالها..."
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  color: '#000000',
+                  outline: 'none',
+                  resize: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* أزرار الإرسال والإلغاء */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleSubmitRating}
+                disabled={isSubmittingRating}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f59e0b',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isSubmittingRating ? 'جاري الإرسال...' : 'إرسال التقييم'}
+              </button>
+              <button
+                onClick={() => setShowRatingModal(false)}
+                disabled={isSubmittingRating}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 📱 4. الشريط السفلي للتنقل المصمم بشكل احترافي */}
       <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-50 flex items-center justify-between h-16 px-3">
         {/* زر الرئيسية */}
