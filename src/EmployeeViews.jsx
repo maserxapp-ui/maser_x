@@ -763,6 +763,7 @@ const handleConfirmRenewal = async () => {
     phone: formData.phone,
     password: formData.password || null,
     address: formData.address || null,
+    district: formData.district || null,
     school_name: formData.school_name || null,
     morning_days: Array.isArray(formData.morning_days) ? formData.morning_days : [],
     morning_time: formData.morning_time || null,
@@ -805,6 +806,7 @@ const handleEdit = (emp) => {
     phone: emp.phone || '',
     password: emp.password || '',
     address: emp.address || '',
+    district: emp.district || '',
     school_name: emp.school_name || '',
     morning_days: mDays,
     morning_time: emp.morning_time || '8:00 ص - 12:00 ظ',
@@ -832,6 +834,7 @@ const resetForm = () => {
     phone: '',
     password: '',
     address: '',
+    district: '',
     school_name: '',
     morning_days: [],
     morning_time: '8:00 ص - 12:00 ظ',
@@ -963,6 +966,15 @@ const resetForm = () => {
                 <label className="block mb-1 font-bold text-gray-300">عنوان السكن</label>
                 <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
               </div>
+              <div>
+  <label className="block mb-1 font-bold text-gray-300">القضاء</label>
+  <input 
+    type="text" 
+    value={formData.district || ''} 
+    onChange={(e) => setFormData({...formData, district: e.target.value})} 
+    className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" 
+  />
+</div>
               <div>
                 <label className="block mb-1 font-bold text-gray-300">اسم المدرسة</label>
                 <input type="text" value={formData.school_name} onChange={(e) => setFormData({...formData, school_name: e.target.value})} className="w-full p-2.5 bg-[#0b1329] border border-[#233554] rounded-xl text-white focus:outline-none focus:border-[#f97316]" />
