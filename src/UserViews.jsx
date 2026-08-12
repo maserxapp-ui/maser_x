@@ -516,10 +516,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [shiftFinished, setShiftFinished] = useState(false);
   const [actionAlert, setActionAlert] = useState('');
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [ratingVal, setRatingVal] = useState(5);
-  const [ratingNote, setRatingNote] = useState('');
-  const [targetEmp, setTargetEmp] = useState(null);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  
   const [isStudentChatOpen, setIsStudentChatOpen] = useState(false);
   // 🚕 حالة ودالة جلب بيانات سائق العودة للطالبة
   const [assignedReturnDriver, setAssignedReturnDriver] = useState(null);
@@ -1861,6 +1858,11 @@ function DriverView({ user, setUser, supabase }) {
   const [ratingStars, setRatingStars] = React.useState(5);
   const [ratingNotes, setRatingNotes] = React.useState('');
   const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
+  const [showRatingModal, setShowRatingModal] = React.useState(false);
+  const [targetEmp, setTargetEmp] = React.useState(null);
+  const [ratingVal, setRatingVal] = React.useState(5);
+  const [ratingNote, setRatingNote] = React.useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
   // 🌟 دالة حفظ وإرسال التقييم للإدارة
   const handleSubmitRating = async () => {
     if (!targetEmp) return;
@@ -2639,11 +2641,7 @@ const handleCompleteTrip = async () => {
          (emp.driver_phone && user?.phone && String(emp.driver_phone).trim() === String(user?.phone).trim()) ||
          (emp.driver_name && user?.name && emp.driver_name.trim() === user?.name.trim());
 });
-const [showRatingModal, setShowRatingModal] = useState(false);
-  const [ratingVal, setRatingVal] = useState(5);
-  const [ratingNote, setRatingNote] = useState('');
-  const [targetEmp, setTargetEmp] = useState(null);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
   // حساب اسم يوم غدٍ تلقائياً
   const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
