@@ -557,80 +557,81 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
     </div>
   </div>
 )}
-      {/* كارت الدعم الفني */}
-<div style={{
-  backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  padding: '20px 16px',
-  marginTop: '16px',
-  textAlign: 'center',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-}}>
-  <div style={{
-    fontSize: '15px',
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px'
-  }}>
-    <span>🎧</span> إذا واجهتك أي مشكلة، تواصل مع الدعم الفني:
-  </div>
+      {/* كارت الدعم الفني باللون الكحلي المطابق */}
+      <div style={{
+        backgroundColor: '#162238',
+        border: '1px solid #233554',
+        borderRadius: '16px',
+        padding: '20px 16px',
+        marginTop: '16px',
+        textAlign: 'center',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{
+          fontSize: '15px',
+          fontWeight: 'bold',
+          color: '#f8fafc',
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
+        }}>
+          <span>🎧</span> إذا واجهتك أي مشكلة، تواصل مع الدعم الفني:
+        </div>
 
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap'
-  }}>
-    {/* الرقم الأول (الأخضر) */}
-    <a
-      href="https://wa.me/9647888978111"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#e6f7f0',
-        border: '1px solid #a3e6cd',
-        color: '#059669',
-        padding: '8px 18px',
-        borderRadius: '12px',
-        textDecoration: 'none',
-        fontWeight: 'bold',
-        fontSize: '14px'
-      }}
-    >
-      07888978111 💬
-    </a>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          {/* الرقم الأول (الأخضر) */}
+          <a
+            href="https://wa.me/9647888978111"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              color: '#34d399',
+              padding: '8px 18px',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            }}
+          >
+            07888978111 💬
+          </a>
 
-    {/* الرقم الثاني (الرمادي) */}
-    <a
-      href="https://wa.me/9647750074100"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#f8fafc',
-        border: '1px solid #e2e8f0',
-        color: '#0f172a',
-        padding: '8px 18px',
-        borderRadius: '12px',
-        textDecoration: 'none',
-        fontWeight: 'bold',
-        fontSize: '14px'
-      }}
-    >
-      07750074100 💬
-    </a>
-  </div>
-</div>
+          {/* الرقم الثاني (الرمادي الفاتح) */}
+          <a
+            href="https://wa.me/9647750074100"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#e2e8f0',
+              padding: '8px 18px',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            }}
+          >
+            07750074100 💬
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
