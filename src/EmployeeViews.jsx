@@ -126,6 +126,35 @@ export function EmployeeLoginModal({ isOpen, onClose, onLoginSuccess, supabase }
 export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
   const [empData, setEmpData] = useState(employee);
   const [loadingToggle, setLoadingToggle] = useState(false);
+  // حالات نافذة التقييم
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingVal, setRatingVal] = useState(5);
+  const [ratingNote, setRatingNote] = useState('');
+  const [targetDriver, setTargetDriver] = useState(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  const handleSubmitRating = async () => {
+  setIsSubmittingRating(true);
+  try {
+    const { error } = await supabase.from('ratings').insert([{
+      evaluator_role: 'معلمة',
+      evaluator_name: user?.name || 'موظفة',
+      target_role: 'سائق',
+      target_name: targetDriver?.name || targetDriver?.driver_name || 'السائق',
+      rating: ratingVal,
+      comment: ratingNote.trim()
+    }]);
+
+    if (error) throw error;
+
+    alert('✅ تم إرسال تقييمك بنجاح، شكراً لك!');
+    setShowRatingModal(false);
+  } catch (err) {
+    alert('❌ حدث خطأ أثناء إرسال التقييم: ' + err.message);
+  } finally {
+    setIsSubmittingRating(false);
+  }
+};
 
   // 🔴 دالة تسجيل الخروج
   const handleLogout = () => {
@@ -253,36 +282,15 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
              {/* زر تقييم السائق */}
 <button
   onClick={() => {
-    const driverName = driverInfo?.name || 'السائق المكلف';
-    const empName = user?.name || 'معلمة';
-    const ratingStr = prompt(`⭐ تقييم السائق (${driverName}):\nأدخلي التقييم من 1 إلى 5:`, '5');
-    if (!ratingStr) return;
-    
-    const ratingVal = parseInt(ratingStr);
-    if (isNaN(ratingVal) || ratingVal < 1 || ratingVal > 5) {
-      alert('⚠️ يرجى إدخال رقم صحيح من 1 إلى 5');
-      return;
-    }
-
-    const note = prompt(`✍️ اكتب ملاحظتك أو انطباعك عن السائق (${driverName}):`, '') || '';
-
-    supabase.from('ratings').insert([{
-      evaluator_role: 'معلمة',
-      evaluator_name: empName,
-      target_role: 'سائق',
-      target_name: driverName,
-      rating: ratingVal,
-      comment: note
-    }]).then(({ error }) => {
-      if (error) alert('❌ حدث خطأ أثناء الحفظ: ' + error.message);
-      else alert('✅ تم إرسال تقييمك للسائق بنجاح!');
-    });
+    setTargetDriver(driverInfo);
+    setRatingVal(5);
+    setRatingNote('');
+    setShowRatingModal(true);
   }}
-  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all shadow-md mt-2 flex items-center justify-center gap-1 w-full"
+  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-xl font-bold transition-all shadow-md mt-2 flex items-center justify-center gap-1"
 >
   ⭐ تقييم السائق
 </button>
-
               <button
   onClick={() => {
     if (!navigator.geolocation) {
@@ -435,6 +443,119 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
         </div>
 
       </div>
+      {/* نافذة تقييم السائق التفاعلية */}
+{showRatingModal && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    padding: '16px'
+  }}>
+    <div style={{
+      backgroundColor: '#ffffff',
+      borderRadius: '16px',
+      padding: '24px',
+      width: '100%',
+      maxWidth: '400px',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+      direction: 'rtl'
+    }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center' }}>
+        ⭐ تقييم السائق ({targetDriver?.name || 'السائق'})
+      </h3>
+
+      {/* اختيار عدد النجوم */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRatingVal(star)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '28px',
+              cursor: 'pointer',
+              filter: star <= ratingVal ? 'none' : 'grayscale(100%) opacity(0.3)',
+              transform: star <= ratingVal ? 'scale(1.1)' : 'scale(1)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            ⭐
+          </button>
+        ))}
+      </div>
+
+      {/* حقل الملاحظة الاختياري */}
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#475569', marginBottom: '6px' }}>
+          ✍️ ملاحظة أو انطباع (اختياري):
+        </label>
+        <textarea
+          rows="3"
+          value={ratingNote}
+          onChange={(e) => setRatingNote(e.target.value)}
+          placeholder="اكتبي أي ملاحظة ترغبين بإيصالها هنا..."
+          style={{
+            width: '100%',
+            padding: '10px',
+            borderRadius: '8px',
+            border: '1px solid #cbd5e1',
+            fontSize: '13px',
+            outline: 'none',
+            resize: 'none',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      {/* أزرار الإجراءات */}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button
+          onClick={handleSubmitRating}
+          disabled={isSubmittingRating}
+          style={{
+            flex: 1,
+            backgroundColor: '#f59e0b',
+            color: '#ffffff',
+            border: 'none',
+            padding: '10px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          {isSubmittingRating ? 'جاري الإرسال...' : 'إرسال التقييم'}
+        </button>
+        <button
+          onClick={() => setShowRatingModal(false)}
+          disabled={isSubmittingRating}
+          style={{
+            flex: 1,
+            backgroundColor: '#f1f5f9',
+            color: '#475569',
+            border: 'none',
+            padding: '10px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
