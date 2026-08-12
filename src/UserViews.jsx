@@ -1862,7 +1862,6 @@ function DriverView({ user, setUser, supabase }) {
   const [targetEmp, setTargetEmp] = React.useState(null);
   const [ratingVal, setRatingVal] = React.useState(5);
   const [ratingNote, setRatingNote] = React.useState('');
-  const [isSubmittingRating, setIsSubmittingRating] = React.useState(false);
   // 🌟 دالة حفظ وإرسال التقييم للإدارة
   const handleSubmitRating = async () => {
     if (!targetEmp) return;
