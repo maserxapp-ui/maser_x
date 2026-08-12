@@ -2544,11 +2544,11 @@ export function RatingsTab({ supabase }) {
             <div key={item.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <span className={`text-xs px-2 py-0.5 rounded-md font-bold ${item.evaluator_role === 'سائق' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'bg-purple-600/30 text-purple-400 border border-purple-500/30'}`}>
-                  {item.evaluator_role}: {item.evaluator_name} ➔ {item.target_role}: {item.target_name}
-                </span>
-                <span className="text-amber-400 text-sm font-bold">
-                  {'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}
-                </span>
+  {item.evaluator_role}: {item.evaluator_name} ➔ {item.target_role}: {item.target_name}
+</span>
+<span className="text-amber-400 text-sm font-bold">
+  {'★'.repeat(Number(item.rating) || 5)}{'☆'.repeat(5 - (Number(item.rating) || 5))}
+</span>
               </div>
 
               {item.comment && (
