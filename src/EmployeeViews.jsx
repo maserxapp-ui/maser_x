@@ -509,6 +509,7 @@ export function EmployeeView({ employee, user, supabase, isOfficialHoliday }) {
             borderRadius: '8px',
             border: '1px solid #cbd5e1',
             fontSize: '13px',
+            color: '#000000',
             outline: 'none',
             resize: 'none',
             boxSizing: 'border-box'
