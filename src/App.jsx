@@ -398,6 +398,8 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [university, setUniversity] = useState('جامعة ميسان');
+  const [department, setDepartment] = useState('');
+  const [groupName, setGroupName] = useState('');
   const [price, setPrice] = useState('90,000');
   const [status, setStatus] = useState('مدفوع');
   const [driverId, setDriverId] = useState('');
@@ -577,13 +579,15 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
               <th>اسم المشترك</th>
               <th>رقم الهاتف</th>
               <th>الجامعة / الجهة</th>
+              <th>القسم</th>
+<th>الكروب</th>
               <th>حالة التواجد</th>
             </tr>
           </thead>
           <tbody>
             ${studentsToPrint.length === 0 ? `
               <tr>
-                <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">لا يوجد طلاب مسجلين مع هذا السائق حالياً</td>
+                <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">لا يوجد طلاب مسجلين مع هذا السائق حالياً</td>
               </tr>
             ` : studentsToPrint.map((s, idx) => `
               <tr>
@@ -591,6 +595,8 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
                 <td><strong>${s.name}</strong></td>
                 <td>${s.phone || '-'}</td>
                 <td>${s.university || '-'}</td>
+                <td>${s.department || '-'}</td>
+<td>${s.group_name || '-'}</td>
                 <td>${s.status || 'لم يحدد بعد'}</td>
               </tr>
             `).join('')}
@@ -615,6 +621,8 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     setUniversity('جامعة ميسان');
     setGender('ذكر');
     setDistrict('');
+    setDepartment('');
+setGroupName('');
     setNewStudentLocation('');
     setPrice('90,000');
     setStatus('مدفوع');
@@ -631,6 +639,8 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     setUniversity(student.university || 'جامعة ميسان');
     setGender(student.gender || 'ذكر');
     setDistrict(student.district || '');
+    setDepartment(student.department || '');
+setGroupName(student.group_name || '');
     setNewStudentLocation(student.location || '');
     setPrice(student.price || '90,000');
     setStatus(student.status || 'مدفوع');
@@ -655,6 +665,8 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       password,
       gender,    // 👈 أضف الجنس هنا
       district,
+      department,
+  group_name: groupName,
       location: newStudentLocation,
       price,
       status,
@@ -1419,6 +1431,7 @@ else if (confirmedAttending) {
                       </span>
                     </div>
                     <div className="text-slate-500 text-[11px] mb-1">🏛️ الجامعة: {s.university || 'غير محدد'}</div>
+                    <div className="text-slate-500 text-[11px] mb-1">📚 القسم: {s.department || 'غير محدد'} | 👥 الكروب: {s.group_name || 'غير محدد'}</div>
                     <div className="text-slate-500 text-[11px] mb-1">📍 المنطقة: {s.location || 'غير محدد'}</div>
                     <div className="text-slate-500 text-[11px] mb-1">
                       👤 الجنس: <span className="font-bold text-slate-700">{s.gender || 'غير محدد'}</span> | 🏛️ القضاء: <span className="font-bold text-slate-700">{s.district || 'غير محدد'}</span>
@@ -1565,6 +1578,8 @@ else if (confirmedAttending) {
                           <th className="p-3">اسم المشترك</th>
                           <th className="p-3">رقم الهاتف</th>
                           <th className="p-3">الجامعة / الجهة</th>
+                          <th className="p-3">القسم</th>
+<th className="p-3">الكروب</th>
                           <th className="p-3">السائق المخصص</th>
                           <th className="p-3">قيمة الاشتراك</th>
                           <th className="p-3">أيام الدوام</th> 
@@ -1895,6 +1910,29 @@ else if (confirmedAttending) {
                   onChange={(e) => setUniversity(e.target.value)}
                 />
               </div>
+              {/* القسم والكروب */}
+<div className="grid grid-cols-2 gap-3">
+  <div>
+    <label className="block text-slate-600 font-bold mb-1">القسم</label>
+    <input
+      type="text"
+      placeholder="مثال: علوم حاسوب / هندسة"
+      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+      value={department}
+      onChange={(e) => setDepartment(e.target.value)}
+    />
+  </div>
+  <div>
+    <label className="block text-slate-600 font-bold mb-1">الكروب</label>
+    <input
+      type="text"
+      placeholder="مثال: جروب A / الصباحي"
+      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+      value={groupName}
+      onChange={(e) => setGroupName(e.target.value)}
+    />
+  </div>
+</div>
           <div>
                 <label className="block text-slate-600 font-bold mb-1">📍 المنطقة / موقع السكن</label>
                 <input
