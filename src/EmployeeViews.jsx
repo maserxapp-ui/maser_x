@@ -795,7 +795,27 @@ const handleConfirmRenewal = async () => {
     alert('فشل الحفظ: ' + (err.message || 'يرجى التأكد من البيانات'));
   }
 };
+const handleDelete = async (id) => {
+  if (!window.confirm("هل أنتِ متأكدة من حذف هذه الموظفة؟")) return;
 
+  try {
+    const { error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // إعادة تحديث القائمة
+    if (typeof fetchEmployees === 'function') {
+      fetchEmployees();
+    } else {
+      window.location.reload();
+    }
+  } catch (err) {
+    alert("حدث خطأ أثناء الحذف: " + err.message);
+  }
+};
 const handleEdit = (emp) => {
   setEditingId(emp.id);
   const mDays = emp.morning_days ? (typeof emp.morning_days === 'string' ? emp.morning_days.split(', ') : emp.morning_days) : [];
