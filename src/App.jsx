@@ -2836,51 +2836,48 @@ export function FinancialReportsCalculator({ supabase }) {
           </h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">
-                مجموع مبالغ الطالبات / الموظفات الكلي:
-              </label>
-              <input
-                type="number"
-                placeholder="أدخلي مجموع مبالغ الطالبات (د.ع)"
-                value={employeeTotal}
-                onChange={(e) => setEmployeeTotal(e.target.value)}
-                className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
-              />
-            </div>
+  {/* المجموع التلقائي لاشتراكات الموظفات */}
+  <div>
+    <label className="text-xs font-bold text-slate-300 block mb-1">
+      مجموع مبالغ الموظفات الكلي (تلقائي):
+    </label>
+    <div className="w-full bg-slate-900 text-emerald-400 font-bold text-sm p-3 rounded-xl border border-slate-700">
+      {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع
+    </div>
+  </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">
-                نسبة المدير المخصومة (%):
-              </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  placeholder="أدخلي النسبية (مثلاً: 15)"
-                  value={managerPercentage}
-                  onChange={(e) => setManagerPercentage(e.target.value)}
-                  className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-lg font-bold text-purple-400">%</span>
-              </div>
-            </div>
-          </div>
+  {/* نسبة المدير */}
+  <div>
+    <label className="text-xs font-bold text-slate-300 block mb-1">
+      نسبة المدير المخصومة (%):
+    </label>
+    <div className="flex gap-2 items-center">
+      <input
+        type="number"
+        placeholder="أدخلي النسبة (مثلاً: 15)"
+        value={managerPercentage}
+        onChange={(e) => setManagerPercentage(e.target.value)}
+        className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+      />
+      <span className="text-lg font-bold text-purple-400">%</span>
+    </div>
+  </div>
+</div>
 
-          {/* نتيجة أرباح المدير الصافية من النسب */}
-          <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
-            <div>
-              <span className="text-xs text-slate-400 block">
-                👑 مجموع أرباحك الصافية (النسب المخصومة للمدير):
-              </span>
-              <span className="text-[10px] text-purple-400 block mt-0.5">
-                ({managerPercentage || 0}% مخصومة من إجمالي {Number(employeeTotal || 0).toLocaleString()} د.ع)
-              </span>
-            </div>
-            <span className="text-2xl font-black text-emerald-400">
-              {managerProfitFromEmployees.toLocaleString()} د.ع
-            </span>
-          </div>
-        </div>
+{/* نتيجة أرباح المدير الصافية من النسبة */}
+<div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
+  <div>
+    <span className="text-xs text-slate-400 block">
+      مجموع أرباحك الصافية (النسبة المخصومة للمدير) 👑
+    </span>
+    <span className="text-[10px] text-purple-400 block mt-0.5">
+      ({managerPercentage || 0}% مخصومة من إجمالي {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع)
+    </span>
+  </div>
+  <span className="text-2xl font-black text-emerald-400">
+    {(((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0) * (Number(managerPercentage) || 0)) / 100).toLocaleString()} د.ع
+  </span>
+</div>
       </div>
     </div>
   );
