@@ -414,6 +414,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [carType, setCarType] = useState('حافلة كيا كوستار');
+  const [carColor, setCarColor] = useState('');
   const [carNumber, setCarNumber] = useState('');
   const [route, setRoute] = useState('منطقة حي الخليج - الجامعة');
   const [capacity, setCapacity] = useState('22');
@@ -732,6 +733,7 @@ setGroupName(student.group_name || '');
     setDriverTripPrice('');
     setCarType('حافلة كيا كوستار');
     setCarNumber('');
+    setCarColor('');
     setRoute('منطقة حي الخليج - الجامعة');
     setCapacity('22');
     setDriverStatus('نشط');
@@ -745,6 +747,7 @@ setGroupName(student.group_name || '');
     setDriverPhone(driver.phone || '');
     setCarType(driver.car_type || 'حافلة كيا كوستار');
     setCarNumber(driver.car_number || '');
+    setCarColor(driver.car_color || '');
     setRoute(driver.route || 'منطقة حي الخليج - الجامعة');
     setCapacity(driver.capacity?.toString() || '22');
     setDriverStatus(driver.status || 'نشط');
@@ -766,6 +769,7 @@ setGroupName(student.group_name || '');
       phone: driverPhone,
       car_type: carType,
       car_number: carNumber,
+      car_color: carColor,
       route: route,
       capacity: parseInt(capacity, 10) || 0,
       status: driverStatus,
@@ -2129,6 +2133,16 @@ else if (confirmedAttending) {
                     onChange={(e) => setCarNumber(e.target.value)}
                   />
                 </div>
+                <div>
+  <label className="block text-slate-600 font-bold mb-1">لون السيارة</label>
+  <input
+    type="text"
+    placeholder="مثال: أبيض / أصفر"
+    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-orange-500"
+    value={carColor}
+    onChange={(e) => setCarColor(e.target.value)}
+  />
+</div>
               </div>
 
               <div>
