@@ -1608,7 +1608,24 @@ if (user && user.role === 'driver') {
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver ? `${assignedDriver.car_type || ''} ${assignedDriver.car_color || ''} ${assignedDriver.car_number || ''}`.trim() || 'لم تحدد بعد' : 'لم تحدد بعد'}
+                  {assignedDriver ? (
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
+    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+      <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
+      <div>{assignedDriver.car_type || 'غير محدد'}</div>
+    </div>
+    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+      <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
+      <div>{assignedDriver.car_color || 'غير محدد'}</div>
+    </div>
+    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
+      <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
+      <div>{assignedDriver.car_number || 'غير محدد'}</div>
+    </div>
+  </div>
+) : (
+  'لم تحدد بعد'
+)}
                 </div>
               </div>
 
