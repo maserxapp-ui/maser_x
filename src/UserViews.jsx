@@ -2100,7 +2100,11 @@ const handleCompleteTrip = async () => {
         alert(`⚠️ لا يمكنك إتمام الرحلة!\nيوجد (${unboardedStudents.length}) طالب من طلابك لم تضغط "صعد معي" لهم بعد:\n📍 الطلاب: ${names}`);
         return; // إلغاء إتمام الرحلة
       }
-
+// 🛑 فحص: يمنع إتمام الرحلة وإضافة المبلغ للمحفظة إذا لم يوجد طلاب
+if (!students || students.length === 0) {
+  alert("عذراً، لا يوجد طلاب مخصصون لك حالياً لإتمام الرحلة!");
+  return;
+}
       // 5️⃣ حساب عدد الرحلات الجديد وتحديث حالة السائق
       const newCompletedCount = (user.completed_trips || 0) + 1;
 
