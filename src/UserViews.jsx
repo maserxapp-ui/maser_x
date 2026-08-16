@@ -1608,7 +1608,7 @@ if (user && user.role === 'driver') {
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.car_model || assignedDriver?.car_type || assignedDriver?.car || 'لم تحدد بعد'}
+                  {assignedDriver ? `${assignedDriver.car_type || ''} ${assignedDriver.car_color || ''} ${assignedDriver.car_number || ''}`.trim() || 'لم تحدد بعد' : 'لم تحدد بعد'}
                 </div>
               </div>
 
