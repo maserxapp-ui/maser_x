@@ -1632,13 +1632,7 @@ else if (confirmedAttending) {
                               >
                                 ✏️ تعديل
                               </button>
-                              <button
-  onClick={() => handleResetDriverWallet(student.id)}
-  className="text-purple-600 hover:text-purple-800 bg-purple-50 p-1.5 rounded-md font-bold text-xs"
-  title="محاسبة وتصفير السائق"
->
-  💳 محاسبة وتصفير
-</button>
+                
                               <button
                         onClick={() => handleRenewSubscription(student)}
                         className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-1.5 rounded-md font-bold text-xs"
@@ -1810,6 +1804,13 @@ else if (confirmedAttending) {
                               >
                                 ✏️ تعديل
                               </button>
+                              <button
+  onClick={() => handleResetDriverWallet(student.id)}
+  className="text-purple-600 hover:text-purple-800 bg-purple-50 p-1.5 rounded-md font-bold text-xs"
+  title="محاسبة وتصفير السائق"
+>
+  💳 محاسبة وتصفير
+</button>
                               <button 
                                 onClick={() => handleDeleteDriver(driver.id, driver.name)}
                                 className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
