@@ -158,7 +158,6 @@ export default function App() {
         .from('drivers')
         .update({ 
           trip_status: null,
-          completed_trips: 0 
         })
         .not('id', 'is', null);
 
