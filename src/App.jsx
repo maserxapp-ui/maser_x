@@ -2654,7 +2654,7 @@ export function FinancialReportsCalculator({ supabase }) {
   const [employeeTotal, setEmployeeTotal] = useState('');
   const [managerPercentage, setManagerPercentage] = useState(15);
   const [loading, setLoading] = useState(true);
-
+ const [employees, setEmployees] = useState([]);
   // جلب إجمالي أرباح الطلاب من حقل price
   useEffect(() => {
     const fetchFinancialData = async () => {
@@ -2669,7 +2669,10 @@ export function FinancialReportsCalculator({ supabase }) {
         } else if (savedMonth === null) {
           localStorage.setItem('calc_saved_month', currentMonth);
         }
-
+// جلب مبالغ اشتراكات الموظفات من قاعدة البيانات
+const { data: empData } = await supabase.from('employees').select('subscription_price');
+if (empData) setEmployees(empData);
+        
         // 2. جلب حقل price لجميع الطلاب بدون استثناء وحساب المجموع
         const { data, error } = await supabase
           .from('students')
