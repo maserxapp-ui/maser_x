@@ -1805,7 +1805,7 @@ else if (confirmedAttending) {
                                 ✏️ تعديل
                               </button>
                               <button
-  onClick={() => handleResetDriverWallet(student.id)}
+  onClick={() => handleResetDriverWallet(driver.id)}
   className="text-purple-600 hover:text-purple-800 bg-purple-50 p-1.5 rounded-md font-bold text-xs"
   title="محاسبة وتصفير السائق"
 >
