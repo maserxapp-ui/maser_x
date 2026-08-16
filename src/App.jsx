@@ -722,7 +722,26 @@ setGroupName(student.group_name || '');
       }
     }
   }
+const handleResetDriverWallet = async (driverId) => {
+  if (!window.confirm("هل أنتِ متأكدة من تصفير ومحاسبة هذا السائق؟")) return;
 
+  try {
+    const { error } = await supabase
+      .from('drivers')
+      .update({ completed_trips: 0 })
+      .eq('id', driverId);
+
+    if (error) throw error;
+    alert("تمت محاسبة وتصفير السائق بنجاح!");
+    if (typeof fetchDrivers === 'function') {
+      fetchDrivers();
+    } else {
+      window.location.reload();
+    }
+  } catch (err) {
+    alert("حدث خطأ أثناء المحاسبة: " + err.message);
+  }
+};
   // --- إدارة السائقين ---
   const openAddDriverModal = () => {
     setIsEditingDriver(false);
@@ -1613,6 +1632,13 @@ else if (confirmedAttending) {
                               >
                                 ✏️ تعديل
                               </button>
+                              <button
+  onClick={() => handleResetDriverWallet(student.id)}
+  className="text-purple-600 hover:text-purple-800 bg-purple-50 p-1.5 rounded-md font-bold text-xs"
+  title="محاسبة وتصفير السائق"
+>
+  💳 محاسبة وتصفير
+</button>
                               <button
                         onClick={() => handleRenewSubscription(student)}
                         className="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-1.5 rounded-md font-bold text-xs"
