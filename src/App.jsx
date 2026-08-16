@@ -2878,6 +2878,7 @@ export function FinancialReportsCalculator({ supabase }) {
     {(((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0) * (Number(managerPercentage) || 0)) / 100).toLocaleString()} د.ع
   </span>
 </div>
+          </div>
       </div>
     </div>
   );
