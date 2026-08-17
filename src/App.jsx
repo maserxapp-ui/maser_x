@@ -264,22 +264,22 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
     // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
 const studentsData = (rawStudents || []).filter(student => {
-  const isAttending = 
-    student.is_attending === true || 
-    student.is_attending === 'true' || 
-    student.is_attending === 1 || 
-    student.is_attending === '1' ||
-    student.attendance_status === 'attending' ||
-    student.attendance_status === 'مداوم';
+  const tomorrowStatus = String(student.tomorrow_status || '');
+  const examNote = String(student.exam_note || '');
 
-  const hasException = 
-    student.is_exception === true || 
-    student.is_exception === 'true' || 
-    student.is_exception === 1 ||
-    student.is_exception === '1' ||
-    student.status === 'exception';
+  // 1. فحص الاستثناء: إذا احتوى حقل exam_note على كلمة "امتحان" أو "لدي امتحان غداً"
+  const hasExamException = examNote.includes('امتحان') || examNote.includes('لدي امتحان غداً');
 
-  return isAttending || hasException;
+  // 2. فحص الدوام الاعتيادي (زر "أداوم غداً")
+  const isAttending = tomorrowStatus.includes('أداوم') || student.is_attending === true;
+
+  // 3. استبعاد الطالب إذا اختار "لا أداوم غداً" بشرط عدم وجود امتحان عنده
+  if (tomorrowStatus.includes('لا أداوم') && !hasExamException) {
+    return false;
+  }
+
+  // ضمه إلى التوزيع فوراً إذا كان مداوماً أو لديه امتحان
+  return isAttending || hasExamException;
 });
     if (dErr || sErr || !drivers || drivers.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد سائقون متاحون أو حدث خطأ في جلب البيانات!');
