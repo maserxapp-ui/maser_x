@@ -150,6 +150,7 @@ export default function App() {
           exam_note: null,
           driver_name: null,         // تصفية اسم السائق
           driver_phone: null,        // تصفية رقم السائق
+          driver_id: null,
           assigned_driver: null,     // تصفية السائق المخصص
         })
         .not('id', 'is', null);
