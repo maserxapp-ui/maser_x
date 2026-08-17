@@ -147,7 +147,7 @@ export default function App() {
           is_boarded_return: false,
           is_dropped_return: false,
           tomorrow_status: null,
-          exam_note: null
+          exam_note: null,
           driver_name: null,         // تصفية اسم السائق
           driver_phone: null,        // تصفية رقم السائق
           assigned_driver: null,     // تصفية السائق المخصص
