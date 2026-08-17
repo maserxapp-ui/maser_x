@@ -909,49 +909,55 @@ if (viewMode === 'user') {
     return <UserViews supabase={supabase} onBackToAdmin={handleAdminAccess} logoImg={logoImg} loginRole={loginRole} setLoginRole={setLoginRole} />;
   }
   // ---------------------------------------------------
-  // 🟢 كود فلترة الطلاب لجدول التواجد اليومي
-  // ---------------------------------------------------
-  const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const tomorrowIndex = (new Date().getDay() + 1) % 7;
-  const tomorrowName = daysOfWeek[tomorrowIndex];
+ // 🟢 كود فلترة الطلاب لجدول التواجد اليومي والإحصائيات
+// ---------------------------------------------------
+const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const tomorrowIndex = (new Date().getDay() + 1) % 7;
+const tomorrowName = daysOfWeek[tomorrowIndex];
 
-  // 🟢 1. المداومون: فقط من ضغط "أداوم غداً"
-  const attendingStudents = students.filter(student => 
-    student.tomorrow_status === 'أداوم غداً'
-  );
+// 🟢 1. المداومون: فقط من اختار "أداوم غداً"
+const attendingStudents = (students || []).filter(student => {
+  const status = String(student.tomorrow_status || '');
+  return status.includes('أداوم') && !status.includes('لا أداوم');
+});
 
-  // 📝 2. الاستثناءات: من لديه امتحان
-  const exceptionStudents = students.filter(student => 
-    student.exam_note && student.exam_note.trim() !== ''
-  );
+// 📝 2. الاستثناءات: من لديه امتحان
+const exceptionStudents = (students || []).filter(student => {
+  const examNote = String(student.exam_note || '');
+  const status = String(student.tomorrow_status || '');
+  return (examNote && examNote.trim() !== '') || status.includes('امتحان') || status.includes('استثناء');
+});
 
-  // 🔴 3. الغائبون: من ليس لديه دوام رسمي أو ضغط "لا أداوم غداً"
-  const absentStudents = students.filter(student => {
-    const hasOfficialWorkTomorrow = student.work_days && student.work_days.includes(tomorrowName);
+// 🔴 3. الغائبون: من ضغط "لا أداوم غداً" أو ليس لديه دوام رسمي
+const absentStudents = (students || []).filter(student => {
+  const status = String(student.tomorrow_status || '');
+  const hasOfficialWorkTomorrow = student.work_days && student.work_days.includes(tomorrowName);
+  const hasExam = student.exam_note && student.exam_note.trim() !== '';
 
-    if (student.exam_note && student.exam_note.trim() !== '') return false;
-    if (student.tomorrow_status === 'أداوم غداً') return false;
+  if (hasExam) return false;
+  if (status.includes('أداوم') && !status.includes('لا أداوم')) return false;
 
-    return student.tomorrow_status === 'لا أداوم غداً' || !hasOfficialWorkTomorrow;
-  });
-  // ---------------------------------------------------
-  // ⚡ 1. حساب الإحصائيات الحية للمخطط والدائرة
-  const totalStudentsCount = students?.length || 0;
-  const absentCount = (typeof absentStudents !== 'undefined') ? absentStudents.length : (students?.filter(s => s.tomorrow_status === 'لا أداوم غداً' || s.is_absent).length || 0);
-  const examCount = (typeof exceptionStudents !== 'undefined') ? exceptionStudents.length : (students?.filter(s => s.exam_note).length || 0);
-  const attendingCount = Math.max(0, totalStudentsCount - absentCount - examCount);
+  return status.includes('لا أداوم') || status.includes('غائب') || !hasOfficialWorkTomorrow;
+});
 
-  const attendingPercent = totalStudentsCount > 0 ? Math.round((attendingCount / totalStudentsCount) * 100) : 0;
-  const absentPercent = totalStudentsCount > 0 ? Math.round((absentCount / totalStudentsCount) * 100) : 0;
-  const examPercent = totalStudentsCount > 0 ? Math.max(0, 100 - attendingPercent - absentPercent) : 0;
+// ---------------------------------------------------
+// ⚡ 1. حساب الإحصائيات الحية المباشرة للمخطط والدائرة
+const totalStudentsCount = students?.length || 1;
 
-  const collectionRate = (typeof totalExpectedRevenue !== 'undefined' && totalExpectedRevenue > 0) 
-    ? Math.round(((totalCollectedRevenue || 0) / totalExpectedRevenue) * 100) : 0;
-  const seatUtilization = (typeof totalSeats !== 'undefined' && totalSeats > 0) 
-    ? Math.round(((totalSubscribers || 0) / totalSeats) * 100) : 0;
-  const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0) 
-    ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
+const attendingCount = attendingStudents.length;
+const absentCount = absentStudents.length;
+const examCount = exceptionStudents.length;
 
+const attendingPercent = Math.round((attendingCount / totalStudentsCount) * 100);
+const absentPercent = Math.round((absentCount / totalStudentsCount) * 100);
+const examPercent = Math.round((examCount / totalStudentsCount) * 100);
+
+const collectionRate = (typeof totalExpectedRevenue !== 'undefined' && totalExpectedRevenue > 0) 
+  ? Math.round(((totalCollectedRevenue || 0) / totalExpectedRevenue) * 100) : 0;
+const seatUtilization = (typeof totalSeats !== 'undefined' && totalSeats > 0) 
+  ? Math.round(((totalSubscribers || 0) / totalSeats) * 100) : 0;
+const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0) 
+  ? Math.round(((activeDriversCount || 0) / totalDrivers) * 100) : 0;
 
   return (
     <div className="flex h-screen bg-slate-100 font-['Tajawal',sans-serif] text-slate-800 dir-rtl" dir="rtl">
