@@ -151,7 +151,6 @@ export default function App() {
           driver_name: null,         // تصفية اسم السائق
           driver_phone: null,        // تصفية رقم السائق
           assigned_driver: null,     // تصفية السائق المخصص
-          assignment_status: null,
         })
         .not('id', 'is', null);
 
