@@ -1139,15 +1139,20 @@ const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0
                   <div className="flex flex-col sm:flex-row items-center justify-around gap-6 my-6">
                     
                     {/* Donut Chart دائري */}
-                    <div className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner"
-                         style={{
-                           background: `conic-gradient(#10B981 0% ${attendingPercent}%, #EF4444 ${attendingPercent}% ${attendingPercent + absentPercent}%, #F59E0B ${attendingPercent + absentPercent}% 100%)`
-                         }}>
-                      <div className="w-28 h-28 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
-                        <span className="text-2xl font-black text-slate-800">{attendingPercent}%</span>
-                        <span className="text-[10px] font-medium text-slate-400">إجمالي الحضور</span>
-                      </div>
-                    </div>
+<div className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner"
+     style={{
+       background: `conic-gradient(
+         #10B981 0% ${attendingPercent}%, 
+         #EF4444 ${attendingPercent}% ${attendingPercent + absentPercent}%, 
+         #F59E0B ${attendingPercent + absentPercent}% ${attendingPercent + absentPercent + examPercent}%, 
+         #E2E8F0 ${attendingPercent + absentPercent + examPercent}% 100%
+       )`
+     }}>
+  <div className="w-28 h-28 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
+    <span className="text-2xl font-black text-slate-800">{attendingPercent}%</span>
+    <span className="text-[10px] font-medium text-slate-400">إجمالي الحضور</span>
+  </div>
+</div>
 
                     {/* مفتاح الرسم البياني (Legend) */}
                     <div className="space-y-3 w-full sm:w-auto">
