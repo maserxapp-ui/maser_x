@@ -261,8 +261,16 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
   try {
     // 1️⃣ جلب بيانات السائقين والطلاب من Supabase
     const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
-    const { data: studentsData, error: sErr } = await supabase.from('students').select('*');
-
+    const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
+    // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
+const studentsData = (rawStudents || []).filter(student => 
+  student.is_attending === true || 
+  student.is_attending === 'true' ||
+  student.attendance_status === 'attending' ||
+  student.is_exception === true || 
+  student.is_exception === 'true' ||
+  student.status === 'exception'
+);
     if (dErr || sErr || !drivers || drivers.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد سائقون متاحون أو حدث خطأ في جلب البيانات!');
       return;
