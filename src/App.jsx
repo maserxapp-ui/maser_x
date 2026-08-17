@@ -263,14 +263,24 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
     const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
     // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
-const studentsData = (rawStudents || []).filter(student => 
-  student.is_attending === true || 
-  student.is_attending === 'true' ||
-  student.attendance_status === 'attending' ||
-  student.is_exception === true || 
-  student.is_exception === 'true' ||
-  student.status === 'exception'
-);
+const studentsData = (rawStudents || []).filter(student => {
+  const isAttending = 
+    student.is_attending === true || 
+    student.is_attending === 'true' || 
+    student.is_attending === 1 || 
+    student.is_attending === '1' ||
+    student.attendance_status === 'attending' ||
+    student.attendance_status === 'مداوم';
+
+  const hasException = 
+    student.is_exception === true || 
+    student.is_exception === 'true' || 
+    student.is_exception === 1 ||
+    student.is_exception === '1' ||
+    student.status === 'exception';
+
+  return isAttending || hasException;
+});
     if (dErr || sErr || !drivers || drivers.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد سائقون متاحون أو حدث خطأ في جلب البيانات!');
       return;
@@ -283,35 +293,7 @@ const studentsData = (rawStudents || []).filter(student =>
     const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const tomorrowDay = daysArabic[baghdadTomorrow.getDay()];
 
-    // 3️⃣ تصفية الطلاب المداومين واستبعاد الغائبين/المعتذرين
-    const eligibleStudents = studentsData.filter(student => {
-      const fullText = Object.values(student).map(v => String(v || '')).join(' ');
-      const statusStr = String(student.tomorrow_status || '');
-      
-      // استبعاد الغائبين
-      const isAbsent = 
-        student.is_absent === true ||
-        statusStr === 'لا أداوم غداً' ||
-        fullText.includes('اعتذار') || 
-        fullText.includes('غائب');
-
-      if (isAbsent) return false;
-
-      // 🎯 فحص الاستثناءات والامتحانات (يتجاوز جدول الدوام الأصلي)
-      const hasExamException = 
-        statusStr.includes('امتحان') || 
-        statusStr.includes('استثناء') || 
-        (student.exam_note && String(student.exam_note).trim() !== '');
-
-      const rawDays = JSON.stringify(student.work_days || student.days || student.work_day || '');
-      const normalize = (t) => String(t || '').replace(/[\[\]"']/g, '').replace(/أ|إ|آ/g, 'ا').trim();
-      
-      const isTomorrowInDays = normalize(rawDays).includes(normalize(tomorrowDay));
-      const isAttending = statusStr === 'أداوم غداً' || statusStr === 'مداوم';
-
-      // يداوم إذا: لديه امتحان OR يداوم حسَب الجدول OR اختار "أداوم غداً"
-      return hasExamException || isTomorrowInDays || isAttending || !student.work_days;
-    });
+    const eligibleStudents = studentsData;
 
     if (eligibleStudents.length === 0) {
       if (!autoMode) alert(`⚠️ لا يوجد طلاب مداومون ليوم غد (${tomorrowDay})!`);
