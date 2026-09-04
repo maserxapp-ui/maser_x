@@ -2349,22 +2349,38 @@ if (!students || students.length === 0) {
               </button>
 
               <button
-                onClick={() => {
-                  if (!isChatWindowOpen) {
-                    alert('🔒 تنبيه: نافذة التواصل مع الطلاب تنفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً!');
-                    return;
-                  }
-                  setSelectedStudentForChat(student);
-                  setIsDriverChatOpen(true);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
-                  isChatWindowOpen 
-                    ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer' 
-                    : 'bg-slate-300 text-slate-600 cursor-pointer'
-                }`}
-              >
-                💬 مراسلة
-              </button>
+  onClick={() => {
+    // 1️⃣ فحص هل الطالب مخصص لهذا السائق أم لا
+    if (!student?.driver_id && !student?.assigned_driver) {
+      alert('⚠️ لا يمكنك المراسلة، لم يتم توزيع الطالب عليك بعد!');
+      return;
+    }
+
+    // 2️⃣ فحص هل أتم السائق الرحلة (إغلاق المراسلة بعد إتمام الرحلة)
+    if (student?.finish_status === 'finished' || student?.finish_status === 'completed') {
+      alert('🔒 تمت إتمام الرحلة بنجاح، تم إغلاق خاصية المراسلة لهذا الطالب!');
+      return;
+    }
+
+    // 3️⃣ فحص شرط وقت المراسلة (شرطك الأصلي)
+    if (!isChatWindowOpen) {
+      alert('🔒 تنبيه: نافذة التواصل مع الطلاب تفتح فقط من الساعة 6:00 صباحاً حتى 9:00 صباحاً');
+      return;
+    }
+
+    setSelectedStudentForChat(student);
+    setIsDriverChatOpen(true);
+  }}
+  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
+    (student?.finish_status === 'finished' || student?.finish_status === 'completed')
+      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+      : isChatWindowOpen
+      ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer'
+      : 'bg-slate-300 text-slate-600 cursor-pointer'
+  }`}
+>
+  مراسلة 💬
+</button>
 
               {/* 🟢 زر التقييم الجديد */}
               <button
