@@ -1443,7 +1443,14 @@ if (user && user.role === 'driver') {
 
               {/* زر لا أداوم غداً */}
               <button
-                onClick={() => handleStudentAction('not_attending', 'لا أداوم غداً')}
+                onClick={() => {
+  // ⛔ التأكد إذا كان الطالب قد صعد مع السائق
+  if (studentData?.is_boarded || student?.is_boarded || isBoarded) {
+    alert("أنت مداوم اليوم وصعدت مع السائق بالفعل!");
+    return;
+  }
+  handleStudentAction('not_attending', 'لا أداوم غداً');
+}}
                 style={{
                   padding: '12px 8px',
                   borderRadius: '10px',
