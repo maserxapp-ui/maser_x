@@ -53,7 +53,7 @@ export default function App() {
     }
   }, [viewMode, loginRole, currentUser]);
   // 🟢 2. كلمة سر المدير (تستطيع تغييرها لأي كلمة ترغب بها)
-  const ADMIN_PASSWORD = '1234'; 
+  const ADMIN_PASSWORD = '582798'; 
  // 🔄 دالة تجديد الاشتراك الشهري للطالب عند ضغط الأدمن
   const handleRenewSubscription = async (student) => {
     const confirmRenew = window.confirm(`هل ترغب بتجديد الاشتراك فعلاً للطالب/ـة (${student.full_name || student.name}) لمدة شهر كامل؟`);
