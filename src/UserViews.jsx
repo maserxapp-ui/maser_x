@@ -2566,28 +2566,23 @@ if (!students || students.length === 0) {
                      {/* 🗺️ خيارات الخرائط والملاحة */}
                   {std.latitude && std.longitude && (
                     <div className="flex items-center gap-2 mt-2">
-                      {/* 📍 Google Maps */}
+                      {/* 📍 1. زر فتح الخرائط (يخيرك بين قوقل ماب و Waze) */}
                       <a
-                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+                        href={`geo:${std.latitude},${std.longitude}?q=${std.latitude},${std.longitude}`}
+                        className="bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
                       >
-                        📍 Google Maps
+                        🧭 فتح في الخرائط
                       </a>
 
-                      {/* 🚙 Waze (فتح مباشر بدون تبويب جديد) */}
-<a
-  href={`waze://?ll=${std.latitude},${std.longitude}&navigate=yes`}
-  onClick={(e) => {
-    e.preventDefault();
-    // تحويل مباشر لنظام الموبايل لفتح تطبيق ويز فوراً
-    window.location.href = `waze://?ll=${std.latitude},${std.longitude}&navigate=yes`;
-  }}
-  className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
->
-  🚙 Waze
-</a>
+                      {/* 🚙 2. زر Waze المباشر */}
+                      <a
+                        href={`https://www.waze.com/ul?ll=${std.latitude},${std.longitude}&navigate=yes`}
+                        target="_top"
+                        rel="noreferrer"
+                        className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+                      >
+                        🚙 Waze
+                      </a>
                     </div>
                   )}
                 </div>
