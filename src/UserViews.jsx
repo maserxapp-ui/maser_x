@@ -2563,18 +2563,29 @@ if (!students || students.length === 0) {
                         💬 مراسلة
                       </button>
 
-                      {std.latitude && std.longitude && (
-                        <a
-                          href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3.5 py-2 rounded-xl font-bold no-underline flex items-center gap-1">
-                          🗺️ موقع الطالبة
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                     {std.latitude && std.longitude && (
+  <div className="flex items-center gap-2">
+    {/* 🗺️ خرائط قوقل */}
+    <a
+      href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+      target="_blank"
+      rel="noreferrer"
+      className="bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+    >
+      📍 Google Maps
+    </a>
+
+    {/* 🚙 تطبيق Waze */}
+    <a
+      href={`https://waze.com/ul?ll=${std.latitude},${std.longitude}&navigate=yes`}
+      target="_blank"
+      rel="noreferrer"
+      className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+    >
+      🚙 Waze
+    </a>
+  </div>
+)}
               </div>
             </div>
           )}
