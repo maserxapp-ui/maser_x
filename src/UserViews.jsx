@@ -2563,26 +2563,37 @@ if (!students || students.length === 0) {
                         💬 مراسلة
                       </button>
 
-                     {/* 🗺️ خيارات الخرائط والملاحة */}
+                    {/* 🗺️ خيارات الخرائط والملاحة */}
                   {std.latitude && std.longitude && (
                     <div className="flex items-center gap-2 mt-2">
-                      {/* 📍 1. زر فتح الخرائط (يخيرك بين قوقل ماب و Waze) */}
+                      {/* 📍 1. Google Maps */}
                       <a
-                        href={`geo:${std.latitude},${std.longitude}?q=${std.latitude},${std.longitude}`}
+                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
                         className="bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
                       >
-                        🧭 فتح في الخرائط
+                        📍 Google Maps
                       </a>
 
-                      {/* 🚙 2. زر Waze المباشر */}
-                      <a
-                        href={`https://www.waze.com/ul?ll=${std.latitude},${std.longitude}&navigate=yes`}
-                        target="_top"
-                        rel="noreferrer"
-                        className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+                      {/* 🚙 2. زر Waze المباشر عبر Intent */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const lat = std.latitude;
+                          const lng = std.longitude;
+                          const isAndroid = /Android/i.test(navigator.userAgent);
+
+                          if (isAndroid) {
+                            window.location.href = `intent://?ll=${lat},${lng}&navigate=yes#Intent;scheme=waze;package=com.waze;end;`;
+                          } else {
+                            window.location.href = `waze://?ll=${lat},${lng}&navigate=yes`;
+                          }
+                        }}
+                        className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
                       >
                         🚙 Waze
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>
