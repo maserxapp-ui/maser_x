@@ -2576,15 +2576,18 @@ if (!students || students.length === 0) {
                         📍 Google Maps
                       </a>
 
-                      {/* 🚙 Waze */}
-                      <a
-                        href={`intent://waze.com/ul?ll=${std.latitude},${std.longitude}&navigate=yes#Intent;scheme=https;package=com.waze;end;`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
-                      >
-                        🚙 Waze
-                      </a>
+                      {/* 🚙 Waze (فتح مباشر بدون تبويب جديد) */}
+<a
+  href={`waze://?ll=${std.latitude},${std.longitude}&navigate=yes`}
+  onClick={(e) => {
+    e.preventDefault();
+    // تحويل مباشر لنظام الموبايل لفتح تطبيق ويز فوراً
+    window.location.href = `waze://?ll=${std.latitude},${std.longitude}&navigate=yes`;
+  }}
+  className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+>
+  🚙 Waze
+</a>
                     </div>
                   )}
                 </div>
