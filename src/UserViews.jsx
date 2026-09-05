@@ -2578,7 +2578,7 @@ if (!students || students.length === 0) {
 
                       {/* 🚙 Waze */}
                       <a
-                        href={`waze://?ll=${std.latitude},${std.longitude}&navigate=yes`}
+                        href={`intent://waze.com/ul?ll=${std.latitude},${std.longitude}&navigate=yes#Intent;scheme=https;package=com.waze;end;`}
                         target="_blank"
                         rel="noreferrer"
                         className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
