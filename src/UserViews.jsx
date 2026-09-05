@@ -2323,18 +2323,35 @@ if (!students || students.length === 0) {
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              <button
-                onClick={() => {
-                  if (!student.latitude || !student.longitude) {
-                    alert('⚠️ لم يقم هذا الطالب بتحديد موقعه على الخريطة بعد!');
-                    return;
-                  }
-                  window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
-                }}
-                className="bg-sky-600 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition inline-block cursor-pointer"
-              >
-                📍 الموقع
-              </button>
+              {/* 📍 Google Maps */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!student.latitude || !student.longitude) {
+                          alert('!لم يتم تحديد موقع الطالب على الخريطة بعد');
+                          return;
+                        }
+                        window.open(`https://www.google.com/maps/search/?api=1&query=${student.latitude},${student.longitude}`, '_blank');
+                      }}
+                      className="bg-sky-600 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold hover:bg-sky-700 transition cursor-pointer"
+                    >
+                      📍 Google
+                    </button>
+
+                    {/* 🚙 Waze */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!student.latitude || !student.longitude) {
+                          alert('!لم يتم تحديد موقع الطالب على الخريطة بعد');
+                          return;
+                        }
+                        window.open(`https://waze.com/ul?ll=${student.latitude},${student.longitude}&navigate=yes`, '_blank');
+                      }}
+                      className="bg-cyan-600 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold hover:bg-cyan-700 transition cursor-pointer"
+                    >
+                      🚙 Waze
+                    </button>
 
               <button
                 onClick={() => handleStudentBoarded(student.id)}
