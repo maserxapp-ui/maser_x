@@ -2222,16 +2222,41 @@ if (!students || students.length === 0) {
             </button>
 
             <button
-              onClick={handleCompleteTrip}
-              disabled={driverTripStatus === 'completed'}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
-                driverTripStatus === 'completed'
-                  ? 'bg-emerald-700 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
-            >
-              {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
-            </button>
+      type="button"
+      disabled={driverTripStatus === 'completed'}
+      onClick={() => {
+        if (driverTripStatus === 'completed') return;
+
+        const tripKey = `trip_start_${new Date().toISOString().slice(0, 10)}`;
+        const startTime = localStorage.getItem(tripKey);
+
+        // 1. التثبت من صعود طالب واحد على الأقل
+        if (!startTime) {
+          alert("⚠️ يجب الضغط على (صعد معي) لطالب واحد على الأقل قبل إتمام الرحلة!");
+          return;
+        }
+
+        // 2. حساب الوقت المنقضي بالدقائق
+        const elapsedMinutes = Math.floor((Date.now() - parseInt(startTime, 10)) / (1000 * 60));
+        const remainingMinutes = Math.max(0, 30 - elapsedMinutes);
+
+        // 3. منع الإنهاء إذا لم تمضِ 30 دقيقة
+        if (elapsedMinutes < 30) {
+          alert(`⏱️ لا يمكنك إتمام الرحلة الآن! يجب الانتظار ${remainingMinutes} دقيقة إضافية (الحد الأدنى للرحلة 30 دقيقة).`);
+          return;
+        }
+
+        // 4. تنفيذ إتمام الرحلة عند انقضاء الـ 30 دقيقة
+        handleCompleteTrip();
+      }}
+      className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
+        driverTripStatus === 'completed'
+          ? 'bg-emerald-700 cursor-not-allowed'
+          : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+      }`}
+    >
+      {driverTripStatus === 'completed' ? '🏁 تم إنهاء وإتمام الرحلة بالكامل' : '🏁 وصلت جميع الطلاب وأتممت الرحلة'}
+    </button>
           </div>
 
           {/* الإحصائيات */}
@@ -2354,7 +2379,13 @@ if (!students || students.length === 0) {
                     </button>
 
               <button
-                onClick={() => handleStudentBoarded(student.id)}
+                onClick={() => {
+  const tripKey = `trip_start_${new Date().toISOString().slice(0, 10)}`;
+  if (!localStorage.getItem(tripKey)) {
+    localStorage.setItem(tripKey, Date.now().toString());
+  }
+  handleStudentBoarded(student.id);
+}}
                 disabled={student.is_boarded}
                 className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition inline-block ${
                   student.is_boarded 
