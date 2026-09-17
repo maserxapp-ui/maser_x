@@ -2658,46 +2658,55 @@ if (!students || students.length === 0) {
               <span>بيانات الحساب والسيارة</span>
             </h4>
 
-            {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات */}
-            <button
-              type="button"
-              onClick={async () => {
-                const nextStatus = !(user?.is_accepting_trips ?? true);
+           {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات (تحديث فوري دون تسجيل خروج) */}
+            {(() => {
+              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+              const isAccepting = user?.is_accepting_trips ?? storedUser?.is_accepting_trips ?? true;
 
-                try {
-                  const { error } = await supabase
-                    .from('drivers')
-                    .update({ is_accepting_trips: nextStatus })
-                    .eq('id', user?.id);
+              return (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextStatus = !isAccepting;
 
-                  if (error) throw error;
+                    try {
+                      // 1. تحديث قاعدة البيانات في Supabase
+                      const { error } = await supabase
+                        .from('drivers')
+                        .update({ is_accepting_trips: nextStatus })
+                        .eq('id', user?.id);
 
-                  if (nextStatus) {
-                    alert('✅ تم تشغيل استقبال الرحلات');
-                  } else {
-                    alert('🛑 تم إيقاف استقبال الرحلات');
-                  }
-                  
-                  window.location.reload();
-                } catch (err) {
-                  alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border cursor-pointer ${
-                (user?.is_accepting_trips ?? true)
-                  ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
-                  : 'bg-rose-600/30 text-rose-300 border-rose-500/50 hover:bg-rose-600/40'
-              }`}
-            >
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  (user?.is_accepting_trips ?? true)
-                    ? 'bg-emerald-400 animate-pulse'
-                    : 'bg-rose-500'
-                }`}
-              ></span>
-              {(user?.is_accepting_trips ?? true) ? 'استقبال الرحلات: مفعل' : 'استقبال الرحلات: متوقف'}
-            </button>
+                      if (error) throw error;
+
+                      // 2. تحديث الذاكرة المحلية (localStorage) والكائن الحلي فوراً
+                      if (user) user.is_accepting_trips = nextStatus;
+                      if (storedUser && storedUser.id) {
+                        storedUser.is_accepting_trips = nextStatus;
+                        localStorage.setItem('user', JSON.stringify(storedUser));
+                      }
+
+                      // 3. إظهار الإشعار وإعادة إنعاش الواجهة
+                      alert(nextStatus ? '✅ تم تشغيل استقبال الرحلات' : '🛑 تم إيقاف استقبال الرحلات');
+                      window.location.reload();
+                    } catch (err) {
+                      alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border cursor-pointer ${
+                    isAccepting
+                      ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
+                      : 'bg-rose-600/30 text-rose-300 border-rose-500/50 hover:bg-rose-600/40'
+                  }`}
+                >
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      isAccepting ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  ></span>
+                  {isAccepting ? 'استقبال الرحلات: مفعل' : 'استقبال الرحلات: متوقف'}
+                </button>
+              );
+            })()}
           </div>
             <div className="text-xs text-slate-300 space-y-1.5">
               <p className="flex justify-between border-b border-slate-800 pb-1">
