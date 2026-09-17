@@ -2653,9 +2653,47 @@ if (!students || students.length === 0) {
 
           {/* بيانات السائق */}
           <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
-            <h4 className="font-bold text-xs text-orange-400 mb-2.5 flex items-center gap-1.5">
-              <span>📋</span> بيانات الحساب والسيارة
+            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+            <h4 className="font-bold text-xs text-orange-400 flex items-center gap-1.5">
+              <span>بيانات الحساب والسيارة</span>
             </h4>
+
+            {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات */}
+            <button
+              type="button"
+              onClick={async () => {
+                const nextStatus = !(user?.is_accepting_trips ?? true);
+
+                try {
+                  const { error } = await supabase
+                    .from('drivers')
+                    .update({ is_accepting_trips: nextStatus })
+                    .eq('id', user?.id);
+
+                  if (error) throw error;
+
+                  alert(nextStatus ? '✅ تم تفعيل استقبال الرحلات والطلاب بنجاح' : '🛑 تم إيقاف استقبال الرحلات');
+                  window.location.reload();
+                } catch (err) {
+                  alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
+                }
+              }}
+              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition border cursor-pointer ${
+                (user?.is_accepting_trips ?? true)
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  (user?.is_accepting_trips ?? true)
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-rose-400'
+                }`}
+              ></span>
+              {(user?.is_accepting_trips ?? true) ? 'استقبال الرحلات: مفعل' : 'استقبال الرحلات: متوقف'}
+            </button>
+          </div>
             <div className="text-xs text-slate-300 space-y-1.5">
               <p className="flex justify-between border-b border-slate-800 pb-1">
                 <span className="text-slate-400">رقم الموبايل:</span>
