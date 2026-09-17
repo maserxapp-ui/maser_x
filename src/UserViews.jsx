@@ -2658,40 +2658,52 @@ if (!students || students.length === 0) {
               <span>بيانات الحساب والسيارة</span>
             </h4>
 
-           {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات (تحديث فوري دون تسجيل خروج) */}
+           {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات (مستقر وبدون إعادة تحميل) */}
             {(() => {
-              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-              const isAccepting = user?.is_accepting_trips ?? storedUser?.is_accepting_trips ?? true;
+              const [isAccepting, setIsAccepting] = React.useState(() => {
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                return user?.is_accepting_trips ?? storedUser?.is_accepting_trips ?? true;
+              });
+
+              const handleToggle = async () => {
+                const nextStatus = !isAccepting;
+
+                // 1. تغيير شكل الزر والحالة فوراً بالواجهة (منع الارتداد)
+                setIsAccepting(nextStatus);
+
+                // 2. تحديث الذاكرة المحلية (localStorage)
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                if (storedUser && storedUser.id) {
+                  storedUser.is_accepting_trips = nextStatus;
+                  localStorage.setItem('user', JSON.stringify(storedUser));
+                }
+                if (user) user.is_accepting_trips = nextStatus;
+
+                try {
+                  // 3. إرسال التحديث لـ Supabase
+                  const { error } = await supabase
+                    .from('drivers')
+                    .update({ is_accepting_trips: nextStatus })
+                    .eq('id', user?.id);
+
+                  if (error) {
+                    // في حال فشل الحفظ نرجع الحالة السابقة ونظهر تنبيه
+                    setIsAccepting(!nextStatus);
+                    alert('⚠️ فشل التحديث في قاعدة البيانات: ' + error.message);
+                    return;
+                  }
+
+                  alert(nextStatus ? '✅ تم تشغيل استقبال الرحلات' : '🛑 تم إيقاف استقبال الرحلات');
+                } catch (err) {
+                  setIsAccepting(!nextStatus);
+                  alert('⚠️ حدث خطأ أثناء الاتصال: ' + err.message);
+                }
+              };
 
               return (
                 <button
                   type="button"
-                  onClick={async () => {
-                    const nextStatus = !isAccepting;
-
-                    try {
-                      // 1. تحديث قاعدة البيانات في Supabase
-                      const { error } = await supabase
-                        .from('drivers')
-                        .update({ is_accepting_trips: nextStatus })
-                        .eq('id', user?.id);
-
-                      if (error) throw error;
-
-                      // 2. تحديث الذاكرة المحلية (localStorage) والكائن الحلي فوراً
-                      if (user) user.is_accepting_trips = nextStatus;
-                      if (storedUser && storedUser.id) {
-                        storedUser.is_accepting_trips = nextStatus;
-                        localStorage.setItem('user', JSON.stringify(storedUser));
-                      }
-
-                      // 3. إظهار الإشعار وإعادة إنعاش الواجهة
-                      alert(nextStatus ? '✅ تم تشغيل استقبال الرحلات' : '🛑 تم إيقاف استقبال الرحلات');
-                      window.location.reload();
-                    } catch (err) {
-                      alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
-                    }
-                  }}
+                  onClick={handleToggle}
                   className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border cursor-pointer ${
                     isAccepting
                       ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
