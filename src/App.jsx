@@ -264,7 +264,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
 
   try {
     // 1️⃣ جلب بيانات السائقين والطلاب من Supabase
-    const { data: drivers, error: dErr } = await supabase.from('drivers').select('*');
+    const { data: drivers, error: dErr } = await supabase.from('drivers').select('*').eq('is_accepting_trips', true);
     const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
     // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
 const studentsData = (rawStudents || []).filter(student => {
