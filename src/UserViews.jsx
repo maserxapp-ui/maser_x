@@ -2672,23 +2672,28 @@ if (!students || students.length === 0) {
 
                   if (error) throw error;
 
-                  alert(nextStatus ? '✅ تم تفعيل استقبال الرحلات والطلاب بنجاح' : '🛑 تم إيقاف استقبال الرحلات');
+                  if (nextStatus) {
+                    alert('✅ تم تشغيل استقبال الرحلات');
+                  } else {
+                    alert('🛑 تم إيقاف استقبال الرحلات');
+                  }
+                  
                   window.location.reload();
                 } catch (err) {
                   alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
                 }
               }}
-              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition border cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border cursor-pointer ${
                 (user?.is_accepting_trips ?? true)
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
-                  : 'bg-rose-500/20 text-rose-300 border-rose-500/30 hover:bg-rose-500/30'
+                  ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
+                  : 'bg-rose-600/30 text-rose-300 border-rose-500/50 hover:bg-rose-600/40'
               }`}
             >
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`w-2.5 h-2.5 rounded-full ${
                   (user?.is_accepting_trips ?? true)
                     ? 'bg-emerald-400 animate-pulse'
-                    : 'bg-rose-400'
+                    : 'bg-rose-500'
                 }`}
               ></span>
               {(user?.is_accepting_trips ?? true) ? 'استقبال الرحلات: مفعل' : 'استقبال الرحلات: متوقف'}
