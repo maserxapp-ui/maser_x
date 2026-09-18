@@ -2656,59 +2656,67 @@ export function FinancialReportsCalculator({ supabase }) {
   const [expenses, setExpenses] = useState([
     { id: 1, name: 'أجرة السائق والرحلات اليومية', amount: '' }
   ]);
-  const [employeeTotal, setEmployeeTotal] = useState('');
   const [managerPercentage, setManagerPercentage] = useState(15);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
 
-  // جلب إجمالي أرباح الطلاب (للذين حالتهم "مدفوع" فقط)
-  useEffect(() => {
-    const fetchFinancialData = async () => {
-      if (!supabase) return;
-      try {
-        // 1. فحص التصفير التلقائي بداية كل شهر للاستقطاعات
-        const currentMonth = new Date().getMonth();
-        const savedMonth = localStorage.getItem('calc_saved_month');
-        if (savedMonth !== null && Number(savedMonth) !== currentMonth) {
-          setExpenses([]); 
-          localStorage.setItem('calc_saved_month', currentMonth);
-        } else if (savedMonth === null) {
-          localStorage.setItem('calc_saved_month', currentMonth);
-        }
-
-        // جلب مبالغ اشتراكات الموظفات من قاعدة البيانات
-        const { data: empData } = await supabase.from('employees').select('subscription_price');
-        if (empData) setEmployees(empData);
-        
-        // 2. 🟢 جلب الطلاب الذين حالتهم "مدفوع" فقط وحساب المجموع
-        const { data, error } = await supabase
-          .from('students')
-          .select('price, payment_status')
-          .or('payment_status.eq.paid,payment_status.eq.مدفوع');
-
-        if (!error && data) {
-          const totalSum = data.reduce((acc, std) => {
-            const rawVal = std.price;
-            let val = 0;
-            if (typeof rawVal === 'number') {
-              val = rawVal;
-            } else if (typeof rawVal === 'string') {
-              val = parseFloat(rawVal.replace(/[^0-9.-]+/g, '')) || 0;
-            }
-            return acc + val;
-          }, 0);
-
-          setStudentRevenue(totalSum);
-        } else if (error) {
-          console.error("خطأ في جلب المبالغ:", error);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  // دالة جلب أرباح الطلاب بفلترة حالة status = مدفوع
+  const fetchFinancialData = async () => {
+    if (!supabase) return;
+    setLoading(true);
+    try {
+      // 1. فحص التصفير التلقائي بداية كل شهر للاستقطاعات
+      const currentMonth = new Date().getMonth();
+      const savedMonth = localStorage.getItem('calc_saved_month');
+      if (savedMonth !== null && Number(savedMonth) !== currentMonth) {
+        setExpenses([]); 
+        localStorage.setItem('calc_saved_month', currentMonth);
+      } else if (savedMonth === null) {
+        localStorage.setItem('calc_saved_month', currentMonth);
       }
-    };
 
+      // جلب مبالغ الموظفات
+      const { data: empData } = await supabase.from('employees').select('subscription_price');
+      if (empData) setEmployees(empData);
+      
+      // 2. 🟢 جلب الطلاب بحقل (status) وتصفية المدفوعين فقط
+      const { data: stdData, error: stdError } = await supabase
+        .from('students')
+        .select('price, status')
+        .or('status.eq.paid,status.eq.مدفوع');
+
+      let totalCollected = 0;
+      if (!stdError && stdData) {
+        totalCollected = stdData.reduce((acc, std) => {
+          if (!std.price) return acc;
+          // إزالة الفواصل والرموز النصية لتجميع الرقم بدقة (مثلاً: "90,000" -> 90000)
+          const numericVal = parseFloat(String(std.price).replace(/[^0-9.-]+/g, '')) || 0;
+          return acc + numericVal;
+        }, 0);
+      } else if (stdError) {
+        console.error("خطأ في جلب بيانات الطلاب:", stdError);
+      }
+
+      // 3. جلب مجموع المحاسبات السابقة الخصم لتحديث المبلغ الصافي المتبقي تلقائياً
+      const { data: settlements } = await supabase
+        .from('financial_settlements')
+        .select('total_deductions');
+
+      const previousDeductions = settlements
+        ? settlements.reduce((sum, item) => sum + (Number(item.total_deductions) || 0), 0)
+        : 0;
+
+      // المبلغ النهائي المتبقي بعد الاستقطاعات السابقة
+      setStudentRevenue(Math.max(0, totalCollected - previousDeductions));
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFinancialData();
   }, [supabase]);
 
@@ -2729,7 +2737,7 @@ export function FinancialReportsCalculator({ supabase }) {
     );
   };
 
-  // 🟢 دالة المحاسبة والتصفير للمدير
+  // 🟢 دالة المحاسبة والتصفير (تخصم مستحقات السائق تلقائياً من المبلغ الكلي وتصفر الحقول)
   const handleSettleAndReset = async () => {
     const totalExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
@@ -2739,12 +2747,13 @@ export function FinancialReportsCalculator({ supabase }) {
     }
 
     const confirmAction = window.confirm(
-      `هل تؤكد خصم أجرة السائق / الاستقطاعات بمبلغ (${totalExp.toLocaleString()} د.ع) وتصفير الحقول؟`
+      `هل تؤكد خصم أجرة السائق / الاستقطاعات بمبلغ (${totalExp.toLocaleString()} د.ع) من الإجمالي وتصفير الحقول؟`
     );
     if (!confirmAction) return;
 
     try {
       if (supabase) {
+        // تسجيل تسوية المحاسبة في Supabase
         await supabase.from('financial_settlements').insert([{
           total_income: studentRevenue,
           total_deductions: totalExp,
@@ -2754,16 +2763,20 @@ export function FinancialReportsCalculator({ supabase }) {
         }]);
       }
 
-      // إعادة تصفير حقول الاستقطاعات
+      // خصم المبلغ المستقطع تلقائياً من المبالغ المحصلة المتبقية
+      setStudentRevenue((prev) => Math.max(0, prev - totalExp));
+
+      // تصفير حقول الاستقطاعات
       setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
-      alert('✅ تم تسجيل المحاسبة وخصم المستحقات وتصفير الحقول بنجاح!');
+      alert('✅ تم خصم المستحقات وتسجيل المحاسبة وتصفير الحقول بنجاح!');
     } catch (err) {
+      console.error(err);
       setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
       alert('✅ تم تصفير الحقول بنجاح!');
     }
   };
 
-  // الحسابات المالية التلقائية
+  // الحسابات المالية الحالية
   const totalExpenses = expenses.reduce(
     (sum, item) => sum + (Number(item.amount) || 0),
     0
@@ -2788,13 +2801,13 @@ export function FinancialReportsCalculator({ supabase }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* الخانة الأولى: أرباح واستقطاعات الطلاب (الجهة اليمنى المعدّلة) */}
+        {/* الخانة الأولى: أرباح واستقطاعات الطلاب */}
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
           <div className="flex justify-between items-center border-b border-slate-700 pb-2">
             <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
               🚌 1. حاسبة أرباح وإستقطاعات الطلاب (المدفوعين)
             </h3>
-            {/* 🟢 زر المحاسبة والتصفير */}
+            {/* زر المحاسبة والتصفير اليدوي/التلقائي */}
             <button
               type="button"
               onClick={handleSettleAndReset}
@@ -2804,11 +2817,11 @@ export function FinancialReportsCalculator({ supabase }) {
             </button>
           </div>
 
-          {/* المبلغ الكلي للطلاب المدفوعين فقط */}
+          {/* المبلغ الكلي للطلاب المدفوعين المتبقي */}
           <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
             <div>
               <span className="text-xs text-slate-400 block">
-                إجمالي مبالغ الطلاب (الاشتراكات المدفوعة فقط):
+                إجمالي مبالغ الطلاب (الاشتراكات المدفوعة المتبقية):
               </span>
               <span className="text-2xl font-black text-emerald-400">
                 {loading ? 'جاري التحميل...' : `${studentRevenue.toLocaleString()} د.ع`}
@@ -2872,10 +2885,10 @@ export function FinancialReportsCalculator({ supabase }) {
           <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex justify-between items-center mt-4">
             <div>
               <span className="text-xs text-slate-400 block">
-                💰 مجموع صافي الأرباح النهائي للطلاب:
+                💰 مجموع صافي الأرباح النهائي المتبقي للطلاب:
               </span>
               <span className="text-[10px] text-slate-500 block">
-                (المبلغ الكلي للمدفوعين - الاستقطاعات {totalExpenses.toLocaleString()} د.ع)
+                (المبلغ الكلي - الاستقطاعات الحالية {totalExpenses.toLocaleString()} د.ع)
               </span>
             </div>
             <span className="text-2xl font-black text-amber-400">
@@ -2884,14 +2897,13 @@ export function FinancialReportsCalculator({ supabase }) {
           </div>
         </div>
 
-        {/* الخانة الثانية: أرباح الموظفات ونسبة المدير (لم يتم تغييرها) */}
+        {/* الخانة الثانية: أرباح الموظفات ونسبة المدير */}
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
           <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2 border-b border-slate-700 pb-2">
             👩‍💼 2. حاسبة أرباح ونسبة المدير من الموظفات
           </h3>
 
           <div className="space-y-4">
-            {/* المجموع التلقائي لاشتراكات الموظفات */}
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">
                 مجموع مبالغ الموظفات الكلي (تلقائي):
@@ -2901,7 +2913,6 @@ export function FinancialReportsCalculator({ supabase }) {
               </div>
             </div>
 
-            {/* نسبة المدير */}
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">
                 نسبة المدير المخصومة (%):
@@ -2919,7 +2930,6 @@ export function FinancialReportsCalculator({ supabase }) {
             </div>
           </div>
 
-          {/* نتيجة أرباح المدير الصافية من النسبة */}
           <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
             <div>
               <span className="text-xs text-slate-400 block">
