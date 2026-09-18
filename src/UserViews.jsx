@@ -470,14 +470,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(() => {
-  try {
-    const saved = localStorage.getItem('maser_currentUser');
-    return saved ? JSON.parse(saved) : null;
-  } catch (e) {
-    return null;
-  }
-});
-  const [assignedDriver, setAssignedDriver] = useState(null);
+     const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
@@ -511,6 +504,14 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     loadEmployees();
   }, [supabase]);
+  try {
+    const saved = localStorage.getItem('maser_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+});
+ 
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
