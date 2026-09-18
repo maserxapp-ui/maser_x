@@ -470,50 +470,47 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('maser_currentUser');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
-
+  try {
+    const saved = localStorage.getItem('maser_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) {
+    return null;
+  }
+});
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
+  // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
 
-  // تعريف الدالة باسم fetchEmp ليتطابق مع زر التحديث في التبويب
-  const fetchEmp = async () => {
-    const client = supabase || (typeof window !== 'undefined' ? window.supabase : null);
-    console.log('🔄 جاري محاولة جلب الموظفات...', { hasClient: !!client });
-
-    if (client) {
-      try {
-        const { data, error } = await client.from('employees').select('*');
-        console.log('📥 استجابة السيرفر لجلب الموظفات:', { data, error });
-
-        if (!error && data && data.length > 0) {
-          console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
-          window._fetchedEmployeesList = data;
-          setFetchedEmployeesList(data);
-        } else if (error) {
-          console.error('❌ خطأ من Supabase:', error.message);
-        }
-      } catch (err) {
-        console.error('❌ استثناء أثناء جلب البيانات:', err);
-      }
-    } else {
-      console.error('❌ لم يتم العثور على كائن supabase متصل بالصفحة!');
-    }
-  };
-
   useEffect(() => {
-    fetchEmp();
+    const loadEmployees = async () => {
+      const client = supabase || (typeof window !== 'undefined' ? window.supabase : null);
+      console.log('🔄 جاري محاولة جلب الموظفات...', { hasClient: !!client });
+
+      if (client) {
+        try {
+          const { data, error } = await client.from('employees').select('*');
+          console.log('📥 استجابة السيرفر لجلب الموظفات:', { data, error });
+
+          if (!error && data && data.length > 0) {
+            console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
+            window._fetchedEmployeesList = data;
+            setFetchedEmployeesList(data);
+          } else if (error) {
+            console.error('❌ خطأ من Supabase:', error.message);
+          }
+        } catch (err) {
+          console.error('❌ استثناء أثناء جلب البيانات:', err);
+        }
+      } else {
+        console.error('❌ لم يتم العثور على كائن supabase متصل بالصفحة!');
+      }
+    };
+
+    loadEmployees();
   }, [supabase]);
-  
- 
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
   const [shiftFinished, setShiftFinished] = useState(false);
@@ -2661,52 +2658,40 @@ if (!students || students.length === 0) {
               <span>بيانات الحساب والسيارة</span>
             </h4>
 
-           {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات (مستقر وبدون إعادة تحميل) */}
+           {/* 🔘 زر تفعيل/إيقاف استقبال الرحلات (تحديث فوري دون تسجيل خروج) */}
             {(() => {
-              const [isAccepting, setIsAccepting] = React.useState(() => {
-                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                return user?.is_accepting_trips ?? storedUser?.is_accepting_trips ?? true;
-              });
-
-              const handleToggle = async () => {
-                const nextStatus = !isAccepting;
-
-                // 1. تغيير شكل الزر والحالة فوراً بالواجهة (منع الارتداد)
-                setIsAccepting(nextStatus);
-
-                // 2. تحديث الذاكرة المحلية (localStorage)
-                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                if (storedUser && storedUser.id) {
-                  storedUser.is_accepting_trips = nextStatus;
-                  localStorage.setItem('user', JSON.stringify(storedUser));
-                }
-                if (user) user.is_accepting_trips = nextStatus;
-
-                try {
-                  // 3. إرسال التحديث لـ Supabase
-                  const { error } = await supabase
-                    .from('drivers')
-                    .update({ is_accepting_trips: nextStatus })
-                    .eq('id', user?.id);
-
-                  if (error) {
-                    // في حال فشل الحفظ نرجع الحالة السابقة ونظهر تنبيه
-                    setIsAccepting(!nextStatus);
-                    alert('⚠️ فشل التحديث في قاعدة البيانات: ' + error.message);
-                    return;
-                  }
-
-                  alert(nextStatus ? '✅ تم تشغيل استقبال الرحلات' : '🛑 تم إيقاف استقبال الرحلات');
-                } catch (err) {
-                  setIsAccepting(!nextStatus);
-                  alert('⚠️ حدث خطأ أثناء الاتصال: ' + err.message);
-                }
-              };
+              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+              const isAccepting = user?.is_accepting_trips ?? storedUser?.is_accepting_trips ?? true;
 
               return (
                 <button
                   type="button"
-                  onClick={handleToggle}
+                  onClick={async () => {
+                    const nextStatus = !isAccepting;
+
+                    try {
+                      // 1. تحديث قاعدة البيانات في Supabase
+                      const { error } = await supabase
+                        .from('drivers')
+                        .update({ is_accepting_trips: nextStatus })
+                        .eq('id', user?.id);
+
+                      if (error) throw error;
+
+                      // 2. تحديث الذاكرة المحلية (localStorage) والكائن الحلي فوراً
+                      if (user) user.is_accepting_trips = nextStatus;
+                      if (storedUser && storedUser.id) {
+                        storedUser.is_accepting_trips = nextStatus;
+                        localStorage.setItem('user', JSON.stringify(storedUser));
+                      }
+
+                      // 3. إظهار الإشعار وإعادة إنعاش الواجهة
+                      alert(nextStatus ? '✅ تم تشغيل استقبال الرحلات' : '🛑 تم إيقاف استقبال الرحلات');
+                      window.location.reload();
+                    } catch (err) {
+                      alert('⚠️ حدث خطأ أثناء تغيير الحالة: ' + err.message);
+                    }
+                  }}
                   className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border cursor-pointer ${
                     isAccepting
                       ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/40'
@@ -2773,7 +2758,7 @@ if (!students || students.length === 0) {
 
      {/* ================= 4. تبويب اشتراك الموظفات ================= */}
 {activeTab === 'employee_line' && (user?.role === 'driver' || currentUserRole === 'driver' || user?.is_driver) && (
-  <div className="max-w-md mx-auto p-4 space-y-4" style={{ direction: 'rtl', paddingBottom: '90px' }}>
+  <div className="max-w-m-md mx-auto p-4 space-y-4" style={{ direction: 'rtl', paddingBottom: '90px' }}>
 
     {/* شريط تنبيه نسبة الاستقطاع 15% */}
     <div style={{
@@ -2800,179 +2785,239 @@ if (!students || students.length === 0) {
       border: '1px solid #e2e8f0',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
-          👩‍🏫 المعلمات المداومات
-        </h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button 
-            type="button"
-            onClick={() => typeof fetchEmp === 'function' ? fetchEmp() : window.location.reload()} 
-            style={{
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              padding: '5px 12px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            🔄 تحديث
-          </button>
+      {(() => {
+    const rawEmployeesList = (typeof window !== 'undefined' && window._fetchedEmployeesList) ? window._fetchedEmployeesList : ((typeof fetchedEmployeesList !== 'undefined' && Array.isArray(fetchedEmployeesList)) ? fetchedEmployeesList : []);
+        const currentDriverId = user?.id || user?.driver_id;
 
-          <span style={{
-            backgroundColor: '#dbeafe',
-            color: '#1e40af',
-            padding: '4px 12px',
-            borderRadius: '16px',
+  console.log('قائمة جميع الموظفات من السيرفر:', rawEmployeesList);
+
+  const assignedEmployees = rawEmployeesList.filter(emp => {
+  if (!emp) return false;
+
+  // 🔴 شرط إخفاء الموظفة إذا كانت غائبة
+  if (emp.attending_status === false || emp.attending_status === 'FALSE' || emp.attending_status === 'false') {
+    return false;
+  }
+
+  const empDriverId = emp.driver_id != null ? String(emp.driver_id).trim() : '';
+  const driverId = currentDriverId != null ? String(currentDriverId).trim() : '';
+
+  console.log(`فحص الموظفة (${emp.name}): driver_id = "${empDriverId}" | id السائق = "${driverId}"`);
+
+  return (empDriverId !== '' && empDriverId === driverId) ||
+         (emp.driver_phone && user?.phone && String(emp.driver_phone).trim() === String(user?.phone).trim()) ||
+         (emp.driver_name && user?.name && emp.driver_name.trim() === user?.name.trim());
+});
+
+  // حساب اسم يوم غدٍ تلقائياً
+  const daysMap = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const tomorrowIndex = (new Date().getDay() + 1) % 7;
+  const tomorrowName = daysMap[tomorrowIndex];
+
+ // فلترة معلمات الغد (يدعم الدوام الصباحي والمسائي والقديم)
+const tomorrowEmployees = assignedEmployees.filter(emp => {
+  const mDays = Array.isArray(emp.morning_days) ? emp.morning_days.join(',') : String(emp.morning_days || '');
+  const eDays = Array.isArray(emp.evening_days) ? emp.evening_days.join(',') : String(emp.evening_days || '');
+  const oldDays = Array.isArray(emp.work_days) ? emp.work_days.join(',') : String(emp.work_days || '');
+
+  return mDays.includes(tomorrowName) || eDays.includes(tomorrowName) || oldDays.includes(tomorrowName);
+});
+
+  console.log('الموظفات المربوطات بالسائق:', assignedEmployees);
+
+        return (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
+                👩‍🏫 المعلمات المداومات غداً ({tomorrowName})
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button 
+          onClick={() => typeof fetchEmp === 'function' ? fetchEmp() : window.location.reload()} 
+          style={{
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            border: 'none',
+            padding: '5px 12px',
+            borderRadius: '12px',
             fontSize: '12px',
-            fontWeight: 'bold'
-          }}>
-            العدد: {((typeof fetchedEmployeesList !== 'undefined' && Array.isArray(fetchedEmployeesList)) ? fetchedEmployeesList : (window._fetchedEmployeesList || [])).length} معلمات
-          </span>
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          🔄 تحديث
+        </button>
+
+        <span style={{
+          backgroundColor: '#dbeafe',
+          color: '#1e40af',
+          padding: '4px 12px',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}>
+          العدد: {tomorrowEmployees.length} معلمات
+        </span>
+      </div>
+            </div>
+
+            {tomorrowEmployees.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', fontSize: '14px' }}>
+                ☕ لا يوجد دوام للمعلمات المخصصات لك غداً ({tomorrowName}).
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {tomorrowEmployees.map((emp, idx) => {
+  const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
+  const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
+  const whatsappUrl = `https://wa.me/${waPhone}`;
+
+  // 1️⃣ تجهيز أوقات وأيام الدوام الصباحي والمسائي
+  const mDays = Array.isArray(emp.morning_days) ? emp.morning_days.join('، ') : (emp.morning_days || '');
+  const eDays = Array.isArray(emp.evening_days) ? emp.evening_days.join('، ') : (emp.evening_days || '');
+  const oldDays = Array.isArray(emp.work_days) ? emp.work_days.join('، ') : (emp.work_days || '');
+
+  return (
+    <div key={emp.id || idx} style={{
+      backgroundColor: '#ffffff',
+      border: '1px solid #e2e8f0',
+      borderRadius: '12px',
+      padding: '14px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px'
+    }}>
+      {/* 2️⃣ الجزء العلوي: الاسم + أزرار الذهاب والعودة + المدرسة والسكن */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
+            {emp.name || 'معلمة'}
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+            <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+              🌅 ذهاب
+            </span>
+            <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
+              🌆 عودة
+            </span>
+          </div>
+        </div>
+
+        {/* عرض اسم المدرسة وعنوان السكن بصورة منفصلة */}
+        <div style={{ fontSize: '12px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
+          <span>🏫 المدرسة: <b>{emp.school_name || 'غير محددة'}</b></span>
+          <span>📍 السكن: <b style={{ color: '#0284c7' }}>{emp.address || 'غير محدد'}</b></span>
         </div>
       </div>
 
-      {!((typeof fetchedEmployeesList !== 'undefined' && Array.isArray(fetchedEmployeesList)) ? fetchedEmployeesList : (window._fetchedEmployeesList || [])).length ? (
-        <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', backgroundColor: '#f8fafc', borderRadius: '12px', fontSize: '14px' }}>
-          ☕ لا يوجد دوام للمعلمات المخصصات لك حالياً.
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {((typeof fetchedEmployeesList !== 'undefined' && Array.isArray(fetchedEmployeesList)) ? fetchedEmployeesList : (window._fetchedEmployeesList || [])).map((emp, idx) => {
-            const rawPhone = emp.phone ? emp.phone.replace(/[^0-9]/g, '') : '';
-            const waPhone = rawPhone.startsWith('0') ? '964' + rawPhone.slice(1) : rawPhone;
-            const whatsappUrl = `https://wa.me/${waPhone}`;
+      {/* 3️⃣ تفاصيل أيام وأوقات الدوام (الصباحي والمسائي) */}
+      <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}>
+        {mDays && (
+          <div style={{ color: '#d97706', fontWeight: 'bold', marginBottom: '2px' }}>
+            ☀️ الدوام الصباحي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({mDays})</span> {emp.morning_time && <span style={{ color: '#b45309' }}>🕒 {emp.morning_time}</span>}
+          </div>
+        )}
+        {eDays && (
+          <div style={{ color: '#7c3aed', fontWeight: 'bold', marginBottom: '2px' }}>
+            🌙 الدوام المسائي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({eDays})</span> {emp.evening_time && <span style={{ color: '#6d28d9' }}>🕒 {emp.evening_time}</span>}
+          </div>
+        )}
+        {!mDays && !eDays && (
+          <div style={{ color: '#475569' }}>
+            📅 أيام الدوام: <b>{oldDays || 'غير محددة'}</b> {emp.work_hours && <span>| 🕒 {emp.work_hours}</span>}
+          </div>
+        )}
+      </div>
 
-            const mDays = Array.isArray(emp.morning_days) ? emp.morning_days.join('، ') : (emp.morning_days || '');
-            const eDays = Array.isArray(emp.evening_days) ? emp.evening_days.join('، ') : (emp.evening_days || '');
-            const oldDays = Array.isArray(emp.work_days) ? emp.work_days.join('، ') : (emp.work_days || '');
+      {/* 4️⃣ الأزرار السفليّة (رقم الهاتف، واتساب، موقع المنزل، التقييم) */}
+      <div style={{
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        borderTop: '1px solid #e2e8f0',
+        paddingTop: '10px',
+        marginTop: '2px',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
+          📞 {emp.phone || 'لا يوجد رقم'}
+        </span>
 
-            return (
-              <div key={emp.id || idx} style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '14px',
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {emp.phone && (
+            <a 
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#25D366',
+                color: '#ffffff',
+                textDecoration: 'none',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#0f172a' }}>
-                      {emp.name || 'معلمة'}
-                    </div>
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              💬 مراسلة
+            </a>
+          )}
 
-                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                      <span style={{ backgroundColor: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                        🌅 ذهاب
-                      </span>
-                      <span style={{ backgroundColor: '#fef9c3', color: '#854d0e', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px' }}>
-                        🌅 عودة
-                      </span>
-                    </div>
-                  </div>
+          <button
+            onClick={() => {
+              if (emp.location_url) {
+                window.open(emp.location_url, '_blank');
+              } else {
+                alert('⚠️ لم تقم هذه الموظفة بتحديد موقع منزلها حتى الآن.');
+              }
+            }}
+            style={{
+              backgroundColor: emp.location_url ? '#2563eb' : '#9ca3af',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            📍 الموقع
+          </button>
 
-                  <div style={{ fontSize: '12px', color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '2px' }}>
-                    <span>🏫 المدرسة: <b>{emp.school_name || 'غير محددة'}</b></span>
-                    <span>📍 السكن: <b style={{ color: '#0284c7' }}>{emp.address || 'غير محدد'}</b></span>
-                  </div>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px' }}>
-                  {mDays && (
-                    <div style={{ color: '#d97706', fontWeight: 'bold', marginBottom: '2px' }}>
-                      ☀️ الدوام الصباحي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({mDays})</span> {emp.morning_time && <span style={{ color: '#b45309' }}>🕒 {emp.morning_time}</span>}
-                    </div>
-                  )}
-                  {eDays && (
-                    <div style={{ color: '#7c3aed', fontWeight: 'bold', marginBottom: '2px' }}>
-                      🌙 الدوام المسائي: <span style={{ color: '#334155', fontWeight: 'normal' }}>({eDays})</span> {emp.evening_time && <span style={{ color: '#6d28d9' }}>🕒 {emp.evening_time}</span>}
-                    </div>
-                  )}
-                  {!mDays && !eDays && (
-                    <div style={{ color: '#475569' }}>
-                      📅 أيام الدوام: <b>{oldDays || 'غير محددة'}</b> {emp.work_hours && <span>| 🕒 {emp.work_hours}</span>}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderTop: '1px solid #e2e8f0',
-                  paddingTop: '10px',
-                  marginTop: '2px',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  <span style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>
-                    📞 {emp.phone || 'لا يوجد رقم'}
-                  </span>
-
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {emp.phone && (
-                      <a 
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          backgroundColor: '#25D366',
-                          color: '#ffffff',
-                          textDecoration: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        💬 مراسلة
-                      </a>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (emp.location_url) {
-                          window.open(emp.location_url, '_blank');
-                        } else {
-                          alert('⚠️ لم تقم هذه الموظفة بتحديد موقع منزلها حتى الآن.');
-                        }
-                      }}
-                      style={{
-                        backgroundColor: emp.location_url ? '#2563eb' : '#9ca3af',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      📍 الموقع
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+         <button
+  onClick={() => {
+    setTargetEmp(emp);
+    setRatingVal(5);
+    setRatingNote('');
+    setShowRatingModal(true);
+  }}
+  className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm flex items-center justify-center gap-1"
+>
+  ⭐ تقييم
+</button>
         </div>
-      )}
+      </div>
+    </div>
+  );
+})}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   </div>
 )}
-      
+
       {/* 👛 3. تبويب المحفظة */}
       {activeTab === 'wallet' && (
         <div className="max-w-md mx-auto p-4 space-y-4">
