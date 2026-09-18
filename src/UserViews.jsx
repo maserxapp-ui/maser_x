@@ -470,11 +470,18 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(() => {
-     const [assignedDriver, setAssignedDriver] = useState(null);
+    try {
+      const saved = localStorage.getItem('maser_currentUser');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const studentData = user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
-  // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
 
   useEffect(() => {
