@@ -2659,8 +2659,9 @@ export function FinancialReportsCalculator({ supabase }) {
   const [employeeTotal, setEmployeeTotal] = useState('');
   const [managerPercentage, setManagerPercentage] = useState(15);
   const [loading, setLoading] = useState(true);
- const [employees, setEmployees] = useState([]);
-  // جلب إجمالي أرباح الطلاب من حقل price
+  const [employees, setEmployees] = useState([]);
+
+  // جلب إجمالي أرباح الطلاب (للذين حالتهم "مدفوع" فقط)
   useEffect(() => {
     const fetchFinancialData = async () => {
       if (!supabase) return;
@@ -2674,14 +2675,16 @@ export function FinancialReportsCalculator({ supabase }) {
         } else if (savedMonth === null) {
           localStorage.setItem('calc_saved_month', currentMonth);
         }
-// جلب مبالغ اشتراكات الموظفات من قاعدة البيانات
-const { data: empData } = await supabase.from('employees').select('subscription_price');
-if (empData) setEmployees(empData);
+
+        // جلب مبالغ اشتراكات الموظفات من قاعدة البيانات
+        const { data: empData } = await supabase.from('employees').select('subscription_price');
+        if (empData) setEmployees(empData);
         
-        // 2. جلب حقل price لجميع الطلاب بدون استثناء وحساب المجموع
+        // 2. 🟢 جلب الطلاب الذين حالتهم "مدفوع" فقط وحساب المجموع
         const { data, error } = await supabase
           .from('students')
-          .select('price');
+          .select('price, payment_status')
+          .or('payment_status.eq.paid,payment_status.eq.مدفوع');
 
         if (!error && data) {
           const totalSum = data.reduce((acc, std) => {
@@ -2701,7 +2704,7 @@ if (empData) setEmployees(empData);
         }
       } catch (e) {
         console.error(e);
-      } finally {
+      } font-bold {
         setLoading(false);
       }
     };
@@ -2726,14 +2729,46 @@ if (empData) setEmployees(empData);
     );
   };
 
+  // 🟢 دالة المحاسبة والتصفير للمدير
+  const handleSettleAndReset = async () => {
+    const totalExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+    if (totalExp <= 0) {
+      alert('⚠️ يرجى إدخال مبلغ استقطاع أو أجرة سائق للمحاسبة عليها أولاً.');
+      return;
+    }
+
+    const confirmAction = window.confirm(
+      `هل تؤكد خصم أجرة السائق / الاستقطاعات بمبلغ (${totalExp.toLocaleString()} د.ع) وتصفير الحقول؟`
+    );
+    if (!confirmAction) return;
+
+    try {
+      if (supabase) {
+        await supabase.from('financial_settlements').insert([{
+          total_income: studentRevenue,
+          total_deductions: totalExp,
+          net_profit: Math.max(0, studentRevenue - totalExp),
+          details: expenses,
+          created_at: new Date().toISOString()
+        }]);
+      }
+
+      // إعادة تصفير حقول الاستقطاعات
+      setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
+      alert('✅ تم تسجيل المحاسبة وخصم المستحقات وتصفير الحقول بنجاح!');
+    } catch (err) {
+      setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
+      alert('✅ تم تصفير الحقول بنجاح!');
+    }
+  };
+
   // الحسابات المالية التلقائية
   const totalExpenses = expenses.reduce(
     (sum, item) => sum + (Number(item.amount) || 0),
     0
   );
   const netStudentProfit = studentRevenue - totalExpenses;
-  const managerProfitFromEmployees =
-    (Number(employeeTotal) || 0) * ((Number(managerPercentage) || 0) / 100);
 
   return (
     <div className="p-6 bg-slate-900 text-white rounded-2xl shadow-xl mt-4 dir-rtl space-y-6">
@@ -2753,17 +2788,27 @@ if (empData) setEmployees(empData);
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* الخانة الأولى: أرباح واستقطاعات الطلاب */}
+        {/* الخانة الأولى: أرباح واستقطاعات الطلاب (الجهة اليمنى المعدّلة) */}
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
-          <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2 border-b border-slate-700 pb-2">
-            🚌 1. حاسبة أرباح وإستقطاعات الطلاب
-          </h3>
+          <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+            <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+              🚌 1. حاسبة أرباح وإستقطاعات الطلاب (المدفوعين)
+            </h3>
+            {/* 🟢 زر المحاسبة والتصفير */}
+            <button
+              type="button"
+              onClick={handleSettleAndReset}
+              className="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
+            >
+              🔄 محاسبة وتصفير
+            </button>
+          </div>
 
-          {/* المبلغ الكلي للطلاب المجلوب تلقائياً */}
+          {/* المبلغ الكلي للطلاب المدفوعين فقط */}
           <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
             <div>
               <span className="text-xs text-slate-400 block">
-                إجمالي مبالغ الطلاب (مجموع أرباح الطلاب بالرئيسية):
+                إجمالي مبالغ الطلاب (الاشتراكات المدفوعة فقط):
               </span>
               <span className="text-2xl font-black text-emerald-400">
                 {loading ? 'جاري التحميل...' : `${studentRevenue.toLocaleString()} د.ع`}
@@ -2778,6 +2823,7 @@ if (empData) setEmployees(empData);
                 ➖ الاستقطاعات والخصومات (أجرة السائق، عدد الرحلات، إلخ):
               </label>
               <button
+                type="button"
                 onClick={addExpenseRow}
                 className="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition"
               >
@@ -2810,6 +2856,7 @@ if (empData) setEmployees(empData);
                     className="w-32 bg-slate-800 text-xs text-white p-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-400"
                   />
                   <button
+                    type="button"
                     onClick={() => removeExpenseRow(exp.id)}
                     className="text-red-400 hover:text-red-300 font-bold text-sm px-2 py-1"
                     title="حذف الحقل"
@@ -2828,7 +2875,7 @@ if (empData) setEmployees(empData);
                 💰 مجموع صافي الأرباح النهائي للطلاب:
               </span>
               <span className="text-[10px] text-slate-500 block">
-                (المبلغ الكلي - الاستقطاعات {totalExpenses.toLocaleString()} د.ع)
+                (المبلغ الكلي للمدفوعين - الاستقطاعات {totalExpenses.toLocaleString()} د.ع)
               </span>
             </div>
             <span className="text-2xl font-black text-amber-400">
@@ -2837,56 +2884,56 @@ if (empData) setEmployees(empData);
           </div>
         </div>
 
-        {/* الخانة الثانية: أرباح الموظفات ونسبة المدير */}
+        {/* الخانة الثانية: أرباح الموظفات ونسبة المدير (لم يتم تغييرها) */}
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
           <h3 className="text-lg font-bold text-purple-300 flex items-center gap-2 border-b border-slate-700 pb-2">
             👩‍💼 2. حاسبة أرباح ونسبة المدير من الموظفات
           </h3>
 
           <div className="space-y-4">
-  {/* المجموع التلقائي لاشتراكات الموظفات */}
-  <div>
-    <label className="text-xs font-bold text-slate-300 block mb-1">
-      مجموع مبالغ الموظفات الكلي (تلقائي):
-    </label>
-    <div className="w-full bg-slate-900 text-emerald-400 font-bold text-sm p-3 rounded-xl border border-slate-700">
-      {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع
-    </div>
-  </div>
+            {/* المجموع التلقائي لاشتراكات الموظفات */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                مجموع مبالغ الموظفات الكلي (تلقائي):
+              </label>
+              <div className="w-full bg-slate-900 text-emerald-400 font-bold text-sm p-3 rounded-xl border border-slate-700">
+                {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع
+              </div>
+            </div>
 
-  {/* نسبة المدير */}
-  <div>
-    <label className="text-xs font-bold text-slate-300 block mb-1">
-      نسبة المدير المخصومة (%):
-    </label>
-    <div className="flex gap-2 items-center">
-      <input
-        type="number"
-        placeholder="أدخلي النسبة (مثلاً: 15)"
-        value={managerPercentage}
-        onChange={(e) => setManagerPercentage(e.target.value)}
-        className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
-      />
-      <span className="text-lg font-bold text-purple-400">%</span>
-    </div>
-  </div>
-</div>
-
-{/* نتيجة أرباح المدير الصافية من النسبة */}
-<div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
-  <div>
-    <span className="text-xs text-slate-400 block">
-      مجموع أرباحك الصافية (النسبة المخصومة للمدير) 👑
-    </span>
-    <span className="text-[10px] text-purple-400 block mt-0.5">
-      ({managerPercentage || 0}% مخصومة من إجمالي {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع)
-    </span>
-  </div>
-  <span className="text-2xl font-black text-emerald-400">
-    {(((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0) * (Number(managerPercentage) || 0)) / 100).toLocaleString()} د.ع
-  </span>
-</div>
+            {/* نسبة المدير */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">
+                نسبة المدير المخصومة (%):
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  placeholder="أدخلي النسبة (مثلاً: 15)"
+                  value={managerPercentage}
+                  onChange={(e) => setManagerPercentage(e.target.value)}
+                  className="w-full bg-slate-900 text-sm text-white p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-purple-400"
+                />
+                <span className="text-lg font-bold text-purple-400">%</span>
+              </div>
+            </div>
           </div>
+
+          {/* نتيجة أرباح المدير الصافية من النسبة */}
+          <div className="bg-slate-950 p-4 rounded-xl border border-purple-500/30 flex justify-between items-center mt-6">
+            <div>
+              <span className="text-xs text-slate-400 block">
+                مجموع أرباحك الصافية (النسبة المخصومة للمدير) 👑
+              </span>
+              <span className="text-[10px] text-purple-400 block mt-0.5">
+                ({managerPercentage || 0}% مخصومة من إجمالي {((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0)).toLocaleString()} د.ع)
+              </span>
+            </div>
+            <span className="text-2xl font-black text-emerald-400">
+              {(((employees || []).reduce((sum, emp) => sum + (Number(emp.subscription_price) || 0), 0) * (Number(managerPercentage) || 0)) / 100).toLocaleString()} د.ع
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
