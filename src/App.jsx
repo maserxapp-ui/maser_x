@@ -2695,27 +2695,11 @@ export function FinancialReportsCalculator({ supabase }) {
         }, 0);
       }
 
-      // 3. 🟢 جلب إجمالي الخصومات المحفوظة من LocalStorage وقاعدة البيانات
+      // 3. جلب إجمالي الخصومات المحفوظة
       const localDeductions = parseFloat(localStorage.getItem('total_settled_deductions') || '0');
-      let dbDeductions = 0;
-
-      try {
-        const { data: settlements } = await supabase
-          .from('financial_settlements')
-          .select('total_deductions');
-
-        if (settlements) {
-          dbDeductions = settlements.reduce((sum, item) => sum + (Number(item.total_deductions) || 0), 0);
-        }
-      } catch (err) {
-        // في حال عدم وجود الجدول في السوبا بيس
-      }
-
-      // اعتماد القيمة الأكبر للخصومات لضمان حفظ الخصم دائماً
-      const finalDeductions = Math.max(localDeductions, dbDeductions);
 
       // خصم المبالغ المحاسَب عليها من الإجمالي الكلي
-      setStudentRevenue(Math.max(0, totalCollected - finalDeductions));
+      setStudentRevenue(Math.max(0, totalCollected - localDeductions));
 
     } catch (e) {
       console.error(e);
@@ -2745,7 +2729,7 @@ export function FinancialReportsCalculator({ supabase }) {
     );
   };
 
-  // 🟢 دالة المحاسبة والتصفير (تخصم وتحفظ المبلغ بشكل دائم)
+  // دالة المحاسبة والتصفير (تخصم وتحفظ المبلغ)
   const handleSettleAndReset = async () => {
     const totalExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
@@ -2759,33 +2743,26 @@ export function FinancialReportsCalculator({ supabase }) {
     );
     if (!confirmAction) return;
 
-    // 1. حفظ المجموع المستقطع التراكمي دائمياً في ذاكرة المتصفح LocalStorage
+    // حفظ المجموع المستقطع التراكمي
     const currentSaved = parseFloat(localStorage.getItem('total_settled_deductions') || '0');
     const updatedDeductions = currentSaved + totalExp;
     localStorage.setItem('total_settled_deductions', updatedDeductions.toString());
 
-    // 2. تحديث الواجهة فورياً بالخصم
+    // تحديث الواجهة وتصفير الحقول
     setStudentRevenue((prev) => Math.max(0, prev - totalExp));
-
-    // 3. تصفير الحقول
     setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
 
-    // 4. حفظ العملية في Supabase
-    try {
-      if (supabase) {
-        await supabase.from('financial_settlements').insert([{
-          total_income: studentRevenue,
-          total_deductions: totalExp,
-          net_profit: Math.max(0, studentRevenue - totalExp),
-          details: expenses,
-          created_at: new Date().toISOString()
-        }]);
-      }
-    } catch (err) {
-      console.warn("حفظ المحاسبة في المحلية فقط:", err);
-    }
-
     alert('✅ تم الخصم والتصفير وحفظ المبلغ المتبقي بنجاح!');
+  };
+
+  // 🟢 دالة استرجاع المبلغ الأصلي وإلغاء الخصومات
+  const handleResetDeductions = () => {
+    const confirmReset = window.confirm('هل تريد إلغاء الخصومات المقتطعة واسترجاع المبلغ الكلي الأصلي؟');
+    if (!confirmReset) return;
+
+    localStorage.setItem('total_settled_deductions', '0');
+    fetchFinancialData();
+    alert('✅ تم إعادة تعيين الحسابات واسترجاع المبلغ الأصلي كاملًا!');
   };
 
   // الحسابات المالية الحالية
@@ -2815,17 +2792,28 @@ export function FinancialReportsCalculator({ supabase }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* الخانة الأولى: أرباح واستقطاعات الطلاب */}
         <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-md space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-700 pb-2">
+          <div className="flex justify-between items-center border-b border-slate-700 pb-2 gap-2 flex-wrap">
             <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
               🚌 1. حاسبة أرباح وإستقطاعات الطلاب (المدفوعين)
             </h3>
-            <button
-              type="button"
-              onClick={handleSettleAndReset}
-              className="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
-            >
-              🔄 محاسبة وتصفير
-            </button>
+            <div className="flex gap-2">
+              {/* 🟢 زر استرجاع المبلغ الأصلي */}
+              <button
+                type="button"
+                onClick={handleResetDeductions}
+                className="bg-sky-600 hover:bg-sky-500 text-white text-xs px-2.5 py-1.5 rounded-xl font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
+                title="إلغاء الخصومات المحفوظة واسترجاع المبلغ الكامل"
+              >
+                ↩️ استرجاع المبلغ الأصلي
+              </button>
+              <button
+                type="button"
+                onClick={handleSettleAndReset}
+                className="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition-all shadow-md cursor-pointer flex items-center gap-1"
+              >
+                🔄 محاسبة وتصفير
+              </button>
+            </div>
           </div>
 
           {/* المبلغ الكلي المتبقي بعد الخصومات */}
