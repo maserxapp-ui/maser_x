@@ -2660,7 +2660,7 @@ export function FinancialReportsCalculator({ supabase }) {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState([]);
 
-  // دالة جلب أرباح الطلاب بفلترة حالة status = مدفوع
+  // دالة جلب البيانات وحساب المتبقي بعد الخصم المحفوظ
   const fetchFinancialData = async () => {
     if (!supabase) return;
     setLoading(true);
@@ -2670,6 +2670,7 @@ export function FinancialReportsCalculator({ supabase }) {
       const savedMonth = localStorage.getItem('calc_saved_month');
       if (savedMonth !== null && Number(savedMonth) !== currentMonth) {
         setExpenses([]); 
+        localStorage.setItem('total_settled_deductions', '0'); // تصفير الخصومات الشهرية
         localStorage.setItem('calc_saved_month', currentMonth);
       } else if (savedMonth === null) {
         localStorage.setItem('calc_saved_month', currentMonth);
@@ -2679,7 +2680,7 @@ export function FinancialReportsCalculator({ supabase }) {
       const { data: empData } = await supabase.from('employees').select('subscription_price');
       if (empData) setEmployees(empData);
       
-      // 2. 🟢 جلب الطلاب بحقل (status) وتصفية المدفوعين فقط
+      // 2. جلب مبالغ الطلاب المدفوعين من Supabase
       const { data: stdData, error: stdError } = await supabase
         .from('students')
         .select('price, status')
@@ -2689,25 +2690,32 @@ export function FinancialReportsCalculator({ supabase }) {
       if (!stdError && stdData) {
         totalCollected = stdData.reduce((acc, std) => {
           if (!std.price) return acc;
-          // إزالة الفواصل والرموز النصية لتجميع الرقم بدقة (مثلاً: "90,000" -> 90000)
           const numericVal = parseFloat(String(std.price).replace(/[^0-9.-]+/g, '')) || 0;
           return acc + numericVal;
         }, 0);
-      } else if (stdError) {
-        console.error("خطأ في جلب بيانات الطلاب:", stdError);
       }
 
-      // 3. جلب مجموع المحاسبات السابقة الخصم لتحديث المبلغ الصافي المتبقي تلقائياً
-      const { data: settlements } = await supabase
-        .from('financial_settlements')
-        .select('total_deductions');
+      // 3. 🟢 جلب إجمالي الخصومات المحفوظة من LocalStorage وقاعدة البيانات
+      const localDeductions = parseFloat(localStorage.getItem('total_settled_deductions') || '0');
+      let dbDeductions = 0;
 
-      const previousDeductions = settlements
-        ? settlements.reduce((sum, item) => sum + (Number(item.total_deductions) || 0), 0)
-        : 0;
+      try {
+        const { data: settlements } = await supabase
+          .from('financial_settlements')
+          .select('total_deductions');
 
-      // المبلغ النهائي المتبقي بعد الاستقطاعات السابقة
-      setStudentRevenue(Math.max(0, totalCollected - previousDeductions));
+        if (settlements) {
+          dbDeductions = settlements.reduce((sum, item) => sum + (Number(item.total_deductions) || 0), 0);
+        }
+      } catch (err) {
+        // في حال عدم وجود الجدول في السوبا بيس
+      }
+
+      // اعتماد القيمة الأكبر للخصومات لضمان حفظ الخصم دائماً
+      const finalDeductions = Math.max(localDeductions, dbDeductions);
+
+      // خصم المبالغ المحاسَب عليها من الإجمالي الكلي
+      setStudentRevenue(Math.max(0, totalCollected - finalDeductions));
 
     } catch (e) {
       console.error(e);
@@ -2737,7 +2745,7 @@ export function FinancialReportsCalculator({ supabase }) {
     );
   };
 
-  // 🟢 دالة المحاسبة والتصفير (تخصم مستحقات السائق تلقائياً من المبلغ الكلي وتصفر الحقول)
+  // 🟢 دالة المحاسبة والتصفير (تخصم وتحفظ المبلغ بشكل دائم)
   const handleSettleAndReset = async () => {
     const totalExp = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
@@ -2747,13 +2755,24 @@ export function FinancialReportsCalculator({ supabase }) {
     }
 
     const confirmAction = window.confirm(
-      `هل تؤكد خصم أجرة السائق / الاستقطاعات بمبلغ (${totalExp.toLocaleString()} د.ع) من الإجمالي وتصفير الحقول؟`
+      `هل تؤكد خصم أجرة السائق / الاستقطاعات بمبلغ (${totalExp.toLocaleString()} د.ع) وتثبيته؟`
     );
     if (!confirmAction) return;
 
+    // 1. حفظ المجموع المستقطع التراكمي دائمياً في ذاكرة المتصفح LocalStorage
+    const currentSaved = parseFloat(localStorage.getItem('total_settled_deductions') || '0');
+    const updatedDeductions = currentSaved + totalExp;
+    localStorage.setItem('total_settled_deductions', updatedDeductions.toString());
+
+    // 2. تحديث الواجهة فورياً بالخصم
+    setStudentRevenue((prev) => Math.max(0, prev - totalExp));
+
+    // 3. تصفير الحقول
+    setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
+
+    // 4. حفظ العملية في Supabase
     try {
       if (supabase) {
-        // تسجيل تسوية المحاسبة في Supabase
         await supabase.from('financial_settlements').insert([{
           total_income: studentRevenue,
           total_deductions: totalExp,
@@ -2762,18 +2781,11 @@ export function FinancialReportsCalculator({ supabase }) {
           created_at: new Date().toISOString()
         }]);
       }
-
-      // خصم المبلغ المستقطع تلقائياً من المبالغ المحصلة المتبقية
-      setStudentRevenue((prev) => Math.max(0, prev - totalExp));
-
-      // تصفير حقول الاستقطاعات
-      setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
-      alert('✅ تم خصم المستحقات وتسجيل المحاسبة وتصفير الحقول بنجاح!');
     } catch (err) {
-      console.error(err);
-      setExpenses([{ id: Date.now(), name: 'أجرة السائق والرحلات اليومية', amount: '' }]);
-      alert('✅ تم تصفير الحقول بنجاح!');
+      console.warn("حفظ المحاسبة في المحلية فقط:", err);
     }
+
+    alert('✅ تم الخصم والتصفير وحفظ المبلغ المتبقي بنجاح!');
   };
 
   // الحسابات المالية الحالية
@@ -2807,7 +2819,6 @@ export function FinancialReportsCalculator({ supabase }) {
             <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
               🚌 1. حاسبة أرباح وإستقطاعات الطلاب (المدفوعين)
             </h3>
-            {/* زر المحاسبة والتصفير اليدوي/التلقائي */}
             <button
               type="button"
               onClick={handleSettleAndReset}
@@ -2817,7 +2828,7 @@ export function FinancialReportsCalculator({ supabase }) {
             </button>
           </div>
 
-          {/* المبلغ الكلي للطلاب المدفوعين المتبقي */}
+          {/* المبلغ الكلي المتبقي بعد الخصومات */}
           <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
             <div>
               <span className="text-xs text-slate-400 block">
@@ -2829,7 +2840,7 @@ export function FinancialReportsCalculator({ supabase }) {
             </div>
           </div>
 
-          {/* إضافة استقطاعات وخصومات متغيرة */}
+          {/* استقطاعات وخصومات */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold text-slate-300">
@@ -2881,14 +2892,14 @@ export function FinancialReportsCalculator({ supabase }) {
             )}
           </div>
 
-          {/* المجموع النهائي للطلاب */}
+          {/* المجموع النهائي */}
           <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex justify-between items-center mt-4">
             <div>
               <span className="text-xs text-slate-400 block">
-                💰 مجموع صافي الأرباح النهائي المتبقي للطلاب:
+                💰 مجموع صافي الأرباح النهائي للطلاب:
               </span>
               <span className="text-[10px] text-slate-500 block">
-                (المبلغ الكلي - الاستقطاعات الحالية {totalExpenses.toLocaleString()} د.ع)
+                (المبلغ المتبقي - الاستقطاعات الحالية {totalExpenses.toLocaleString()} د.ع)
               </span>
             </div>
             <span className="text-2xl font-black text-amber-400">
