@@ -511,13 +511,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     loadEmployees();
   }, [supabase]);
-  try {
-    const saved = localStorage.getItem('maser_currentUser');
-    return saved ? JSON.parse(saved) : null;
-  } catch (e) {
-    return null;
-  }
-});
+  
  
   // حالات تفاعل الطالب
   const [tomorrowStatus, setTomorrowStatus] = useState(null);
