@@ -484,32 +484,33 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [showEmpLogin, setShowEmpLogin] = useState(false);
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
 
-  useEffect(() => {
-    const loadEmployees = async () => {
-      const client = supabase || (typeof window !== 'undefined' ? window.supabase : null);
-      console.log('🔄 جاري محاولة جلب الموظفات...', { hasClient: !!client });
+  // تعريف الدالة باسم fetchEmp ليتطابق مع زر التحديث في التبويب
+  const fetchEmp = async () => {
+    const client = supabase || (typeof window !== 'undefined' ? window.supabase : null);
+    console.log('🔄 جاري محاولة جلب الموظفات...', { hasClient: !!client });
 
-      if (client) {
-        try {
-          const { data, error } = await client.from('employees').select('*');
-          console.log('📥 استجابة السيرفر لجلب الموظفات:', { data, error });
+    if (client) {
+      try {
+        const { data, error } = await client.from('employees').select('*');
+        console.log('📥 استجابة السيرفر لجلب الموظفات:', { data, error });
 
-          if (!error && data && data.length > 0) {
-            console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
-            window._fetchedEmployeesList = data;
-            setFetchedEmployeesList(data);
-          } else if (error) {
-            console.error('❌ خطأ من Supabase:', error.message);
-          }
-        } catch (err) {
-          console.error('❌ استثناء أثناء جلب البيانات:', err);
+        if (!error && data && data.length > 0) {
+          console.log('✅ تم جلب الموظفات بنجاح، العدد:', data.length);
+          window._fetchedEmployeesList = data;
+          setFetchedEmployeesList(data);
+        } else if (error) {
+          console.error('❌ خطأ من Supabase:', error.message);
         }
-      } else {
-        console.error('❌ لم يتم العثور على كائن supabase متصل بالصفحة!');
+      } catch (err) {
+        console.error('❌ استثناء أثناء جلب البيانات:', err);
       }
-    };
+    } else {
+      console.error('❌ لم يتم العثور على كائن supabase متصل بالصفحة!');
+    }
+  };
 
-    loadEmployees();
+  useEffect(() => {
+    fetchEmp();
   }, [supabase]);
   
  
