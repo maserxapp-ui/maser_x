@@ -2704,7 +2704,7 @@ export function FinancialReportsCalculator({ supabase }) {
         }
       } catch (e) {
         console.error(e);
-      } font-bold {
+      } finally {
         setLoading(false);
       }
     };
