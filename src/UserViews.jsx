@@ -2531,13 +2531,22 @@ if (!students || students.length === 0) {
       {returnTripStudents.map((std) => (
         <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
           <div className="flex justify-between items-start">
-            <div>
-              <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
-              <div className="text-xs text-slate-500">
-                📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
-              </div>
-            </div>
-          </div>
+  <div>
+    {/* 👤 اسم الطالبة */}
+    <strong className="text-sm font-bold text-slate-900 block mb-1">
+      👩‍🎓 {std.name || std.full_name || 'اسم الطالبة غير محدد'}
+    </strong>
+    
+    {/* 🎓 الجامعة والمنطقة والسكن */}
+    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+      <span>🎓 الجامعة: <b className="text-indigo-700 font-bold">{std.university || 'غير محدد'}</b></span>
+      <span>•</span>
+      <span>📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b></span>
+      <span>•</span>
+      <span>السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b></span>
+    </div>
+  </div>
+</div>
 
           <div className="flex flex-wrap gap-2 mt-1">
             {/* 🙋‍♀️ زر صعود الطالبة (ضغط لمرة واحدة فقط) */}
