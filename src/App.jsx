@@ -2267,8 +2267,8 @@ export function TripsManagement({ supabase }) {
 
   const fetchData = async () => {
     try {
-      const { data: driversData } = await supabase.from('drivers').select('*');
-      const { data: studentsData } = await supabase.from('students').select('*');
+      const { data: driversData } = await supabase.from('drivers').select('*').neq('line_type', 'internal_amarah');
+const { data: studentsData } = await supabase.from('students').select('*').neq('line_type', 'internal_amarah');
       
       setDrivers(driversData || []);
       
