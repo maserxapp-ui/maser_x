@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InternalAmarahLines } from './InternalAmarahLines';
 import { supabase } from './supabase';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
 const logoImg = '/logo.png';
