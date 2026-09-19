@@ -1655,43 +1655,88 @@ if (user && user.role === 'driver') {
 
           {/* 🎒 كارت رحلة العودة المحدث للطالبة */}
         {assignedReturnDriver && studentData?.return_approved ? (
-          <div style={{
-            backgroundColor: '#eff6ff',
-            border: '2px solid #3b82f6',
-            borderRadius: '16px',
-            padding: '14px',
-            marginBottom: '15px',
-            textAlign: 'center'
-          }}>
-            <h4 style={{ color: '#1d4ed8', margin: '0 0 6px 0', fontSize: '15px' }}>
-              🚗 رحلة العودة الخاصة بكِ جاهزة
-            </h4>
-            <p style={{ fontSize: '13px', color: '#1e40af', margin: '0 0 10px 0' }}>
-              السائق المسؤول عن عودتكِ: <b>{assignedReturnDriver.full_name || assignedReturnDriver.name || 'سائق العودة'}</b>
-            </p>
+  <>
+    {/* كارت رحلة العودة */}
+    <div style={{
+      backgroundColor: '#eff6ff',
+      border: '2px solid #3b82f6',
+      borderRadius: '16px',
+      padding: '14px',
+      marginBottom: '15px',
+      textAlign: 'center'
+    }}>
+      <h4 style={{ color: '#1d4ed8', margin: '0 0 6px 0', fontSize: '15px' }}>
+        رحلة العودة الخاصة بك جاهزة 🚗
+      </h4>
+      <p style={{ fontSize: '13px', color: '#1e40af', margin: '0 0 10px 0' }}>
+        السائق المسؤول عن عودتك: <b>{assignedReturnDriver.full_name || assignedReturnDriver.name || 'سائق العودة'}</b>
+      </p>
 
-            <button
-              onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
-              style={{
-                width: '100%',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
-              }}>
-              💬 مراسلة السائق
-            </button>
-          </div>
-        ) : studentData?.finish_status === 'finished' ? (
+      <button
+        onClick={() => openDriverChat && openDriverChat(assignedReturnDriver)}
+        style={{
+          width: '100%',
+          backgroundColor: '#3b82f6',
+          color: '#ffffff',
+          border: 'none',
+          padding: '10px 14px',
+          borderRadius: '10px',
+          fontSize: '13px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
+        }}>
+        مراسلة السائق 💬
+      </button>
+    </div>
+
+    {/* 🚗 مربع تفاصيل السائق والمركبة */}
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm my-3 text-slate-800" dir="rtl">
+      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+        <span className="text-lg">🚘</span>
+        <h3 className="text-sm font-bold text-slate-800 m-0">بيانات السائق والمركبة</h3>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-right">
+        {/* 👤 اسم السائق */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+          <span className="text-[11px] text-slate-400 block mb-0.5">اسم السائق</span>
+          <strong className="text-xs font-bold text-slate-800">
+            {assignedReturnDriver?.name || assignedReturnDriver?.full_name || 'غير محدد'}
+          </strong>
+        </div>
+
+        {/* 🚗 نوع المركبة */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+          <span className="text-[11px] text-slate-400 block mb-0.5">نوع المركبة</span>
+          <strong className="text-xs font-bold text-slate-800">
+            {assignedReturnDriver?.car_type || 'غير محدد'}
+          </strong>
+        </div>
+
+        {/* 🎨 لون المركبة */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+          <span className="text-[11px] text-slate-400 block mb-0.5">لون المركبة</span>
+          <strong className="text-xs font-bold text-slate-800">
+            {assignedReturnDriver?.car_color || 'غير محدد'}
+          </strong>
+        </div>
+
+        {/* 🔢 رقم اللوحة */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+          <span className="text-[11px] text-slate-400 block mb-0.5">رقم اللوحة</span>
+          <strong className="text-xs font-bold text-slate-800">
+            {assignedReturnDriver?.car_number || 'غير محدد'}
+          </strong>
+        </div>
+      </div>
+    </div>
+  </>
+) : studentData?.finish_status === 'finished' ? (
           <div style={{
             backgroundColor: '#fef3c7',
             border: '1px solid #f59e0b',
