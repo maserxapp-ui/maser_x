@@ -996,6 +996,7 @@ const driverReadiness = (typeof totalDrivers !== 'undefined' && totalDrivers > 0
             { id: 'trips', label: 'الرحلات', icon: '🚌' },
             { id: 'expenses', label: 'المكافات والتقييمات', icon: '⚖️' },
             { id: 'reports', label: 'التقارير المالية', icon: '📊' },
+            { id: 'internal_amarah', label: 'إدارة خطوط داخل العمارة', icon: '🏙️' },
             { id: 'employees', label: 'إدارة الموظفات', icon: '👩‍🏫' }, // 🌟 السطر الجديد
           ].map((item) => (
               <button
@@ -2252,7 +2253,9 @@ else if (confirmedAttending) {
           </div>
         </div>
       )}
-
+    {activeTab === 'internal_amarah' && (
+  <InternalAmarahLines supabase={supabase} />
+)}
     </div>
   );
 }
