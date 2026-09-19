@@ -2690,7 +2690,7 @@ export function FinancialReportsCalculator({ supabase }) {
       if (!stdError && stdData) {
         totalCollected = stdData.reduce((acc, std) => {
           if (!std.price) return acc;
-          const numericVal = parseFloat(String(std.price).replace(/[^0-9.-]+/g, '')) || 0;
+          const numericVal = parseInt(String(std.price || '0').replace(/[^\d]/g, ''), 10) || 0;
           return acc + numericVal;
         }, 0);
       }
