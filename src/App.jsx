@@ -1793,7 +1793,25 @@ else if (confirmedAttending) {
                                 {count} / {maxCap} طالب
                               </span>
                             </td>
-                            <td className="p-3 text-center">{getDriverStatusBadge(driver.status)}</td>
+                            <td className="p-3 text-center">
+  <div className="flex flex-col items-center gap-1.5 justify-center">
+    {/* شارة حالة السائق الرئيسية */}
+    {getDriverStatusBadge(driver.status)}
+
+    {/* شارة استقبال الرحلات المباشرة من Supabase */}
+    {driver.is_accepting_trips ? (
+      <span className="bg-emerald-500 text-white text-[11px] px-2.5 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-sm">
+        <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        متاح
+      </span>
+    ) : (
+      <span className="bg-rose-500 text-white text-[11px] px-2.5 py-0.5 rounded-md font-bold flex items-center gap-1 shadow-sm">
+        <span className="w-2 h-2 rounded-full bg-white"></span>
+        غير متاح
+      </span>
+    )}
+  </div>
+</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
                               <button 
                                 onClick={() => handlePrintDriverManifest(driver)}
