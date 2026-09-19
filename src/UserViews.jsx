@@ -2515,141 +2515,148 @@ if (!students || students.length === 0) {
         </div>
       )}
           {/* 🎒 طلاب الرحلة الثانية */}
-          {returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm" dir="rtl">
-              <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🎒</span>
-                  <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
-                </div>
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
-                  {returnTripStudents.length} طالبات • معتمدة ✅
-                </span>
+{returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
+  <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm" dir="rtl">
+    <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+      <div className="flex items-center gap-2">
+        <span className="text-xl">🎒</span>
+        <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
+      </div>
+      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
+        {returnTripStudents.length} طالبات • معتمدة ✅
+      </span>
+    </div>
+
+    <div className="flex flex-col gap-3">
+      {returnTripStudents.map((std) => (
+        <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
+          <div className="flex justify-between items-start">
+            <div>
+              <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
+              <div className="text-xs text-slate-500">
+                📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
               </div>
+            </div>
+          </div>
 
-              <div className="flex flex-col gap-3">
-                {returnTripStudents.map((std) => (
-                  <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <strong className="text-sm font-bold text-slate-900 block mb-0.5">{std.full_name}</strong>
-                        <div className="text-xs text-slate-500">
-                          📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b> | السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b>
-                        </div>
-                      </div>
-                    </div>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {/* 🙋‍♀️ زر صعود الطالبة (ضغط لمرة واحدة فقط) */}
+            <button
+              disabled={std.is_boarded_return}
+              onClick={async () => {
+                if (std.is_boarded_return) return;
+                await supabase.from('students').update({ is_boarded_return: true }).eq('id', std.id);
+                fetchDriverReturnStudents();
+              }}
+              className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none flex items-center gap-1 transition ${
+                std.is_boarded_return 
+                  ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90' 
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer'
+              }`}>
+              {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
+            </button>
 
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <button
-                        onClick={async () => {
-                          await supabase.from('students').update({ is_boarded_return: !std.is_boarded_return }).eq('id', std.id);
-                          fetchDriverReturnStudents();
-                        }}
-                        className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
-                          std.is_boarded_return ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                        }`}>
-                        {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
-                      </button>
+            {/* 🏁 زر إيصال الطالبة (ضغط لمرة واحدة فقط) */}
+            <button
+              disabled={std.is_dropped_return}
+              onClick={async () => {
+                if (std.is_dropped_return) return;
+                const newStatus = true;
 
-                      <button
-                        onClick={async () => {
-                          const newStatus = !std.is_dropped_return;
+                // 1️⃣ تحديث حالة إيصال الطالبة إلى true دائماً
+                await supabase
+                  .from('students')
+                  .update({ is_dropped_return: true })
+                  .eq('id', std.id);
 
-                          // 1️⃣ تحديث حالة إيصال الطالبة
-                          await supabase
-                            .from('students')
-                            .update({ is_dropped_return: newStatus })
-                            .eq('id', std.id);
+                // 2️⃣ تحديث قائمة القراءة في الواجهة
+                if (typeof fetchDriverReturnStudents === 'function') {
+                  await fetchDriverReturnStudents();
+                }
 
-                          // 2️⃣ تحديث قائمة القراءة في الواجهة
-                          if (typeof fetchDriverReturnStudents === 'function') {
-                            await fetchDriverReturnStudents();
-                          }
+                // 3️⃣ التحقق هل تم إيصال جميع طلاب الرحلة الثانية الآن؟
+                const { data: returnStudents } = await supabase
+                  .from('students')
+                  .select('*')
+                  .or(`driver_id.eq.${user.id},return_driver_id.eq.${user.id}`)
+                  .eq('return_approved', true);
 
-                          // 3️⃣ التحقق هل تم إيصال جميع طلاب الرحلة الثانية الآن؟
-                          if (newStatus) {
-                            const { data: returnStudents } = await supabase
-                              .from('students')
-                              .select('*')
-                              .or(`driver_id.eq.${user.id},return_driver_id.eq.${user.id}`)
-                              .eq('return_approved', true);
+                if (returnStudents && returnStudents.length > 0) {
+                  const isAllDone = returnStudents.every(s => s.is_dropped_return === true);
 
-                            if (returnStudents && returnStudents.length > 0) {
-                              const isAllDone = returnStudents.every(s => s.is_dropped_return === true);
+                  if (isAllDone) {
+                    const newCompletedCount = Number(user?.completed_trips || 0) + 1;
 
-                              if (isAllDone) {
-                                const newCompletedCount = Number(user?.completed_trips || 0) + 1;
+                    // إضافة أجر الرحلة للمحفظة في قاعدة البيانات
+                    await supabase
+                      .from('drivers')
+                      .update({ completed_trips: newCompletedCount })
+                      .eq('id', user.id);
 
-                                // إضافة أجر الرحلة للمحفظة في قاعدة البيانات
-                                await supabase
-                                  .from('drivers')
-                                  .update({ completed_trips: newCompletedCount })
-                                  .eq('id', user.id);
+                    // تحديث المحفظة في الواجهة فوراً
+                    setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
 
-                                // تحديث المحفظة في الواجهة فوراً
-                                setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+                    alert('🎉 ممتاز! تم إيصال جميع الطلاب بنجاح وتمت إضافة أجر الرحلة الثانية إلى المحفظة.');
+                  }
+                }
+              }}
+              className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none flex items-center gap-1 transition ${
+                std.is_dropped_return 
+                  ? 'bg-blue-600 text-white cursor-not-allowed opacity-90' 
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer'
+              }`}
+            >
+              {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
+            </button>
 
-                                alert('🎉 ممتاز! تم إيصال جميع الطلاب بنجاح وتمت إضافة أجر الرحلة الثانية إلى المحفظة.');
-                              }
-                            }
-                          }
-                        }}
-                        className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none cursor-pointer flex items-center gap-1 transition ${
-                          std.is_dropped_return ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                        }`}
-                      >
-                        {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
-                      </button>
-                      
+            <button
+              onClick={() => {
+                setSelectedStudentForChat(std);
+                setIsDriverChatOpen(true);
+              }}
+              className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer flex items-center gap-1">
+              💬 مراسلة
+            </button>
 
-                      <button
-                        onClick={() => {
-                          setSelectedStudentForChat(std);
-                          setIsDriverChatOpen(true);
-                        }}
-                        className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer flex items-center gap-1">
-                        💬 مراسلة
-                      </button>
+            {/* 🗺️ خيارات الخرائط والملاحة */}
+            {std.latitude && std.longitude && (
+              <div className="flex items-center gap-2 mt-2">
+                {/* 📍 1. Google Maps */}
+                <a
+                  href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
+                >
+                  📍 Google Maps
+                </a>
 
-                    {/* 🗺️ خيارات الخرائط والملاحة */}
-                  {std.latitude && std.longitude && (
-                    <div className="flex items-center gap-2 mt-2">
-                      {/* 📍 1. Google Maps */}
-                      <a
-                        href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs px-3 py-2 rounded-xl font-bold no-underline flex items-center gap-1 transition"
-                      >
-                        📍 Google Maps
-                      </a>
+                {/* 🚙 2. زر Waze المباشر عبر Intent */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lat = std.latitude;
+                    const lng = std.longitude;
+                    const isAndroid = /Android/i.test(navigator.userAgent);
 
-                      {/* 🚙 2. زر Waze المباشر عبر Intent */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const lat = std.latitude;
-                          const lng = std.longitude;
-                          const isAndroid = /Android/i.test(navigator.userAgent);
-
-                          if (isAndroid) {
-                            window.location.href = `intent://?ll=${lat},${lng}&navigate=yes#Intent;scheme=waze;package=com.waze;end;`;
-                          } else {
-                            window.location.href = `waze://?ll=${lat},${lng}&navigate=yes`;
-                          }
-                        }}
-                        className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
-                      >
-                        🚙 Waze
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    if (isAndroid) {
+                      window.location.href = `intent://?ll=${lat},${lng}&navigate=yes#Intent;scheme=waze;package=com.waze;end;`;
+                    } else {
+                      window.location.href = `waze://?ll=${lat},${lng}&navigate=yes`;
+                    }
+                  }}
+                  className="bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  🚙 Waze
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
-      )}
+      ))}
+    </div>
+  </div>
+)}
 
           {/* بيانات السائق */}
           <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
