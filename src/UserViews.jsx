@@ -1967,8 +1967,8 @@ if (user && user.role === 'driver') {
   currentUserRole="student"                 // يحدد دور المستخدم كطالبة
   supabase={supabase}                       // متصفح Supabase
 />
-      {/* 🌟 نافذة تقييم السائق للطالب */}
-      {showRatingModal && (
+     {/* 🌟 نافذة تقييم السائق للطلاب */}
+    {showRatingModal && (
       <DriverRatingModal
         driverId={user?.driver_id || user?.return_driver_id}
         studentId={user?.id}
@@ -1977,11 +1977,12 @@ if (user && user.role === 'driver') {
       />
     )}
       </div>
-    ) : null}
+    )}
     );
   }
-// 🚗 مكون واجهة السائق الشامل والمصحح
-function DriverView({ user, setUser, supabase }) {
+
+  // 🚗 مكون واجهة السائق الشامل والمصحح
+  function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
