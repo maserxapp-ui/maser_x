@@ -1974,14 +1974,15 @@ if (user && user.role === 'driver') {
         onClose={() => setShowRatingModal(false)}
       />
     )}
+          </div>
+        )}
       </div>
-    )}
     );
   }
 
   // 🚗 مكون واجهة السائق الشامل والمصحح
   function DriverView({ user, setUser, supabase }) {
-  const [students, setStudents] = React.useState([]);
+    const [students, setStudents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [isDriverChatOpen, setIsDriverChatOpen] = React.useState(false);
   const [selectedStudentForChat, setSelectedStudentForChat] = React.useState(null);
