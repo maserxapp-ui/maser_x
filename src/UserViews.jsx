@@ -526,38 +526,50 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // 1️⃣ حالة التحديث
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 1️⃣ التحديث التلقائي المستمر كل 3 ثوانٍ (Auto Polling)
+  // 🌟 عداد إجبار الشاشة وبطاقات السائق على التحديث المباشر
+  const [, setForceUpdate] = React.useState(0);
+
+  // 1️⃣ التحديث التلقائي اللحظي المستمر (Auto Polling كل 3 ثوانٍ)
   React.useEffect(() => {
     const autoFetch = async () => {
-      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id || user?.id;
-      
-      if (studentId) {
-        const { data: updatedStudent } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', studentId)
-          .single();
+      try {
+        const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
+        const studentId = localUser?.id || studentData?.id;
 
-        if (updatedStudent) {
-          setStudentData(updatedStudent);
-          if (typeof setUser === 'function') setUser(updatedStudent);
-          localStorage.setItem('user', JSON.stringify(updatedStudent));
-          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+        if (studentId) {
+          const { data: updatedStudent } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', studentId)
+            .single();
+
+          if (updatedStudent) {
+            // تحديث البيانات كنسخة جديدة
+            setStudentData({ ...updatedStudent });
+
+            // تحديث التخزين المحلي المزدوج
+            localStorage.setItem('user', JSON.stringify(updatedStudent));
+            localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+
+            // إجبار React على إعادة رسم الشاشة والبطاقات فوراً
+            setForceUpdate(prev => prev + 1);
+          }
         }
+      } catch (err) {
+        console.error("خطأ في التحديث التلقائي:", err);
       }
     };
 
     const interval = setInterval(autoFetch, 3000);
     return () => clearInterval(interval);
-  }, [studentData?.id, user?.id]);
+  }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
+  // 2️⃣ دالة التحديث اليدوي الشامل عند ضغط الزر
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
       const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id || user?.id;
+      const studentId = localUser?.id || studentData?.id;
 
       if (studentId) {
         const { data: updatedStudent } = await supabase
@@ -567,10 +579,10 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           .single();
 
         if (updatedStudent) {
-          setStudentData(updatedStudent);
-          if (typeof setUser === 'function') setUser(updatedStudent);
+          setStudentData({ ...updatedStudent });
           localStorage.setItem('user', JSON.stringify(updatedStudent));
           localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+          setForceUpdate(prev => prev + 1);
         }
       }
 
@@ -584,6 +596,8 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       setTimeout(() => setIsRefreshing(false), 600);
     }
   };
+
+  
   
  
 
