@@ -523,6 +523,48 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 // 💬 حالات ودالة التحكم بالمحادثة
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatDriverId, setActiveChatDriverId] = useState(null);
+  // 1️⃣ حالة التحديث
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
+      const studentId = localUser?.id || studentData?.id;
+
+      if (studentId) {
+        const { data: updatedStudent } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', studentId)
+          .single();
+
+        if (updatedStudent) {
+          setStudentData(updatedStudent);
+          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+        }
+      }
+
+      if (typeof fetchMessages === 'function') await fetchMessages();
+      if (typeof fetchStudentData === 'function') await fetchStudentData();
+      if (typeof fetchReturnStudents === 'function') await fetchReturnStudents();
+
+    } catch (error) {
+      console.error('خطأ أثناء التحديث:', error);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
+
+  // 3️⃣ ميزة جلب الرسائل تلقائياً كل 5 ثوانٍ
+  useEffect(() => {
+    const messagesInterval = setInterval(() => {
+      if (typeof fetchMessages === 'function') fetchMessages();
+    }, 5000);
+
+    return () => clearInterval(messagesInterval);
+  }, []);
 // 🌟 فحص تلقائي: إذا أتم السائق الرحلة ولم يقم الطالب بتبليغ التقييم اليوم، تفتح النافذة فوراً
   useEffect(() => {
     const checkDriverTripAndRating = async () => {
@@ -1361,6 +1403,26 @@ if (user && user.role === 'driver') {
 
       {activeTab === 'main' ? (
         <div style={{ padding: '15px' }}>
+          {activeTab === 'main' ? (
+        <div style={{ padding: '15px' }}>
+
+          {/* 🔄 زر تحديث الصفحة والرسائل */}
+          <div className="flex justify-end mb-3">
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 shadow-sm transition border-none cursor-pointer disabled:opacity-60"
+            >
+              <span className={`text-sm inline-block ${isRefreshing ? 'animate-spin' : ''}`}>
+                🔄
+              </span>
+              <span>{isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات والرسائل'}</span>
+            </button>
+          </div>
+
+          {/* كارت توقيت بغداد + العداد التنازلي IQ */}
+          <div style={{ backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)' }}>
           
           {/* 🇮🇶 كارت توقيت بغداد + العداد التنازلي */}
           <div style={{ backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
