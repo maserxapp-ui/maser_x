@@ -7,6 +7,11 @@
     <meta name="theme-color" content="#0284c7" />
     <meta name="description" content="Masar X - منصة إدارة نقل الطلاب والرحلات" />
 
+    <!-- 🚫 منع المتصفح والتطبيق المثبت من حفظ نسخ قديمة (Fix PWA Freeze) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <!-- 📱 ربط ملف التثبيت المباشر للهاتف (PWA) -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/logo.png" />
@@ -21,6 +26,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت -->
+    <script>
+      // 1️⃣ مسح ملفات التخزين المؤقت القديمة (Service Worker) التي تسبب تجمد التطبيق
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+
+      // 2️⃣ إجبار التطبيق على إعادة الاتصال والتحديث فور الفتح من الخلفية
+      let lastLeaveTime = 0;
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+          lastLeaveTime = Date.now();
+        } else if (document.visibilityState === 'visible') {
+          // إذا ترك المستخدم التطبيق في الخلفية لأكثر من ثانيتين، يتم عمل التحديث تلقائياً
+          if (lastLeaveTime && Date.now() - lastLeaveTime > 2000) {
+            window.location.reload();
+          }
+        }
+      });
+    </script>
   </head>
   <body class="bg-slate-900 text-slate-100 font-['Tajawal',sans-serif] antialiased select-none">
     <div id="root"></div>
