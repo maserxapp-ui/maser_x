@@ -1401,7 +1401,7 @@ if (user && user.role === 'driver') {
         </div>
       </div>
 
-      {activeTab === 'main' ? (
+      {activeTab === 'main' && (
         <div style={{ padding: '15px' }}>
           {activeTab === 'main' ? (
         <div style={{ padding: '15px' }}>
