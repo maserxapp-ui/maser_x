@@ -585,36 +585,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     }
   };
   
-  // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id;
-
-      if (studentId) {
-        const { data: updatedStudent } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', studentId)
-          .single();
-
-        if (updatedStudent) {
-          setStudentData(updatedStudent);
-          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
-        }
-      }
-
-      if (typeof fetchMessages === 'function') await fetchMessages();
-      if (typeof fetchStudentData === 'function') await fetchStudentData();
-      if (typeof fetchReturnStudents === 'function') await fetchReturnStudents();
-
-    } catch (error) {
-      console.error('خطأ أثناء التحديث:', error);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
-  };
+ 
 
   // 3️⃣ ميزة جلب الرسائل تلقائياً كل 5 ثوانٍ
   useEffect(() => {
