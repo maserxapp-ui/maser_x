@@ -526,6 +526,31 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // 1️⃣ حالة التحديث
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // 1️⃣ التحديث التلقائي المستمر كل 3 ثوانٍ (Auto Polling)
+  React.useEffect(() => {
+    const autoFetch = async () => {
+      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
+      const studentId = localUser?.id || studentData?.id;
+      
+      if (studentId) {
+        const { data: updatedStudent } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', studentId)
+          .single();
+
+        if (updatedStudent) {
+          setStudentData(updatedStudent);
+          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+        }
+      }
+    };
+
+    // فحص البيانات وتحديث الشاشة تلقائياً كل 3 ثوانٍ
+    const interval = setInterval(autoFetch, 3000);
+    return () => clearInterval(interval);
+  }, [studentData?.id]);
+  
   // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
