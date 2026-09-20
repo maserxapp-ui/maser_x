@@ -1403,8 +1403,6 @@ if (user && user.role === 'driver') {
 
       {activeTab === 'main' && (
         <div style={{ padding: '15px' }}>
-          {activeTab === 'main' ? (
-        <div style={{ padding: '15px' }}>
 
           {/* 🔄 زر تحديث الصفحة والرسائل */}
           <div className="flex justify-end mb-3">
