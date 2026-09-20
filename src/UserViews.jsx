@@ -1969,16 +1969,17 @@ if (user && user.role === 'driver') {
 />
       {/* 🌟 نافذة تقييم السائق للطالب */}
       {showRatingModal && (
-        <DriverRatingModal
-          driverId={user?.driver_id || user?.return_driver_id}
-          studentId={user?.id}
-          supabase={supabase}
-          onClose={() => setShowRatingModal(false)}
-        />
-      ) : null}
-    </div>
-  );
-}
+      <DriverRatingModal
+        driverId={user?.driver_id || user?.return_driver_id}
+        studentId={user?.id}
+        supabase={supabase}
+        onClose={() => setShowRatingModal(false)}
+      />
+    )}
+      </div>
+    )}
+    );
+  }
 // 🚗 مكون واجهة السائق الشامل والمصحح
 function DriverView({ user, setUser, supabase }) {
   const [students, setStudents] = React.useState([]);
