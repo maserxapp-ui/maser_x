@@ -564,14 +564,15 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(interval);
   }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث اليدوي الشامل عند ضغط الزر
+  // 2️⃣ دالة التحديث الشامل وإعادة تحميل الشاشة تلقائياً
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
       const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id;
+      const studentId = localUser?.id || studentData?.id || user?.id;
 
       if (studentId) {
+        // 1. جلب أحدث بيانات للطالب من قاعدة البيانات
         const { data: updatedStudent } = await supabase
           .from('students')
           .select('*')
@@ -579,21 +580,18 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           .single();
 
         if (updatedStudent) {
-          setStudentData({ ...updatedStudent });
+          // 2. تحديث التخزين المحلي بالكامل
           localStorage.setItem('user', JSON.stringify(updatedStudent));
           localStorage.setItem('studentData', JSON.stringify(updatedStudent));
-          setForceUpdate(prev => prev + 1);
         }
       }
 
-      if (typeof fetchMessages === 'function') await fetchMessages();
-      if (typeof fetchStudentData === 'function') await fetchStudentData();
-      if (typeof fetchReturnStudents === 'function') await fetchReturnStudents();
+      // 3. إعادة تحميل الشاشة بالكامل لتحديث كل المكونات وبطاقات السائق فوراً
+      window.location.reload();
 
     } catch (error) {
       console.error('خطأ أثناء التحديث:', error);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
+      setIsRefreshing(false);
     }
   };
 
