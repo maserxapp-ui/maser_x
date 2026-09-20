@@ -564,7 +564,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(interval);
   }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث الشاملة المضمونة (جلب الطالب + السائق + إعادة تحميل الصفحة)
+  // 2️⃣ دالة التحديث الشاملة (بدون عرض رقم هاتف السائق)
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -583,7 +583,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           let driverInfo = null;
           let returnDriverInfo = null;
 
-          // 2. جلب بيانات سائق الذهاب من جدول السائقين
+          // 2. جلب بيانات سائق الذهاب
           if (student.driver_id) {
             const { data: d } = await supabase
               .from('drivers')
@@ -593,7 +593,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             driverInfo = d;
           }
 
-          // 3. جلب بيانات سائق العودة إذا وجد
+          // 3. جلب بيانات سائق العودة
           if (student.return_driver_id) {
             const { data: rd } = await supabase
               .from('drivers')
@@ -603,22 +603,35 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             returnDriverInfo = rd;
           }
 
-          // 4. دمج بيانات الطالب مع السائق (تماماً كما يحدث عند تسجيل الدخول)
+          // 4. دمج كافة البيانات مع تفريغ/إخفاء رقم هاتف السائق
           const completeUserData = {
             ...student,
-            driver: driverInfo,
-            return_driver: returnDriverInfo,
-            driver_name: driverInfo?.name || student.driver_name,
-            driver_phone: driverInfo?.phone || student.driver_phone,
+            driver: driverInfo ? { ...driverInfo, phone: '' } : null,
+            return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
+            
+            // بيانات السائق (تم إخفاء الرقم)
+            driver_name: driverInfo?.name || student.driver_name || '',
+            driver_phone: '', // 🛑 تم إخفاء رقم الهاتف
+
+            // 🚗 أعمدة السيارة حسب قواعد البيانات
+            car_type: driverInfo?.car_type || student.car_type || '',
+            car_number: driverInfo?.car_number || student.car_number || '',
+            car_color: driverInfo?.car_color || student.car_color || '',
+            car_model: driverInfo?.car_type || student.car_type || student.car_model || '',
+
+            // 🚀 حالة السائق والرحلة المباشرة
+            status: student.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
+            driver_status: driverInfo?.status || student.driver_status || '',
+            trip_status: student.trip_status || driverInfo?.trip_status || student.status || '',
           };
 
-          // 5. حفظ البيانات الكاملة في التخزين المحلي
+          // 5. حفظ البيانات المكتملة في التخزين المحلي
           localStorage.setItem('user', JSON.stringify(completeUserData));
           localStorage.setItem('studentData', JSON.stringify(completeUserData));
         }
       }
 
-      // 6. إعادة تحميل الشاشة لتظهر البيانات المكتملة فوراً
+      // 6. إعادة تحميل الصفحة لتحديث كافة العناصر
       window.location.reload();
 
     } catch (error) {
