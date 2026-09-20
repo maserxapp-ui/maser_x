@@ -530,7 +530,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   React.useEffect(() => {
     const autoFetch = async () => {
       const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id;
+      const studentId = localUser?.id || studentData?.id || user?.id;
       
       if (studentId) {
         const { data: updatedStudent } = await supabase
@@ -541,15 +541,49 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
         if (updatedStudent) {
           setStudentData(updatedStudent);
+          if (typeof setUser === 'function') setUser(updatedStudent);
+          localStorage.setItem('user', JSON.stringify(updatedStudent));
           localStorage.setItem('studentData', JSON.stringify(updatedStudent));
         }
       }
     };
 
-    // فحص البيانات وتحديث الشاشة تلقائياً كل 3 ثوانٍ
     const interval = setInterval(autoFetch, 3000);
     return () => clearInterval(interval);
-  }, [studentData?.id]);
+  }, [studentData?.id, user?.id]);
+
+  // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
+      const studentId = localUser?.id || studentData?.id || user?.id;
+
+      if (studentId) {
+        const { data: updatedStudent } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', studentId)
+          .single();
+
+        if (updatedStudent) {
+          setStudentData(updatedStudent);
+          if (typeof setUser === 'function') setUser(updatedStudent);
+          localStorage.setItem('user', JSON.stringify(updatedStudent));
+          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+        }
+      }
+
+      if (typeof fetchMessages === 'function') await fetchMessages();
+      if (typeof fetchStudentData === 'function') await fetchStudentData();
+      if (typeof fetchReturnStudents === 'function') await fetchReturnStudents();
+
+    } catch (error) {
+      console.error('خطأ أثناء التحديث:', error);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
   
   // 2️⃣ دالة التحديث اليدوي الشامل للبيانات والرسائل
   const handleManualRefresh = async () => {
