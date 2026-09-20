@@ -1975,7 +1975,7 @@ if (user && user.role === 'driver') {
           supabase={supabase}
           onClose={() => setShowRatingModal(false)}
         />
-      )}
+      ) : null}
     </div>
   );
 }
