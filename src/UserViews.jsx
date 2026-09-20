@@ -564,7 +564,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(interval);
   }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث الشامل وإعادة تحميل الشاشة تلقائياً
+  // 2️⃣ دالة التحديث الشاملة المضمونة (جلب الطالب + السائق + إعادة تحميل الصفحة)
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -572,21 +572,53 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       const studentId = localUser?.id || studentData?.id || user?.id;
 
       if (studentId) {
-        // 1. جلب أحدث بيانات للطالب من قاعدة البيانات
-        const { data: updatedStudent } = await supabase
+        // 1. جلب بيانات الطالب الحديثة
+        const { data: student } = await supabase
           .from('students')
           .select('*')
           .eq('id', studentId)
           .single();
 
-        if (updatedStudent) {
-          // 2. تحديث التخزين المحلي بالكامل
-          localStorage.setItem('user', JSON.stringify(updatedStudent));
-          localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+        if (student) {
+          let driverInfo = null;
+          let returnDriverInfo = null;
+
+          // 2. جلب بيانات سائق الذهاب من جدول السائقين
+          if (student.driver_id) {
+            const { data: d } = await supabase
+              .from('drivers')
+              .select('*')
+              .eq('id', student.driver_id)
+              .single();
+            driverInfo = d;
+          }
+
+          // 3. جلب بيانات سائق العودة إذا وجد
+          if (student.return_driver_id) {
+            const { data: rd } = await supabase
+              .from('drivers')
+              .select('*')
+              .eq('id', student.return_driver_id)
+              .single();
+            returnDriverInfo = rd;
+          }
+
+          // 4. دمج بيانات الطالب مع السائق (تماماً كما يحدث عند تسجيل الدخول)
+          const completeUserData = {
+            ...student,
+            driver: driverInfo,
+            return_driver: returnDriverInfo,
+            driver_name: driverInfo?.name || student.driver_name,
+            driver_phone: driverInfo?.phone || student.driver_phone,
+          };
+
+          // 5. حفظ البيانات الكاملة في التخزين المحلي
+          localStorage.setItem('user', JSON.stringify(completeUserData));
+          localStorage.setItem('studentData', JSON.stringify(completeUserData));
         }
       }
 
-      // 3. إعادة تحميل الشاشة بالكامل لتحديث كل المكونات وبطاقات السائق فوراً
+      // 6. إعادة تحميل الشاشة لتظهر البيانات المكتملة فوراً
       window.location.reload();
 
     } catch (error) {
@@ -594,9 +626,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       setIsRefreshing(false);
     }
   };
-
-  
-  
  
 
   // 3️⃣ ميزة جلب الرسائل تلقائياً كل 5 ثوانٍ
