@@ -1737,46 +1737,71 @@ if (user && user.role === 'driver') {
       </div>
      
           {/* 🟢 كارت رحلة الذهاب */}
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
-              <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
-              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {assignedDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
-              </span>
+<div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+  {(() => {
+    // 🔍 جلب بيانات السائق والطالب من جميع المصادر المتاحة بمرونة
+    const activeDriver = assignedDriver || studentData?.driver || user?.driver;
+    const activeUser = studentData || user || {};
+    const hasDriver = !!(activeDriver || activeUser?.driver_id || activeUser?.driver_name);
+
+    // 🚀 جلب حالة الرحلة المباشرة (في الطريق / مؤكدة / بانتظار التوزيع)
+    const tripStatus = activeUser?.driver_status || activeDriver?.status || activeUser?.status || (hasDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳');
+
+    return (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
+          <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
+          <span style={{ 
+            backgroundColor: hasDriver ? '#dcfce7' : '#fef3c7', 
+            color: hasDriver ? '#15803d' : '#d97706', 
+            fontSize: '11px', 
+            padding: '3px 10px', 
+            borderRadius: '20px', 
+            fontWeight: 'bold' 
+          }}>
+            {tripStatus}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
+          {/* الجهة / الجامعة */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+            <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
+            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+              {activeUser.university || 'غير محدد'}
             </div>
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
-              </div>
+          {/* المنطقة / السكن */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+            <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
+            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+              {activeUser.location || 'غير محدد'}
+            </div>
+          </div>
 
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver ? (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
-      <div>{assignedDriver.car_type || 'غير محدد'}</div>
-    </div>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
-      <div>{assignedDriver.car_color || 'غير محدد'}</div>
-    </div>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
-      <div>{assignedDriver.car_number || 'غير محدد'}</div>
-    </div>
-  </div>
-) : (
-  'لم تحدد بعد'
-)}
+          {/* تفاصيل السيارة */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+            <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
+            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+              {hasDriver ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
+                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                    <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
+                    <div>{activeDriver?.car_type || activeDriver?.car_model || activeUser?.car_type || 'غير محدد'}</div>
+                  </div>
+                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                    <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
+                    <div>{activeDriver?.car_color || activeUser?.car_color || 'غير محدد'}</div>
+                  </div>
+                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
+                    <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
+                    <div>{activeDriver?.car_number || activeUser?.car_number || 'غير محدد'}</div>
+                  </div>
+                </div>
+              ) : (
+                'لم تحدد بعد'
+              )}
                 </div>
               </div>
 
