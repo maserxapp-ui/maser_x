@@ -529,14 +529,15 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // 🌟 عداد إجبار الشاشة وبطاقات السائق على التحديث المباشر
   const [, setForceUpdate] = React.useState(0);
 
-  // 1️⃣ التحديث التلقائي اللحظي المستمر (Auto Polling كل 3 ثوانٍ)
+  // 1️⃣ التحديث التلقائي اللحظي المستمر الشامل (Auto Polling كل 3 ثوانٍ)
   React.useEffect(() => {
     const autoFetch = async () => {
       try {
         const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-        const studentId = localUser?.id || studentData?.id;
+        const studentId = localUser?.id || studentData?.id || user?.id;
 
         if (studentId) {
+          // 1. جلب بيانات الطالب الحديثة
           const { data: updatedStudent } = await supabase
             .from('students')
             .select('*')
@@ -544,15 +545,59 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             .single();
 
           if (updatedStudent) {
-            // تحديث البيانات كنسخة جديدة
-            setStudentData({ ...updatedStudent });
+            let driverInfo = null;
+            let returnDriverInfo = null;
 
-            // تحديث التخزين المحلي المزدوج
-            localStorage.setItem('user', JSON.stringify(updatedStudent));
-            localStorage.setItem('studentData', JSON.stringify(updatedStudent));
+            // 2. جلب بيانات سائق الذهاب المحدثة (شاملة تفاصيل السيارة)
+            if (updatedStudent.driver_id) {
+              const { data: d } = await supabase
+                .from('drivers')
+                .select('*')
+                .eq('id', updatedStudent.driver_id)
+                .single();
+              driverInfo = d;
+            }
 
-            // إجبار React على إعادة رسم الشاشة والبطاقات فوراً
-            setForceUpdate(prev => prev + 1);
+            // 3. جلب بيانات سائق العودة
+            if (updatedStudent.return_driver_id) {
+              const { data: rd } = await supabase
+                .from('drivers')
+                .select('*')
+                .eq('id', updatedStudent.return_driver_id)
+                .single();
+              returnDriverInfo = rd;
+            }
+
+            // 4. دمج كافة البيانات المكتملة
+            const completeUserData = {
+              ...updatedStudent,
+              driver: driverInfo ? { ...driverInfo, phone: '' } : null,
+              return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
+              
+              driver_name: driverInfo?.name || updatedStudent.driver_name || '',
+              driver_phone: '', // إخفاء الهاتف
+
+              // 🚗 تفاصيل السيارة اللحظية من جدول السائقين
+              car_type: driverInfo?.car_type || updatedStudent.car_type || '',
+              car_number: driverInfo?.car_number || updatedStudent.car_number || '',
+              car_color: driverInfo?.car_color || updatedStudent.car_color || '',
+              car_model: driverInfo?.car_type || updatedStudent.car_type || updatedStudent.car_model || '',
+
+              // 🚀 حالات الرحلة وإشعار "في طريقه إليكم"
+              status: updatedStudent.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
+              driver_status: driverInfo?.status || updatedStudent.driver_status || '',
+              trip_status: updatedStudent.trip_status || driverInfo?.trip_status || updatedStudent.status || '',
+            };
+
+            // 5. تحديث حالات React اللحظية لتظهر الشاشة فوراً
+            setStudentData(completeUserData);
+            if (driverInfo) {
+              setAssignedDriver(driverInfo);
+            }
+
+            // 6. تحديث التخزين المحلي
+            localStorage.setItem('user', JSON.stringify(completeUserData));
+            localStorage.setItem('studentData', JSON.stringify(completeUserData));
           }
         }
       } catch (err) {
@@ -560,11 +605,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       }
     };
 
-    const interval = setInterval(autoFetch, 3000);
+    autoFetch(); // تشغيل فوري أول مرة
+    const interval = setInterval(autoFetch, 3000); // تكرار كل 3 ثوانٍ
     return () => clearInterval(interval);
   }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث الشاملة (بدون عرض رقم هاتف السائق)
+  // 2️⃣ دالة التحديث اليدوي (بدون الحاجة لإعادة تحميل الصفحة بالكامل)
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -572,7 +618,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       const studentId = localUser?.id || studentData?.id || user?.id;
 
       if (studentId) {
-        // 1. جلب بيانات الطالب الحديثة
         const { data: student } = await supabase
           .from('students')
           .select('*')
@@ -583,7 +628,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           let driverInfo = null;
           let returnDriverInfo = null;
 
-          // 2. جلب بيانات سائق الذهاب
           if (student.driver_id) {
             const { data: d } = await supabase
               .from('drivers')
@@ -593,7 +637,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             driverInfo = d;
           }
 
-          // 3. جلب بيانات سائق العودة
           if (student.return_driver_id) {
             const { data: rd } = await supabase
               .from('drivers')
@@ -603,39 +646,31 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             returnDriverInfo = rd;
           }
 
-          // 4. دمج كافة البيانات مع تفريغ/إخفاء رقم هاتف السائق
           const completeUserData = {
             ...student,
             driver: driverInfo ? { ...driverInfo, phone: '' } : null,
             return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
-            
-            // بيانات السائق (تم إخفاء الرقم)
             driver_name: driverInfo?.name || student.driver_name || '',
-            driver_phone: '', // 🛑 تم إخفاء رقم الهاتف
-
-            // 🚗 أعمدة السيارة حسب قواعد البيانات
+            driver_phone: '',
             car_type: driverInfo?.car_type || student.car_type || '',
             car_number: driverInfo?.car_number || student.car_number || '',
             car_color: driverInfo?.car_color || student.car_color || '',
             car_model: driverInfo?.car_type || student.car_type || student.car_model || '',
-
-            // 🚀 حالة السائق والرحلة المباشرة
             status: student.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
             driver_status: driverInfo?.status || student.driver_status || '',
             trip_status: student.trip_status || driverInfo?.trip_status || student.status || '',
           };
 
-          // 5. حفظ البيانات المكتملة في التخزين المحلي
+          setStudentData(completeUserData);
+          if (driverInfo) setAssignedDriver(driverInfo);
+
           localStorage.setItem('user', JSON.stringify(completeUserData));
           localStorage.setItem('studentData', JSON.stringify(completeUserData));
         }
       }
-
-      // 6. إعادة تحميل الصفحة لتحديث كافة العناصر
-      window.location.reload();
-
     } catch (error) {
       console.error('خطأ أثناء التحديث:', error);
+    } finally {
       setIsRefreshing(false);
     }
   };
