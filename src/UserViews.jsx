@@ -479,7 +479,8 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 });
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const studentData = user;
+  const [studentData, setStudentData] = useState(user);
+const currentStudent = studentData?.id ? studentData : user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
   // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
@@ -610,66 +611,54 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
     return () => clearInterval(interval);
   }, [studentData?.id]);
 
-  // 2️⃣ دالة التحديث اليدوي (بدون الحاجة لإعادة تحميل الصفحة بالكامل)
+ // 🔄 دالة التحديث الفوري عند الضغط على زر "تحديث البيانات والرسائل"
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
-      const studentId = localUser?.id || studentData?.id || user?.id;
+      const studentId = user?.id || studentData?.id;
+      if (!studentId) return;
 
-      if (studentId) {
-        const { data: student } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', studentId)
-          .single();
+      // 1️⃣ جلب بيانات الطالب المحدثة من جدول الطلاب
+      const { data: updatedStudent } = await supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .single();
 
-        if (student) {
-          let driverInfo = null;
-          let returnDriverInfo = null;
+      if (updatedStudent) {
+        let driverInfo = null;
 
-          if (student.driver_id) {
-            const { data: d } = await supabase
-              .from('drivers')
-              .select('*')
-              .eq('id', student.driver_id)
-              .single();
-            driverInfo = d;
-          }
-
-          if (student.return_driver_id) {
-            const { data: rd } = await supabase
-              .from('drivers')
-              .select('*')
-              .eq('id', student.return_driver_id)
-              .single();
-            returnDriverInfo = rd;
-          }
-
-          const completeUserData = {
-            ...student,
-            driver: driverInfo ? { ...driverInfo, phone: '' } : null,
-            return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
-            driver_name: driverInfo?.name || student.driver_name || '',
-            driver_phone: '',
-            car_type: driverInfo?.car_type || student.car_type || '',
-            car_number: driverInfo?.car_number || student.car_number || '',
-            car_color: driverInfo?.car_color || student.car_color || '',
-            car_model: driverInfo?.car_type || student.car_type || student.car_model || '',
-            status: student.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
-            driver_status: driverInfo?.status || student.driver_status || '',
-            trip_status: student.trip_status || driverInfo?.trip_status || student.status || '',
-          };
-
-          setStudentData(completeUserData);
-          if (driverInfo) setAssignedDriver(driverInfo);
-
-          localStorage.setItem('user', JSON.stringify(completeUserData));
-          localStorage.setItem('studentData', JSON.stringify(completeUserData));
+        // 2️⃣ جلب تفاصيل السائق والسيارة من جدول السائقين
+        if (updatedStudent.driver_id) {
+          const { data: d } = await supabase
+            .from('drivers')
+            .select('*')
+            .eq('id', updatedStudent.driver_id)
+            .maybeSingle();
+          driverInfo = d;
         }
+
+        // 3️⃣ دمج البيانات المكتملة (السيارة + السائق + حالة الرحلة)
+        const completeData = {
+          ...updatedStudent,
+          car_type: driverInfo?.car_type || updatedStudent.car_type || '',
+          car_number: driverInfo?.car_number || updatedStudent.car_number || '',
+          car_color: driverInfo?.car_color || updatedStudent.car_color || '',
+          driver_name: driverInfo?.name || updatedStudent.driver_name || '',
+        };
+
+        // 4️⃣ تحديث الحالات فوراً لتنعكس على الشاشة بدون إعادة تحميل
+        setStudentData(completeData);
+        if (driverInfo) {
+          setAssignedDriver(driverInfo);
+        }
+
+        // 5️⃣ تحديث ذاكرة التخزين المحلي
+        localStorage.setItem('user', JSON.stringify(completeData));
+        localStorage.setItem('studentData', JSON.stringify(completeData));
       }
-    } catch (error) {
-      console.error('خطأ أثناء التحديث:', error);
+    } catch (err) {
+      console.error("خطأ أثناء التحديث اليدوي:", err);
     } finally {
       setIsRefreshing(false);
     }
@@ -1776,7 +1765,7 @@ if (user && user.role === 'driver') {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
               <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
               <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {(assignedDriver || studentData?.driver_name || user?.driver_name) ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
+                {(assignedDriver || currentStudent?.driver_name || currentStudent?.driver_id) ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
               </span>
             </div>
 
@@ -1784,33 +1773,33 @@ if (user && user.role === 'driver') {
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {studentData?.university || user?.university || 'غير محدد'}
+                  {currentStudent?.university || 'غير محدد'}
                 </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {studentData?.location || user?.location || 'غير محدد'}
+                  {currentStudent?.location || 'غير محدد'}
                 </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {(assignedDriver || studentData?.driver_name || user?.driver_name) ? (
+                  {(assignedDriver || currentStudent?.car_type) ? (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
                       <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
-                        <div>{assignedDriver?.car_type || 'غير محدد'}</div>
+                        <div>{assignedDriver?.car_type || currentStudent?.car_type || 'غير محدد'}</div>
                       </div>
                       <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
-                        <div>{assignedDriver?.car_color || 'غير محدد'}</div>
+                        <div>{assignedDriver?.car_color || currentStudent?.car_color || 'غير محدد'}</div>
                       </div>
                       <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
                         <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
-                        <div>{assignedDriver?.car_number || 'غير محدد'}</div>
+                        <div>{assignedDriver?.car_number || currentStudent?.car_number || 'غير محدد'}</div>
                       </div>
                     </div>
                   ) : (
@@ -1822,9 +1811,9 @@ if (user && user.role === 'driver') {
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.name || studentData?.driver_name || user?.driver_name || 'لم يحدد بعد'}
+                  {assignedDriver?.name || currentStudent?.driver_name || 'لم يحدد بعد'}
                 </div>
-                {(assignedDriver || studentData?.driver_name || user?.driver_name) && (
+                {(assignedDriver || currentStudent?.driver_name || currentStudent?.driver_id) && (
                   <button
                     onClick={() => setIsStudentChatOpen(true)}
                     style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
