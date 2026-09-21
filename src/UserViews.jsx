@@ -1803,7 +1803,7 @@ if (user && user.role === 'driver') {
                 'لم تحدد بعد'
               )}
                 </div>
-              </div>
+              
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
