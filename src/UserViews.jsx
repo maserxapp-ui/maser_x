@@ -2082,7 +2082,7 @@ if (user && user.role === 'driver') {
         onClose={() => setShowRatingModal(false)}
       />
     )}
-          </div>
+        
         )}
       </div>
     );
