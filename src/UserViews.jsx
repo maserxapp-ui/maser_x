@@ -1736,56 +1736,60 @@ if (user && user.role === 'driver') {
 
       </div>
      
-          {/* 🟢 كارت رحلة الذهاب */}
+         {/* 🟢 كارت رحلة الذهاب */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '15px', marginBottom: '15px', border: '1px solid #10b981', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed #f1f5f9' }}>
               <span style={{ fontWeight: 'bold', color: '#059669', fontSize: '14px' }}>🟢 رحلة الذهاب</span>
               <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 'bold' }}>
-                {assignedDriver ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
+                {(assignedDriver || studentData?.driver_name || user?.driver_name) ? 'مؤكدة ✔️' : 'بانتظار التوزيع ⏳'}
               </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', textAlign: 'center', fontSize: '12px' }}>
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>الجهة / الجامعة</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.university || 'غير محدد'}</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                  {studentData?.university || user?.university || 'غير محدد'}
+                </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>📍 المنطقة / السكن</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>{user.location || 'غير محدد'}</div>
+                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                  {studentData?.location || user?.location || 'غير محدد'}
+                </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver ? (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
-      <div>{assignedDriver.car_type || 'غير محدد'}</div>
-    </div>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
-      <div>{assignedDriver.car_color || 'غير محدد'}</div>
-    </div>
-    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
-      <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
-      <div>{assignedDriver.car_number || 'غير محدد'}</div>
-    </div>
-  </div>
-) : (
-  'لم تحدد بعد'
-)}
+                  {(assignedDriver || activeDriver) ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
+                      <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
+                        <div>{assignedDriver?.car_type || activeDriver?.car_type || 'غير محدد'}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
+                        <div>{assignedDriver?.car_color || activeDriver?.car_color || 'غير محدد'}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
+                        <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
+                        <div>{assignedDriver?.car_number || activeDriver?.car_number || 'غير محدد'}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    'لم تحدد بعد'
+                  )}
                 </div>
               </div>
 
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+                  {assignedDriver?.name || studentData?.driver_name || user?.driver_name || 'لم يحدد بعد'}
                 </div>
-                {assignedDriver && (
+                {(assignedDriver || studentData?.driver_name || user?.driver_name) && (
                   <button
                     onClick={() => setIsStudentChatOpen(true)}
                     style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
