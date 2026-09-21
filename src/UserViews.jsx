@@ -480,6 +480,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [assignedDriver, setAssignedDriver] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [studentData, setStudentData] = useState(user);
+  const student = currentStudent;
 const currentStudent = studentData?.id ? studentData : user;
   const [showEmpLogin, setShowEmpLogin] = useState(false);
   // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
