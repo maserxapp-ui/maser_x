@@ -1783,44 +1783,43 @@ if (user && user.role === 'driver') {
           {/* تفاصيل السيارة */}
           <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
             <div style={{ color: '#64748b', fontSize: '10px' }}>السيارة</div>
-            <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-              {hasDriver ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
-                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-                    <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
-                    <div>{activeDriver?.car_type || activeDriver?.car_model || activeUser?.car_type || 'غير محدد'}</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                {hasDriver ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '4px', fontSize: '10px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                      <div style={{ color: '#64748b', fontSize: '8px' }}>النوع</div>
+                      <div>{activeDriver?.car_type || activeDriver?.car_model || activeUser?.car_type || 'غير محدد'}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
+                      <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
+                      <div>{activeDriver?.car_color || activeUser?.car_color || 'غير محدد'}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
+                      <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
+                      <div>{activeDriver?.car_number || activeUser?.car_number || 'غير محدد'}</div>
+                    </div>
                   </div>
-                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px' }}>
-                    <div style={{ color: '#64748b', fontSize: '8px' }}>اللون</div>
-                    <div>{activeDriver?.car_color || activeUser?.car_color || 'غير محدد'}</div>
-                  </div>
-                  <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '6px', gridColumn: 'span 2' }}>
-                    <div style={{ color: '#64748b', fontSize: '8px' }}>رقم اللوحة</div>
-                    <div>{activeDriver?.car_number || activeUser?.car_number || 'غير محدد'}</div>
-                  </div>
-                </div>
-              ) : (
-                'لم تحدد بعد'
-              )}
-                </div>
-              
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
-                <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
-                <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.name || studentData?.driver_name || user?.driver_name || 'لم يحدد بعد'}
-                </div>
-                {(assignedDriver || studentData?.driver || user?.driver) && (
-                  <button
-                    onClick={() => setIsStudentChatOpen(true)}
-                    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer' }}
-                  >
-                    مراسلة السائق 💬
-                  </button>
+                ) : (
+                  'لم تحدد بعد'
                 )}
               </div>
             </div>
-          </div>
+
+            {/* 👨‍✈️ كارت السائق المخصص */}
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
+              <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
+              <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
+                {assignedDriver?.name || studentData?.driver_name || user?.driver_name || 'لم يحدد بعد'}
+              </div>
+              {(assignedDriver || studentData?.driver || user?.driver) && (
+                <button
+                  onClick={() => setIsStudentChatOpen(true)}
+                  style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer' }}
+                >
+                  مراسلة السائق 💬
+                </button>
+              )}
+            </div>
 
           {/* 🎒 كارت رحلة العودة المحدث للطالبة */}
         {assignedReturnDriver && studentData?.return_approved ? (
