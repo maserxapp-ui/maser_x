@@ -2462,7 +2462,7 @@ if (!students || students.length === 0) {
         const remainingMinutes = Math.max(0, 30 - elapsedMinutes);
 
         // 3. منع الإنهاء إذا لم تمضِ 30 دقيقة
-        if (elapsedMinutes < 30 ) {
+        if (elapsedMinutes < 0 ) {
           alert(`⏱️ لا يمكنك إتمام الرحلة الآن! يجب الانتظار ${remainingMinutes} دقيقة إضافية (الحد الأدنى للرحلة 30 دقيقة).`);
           return;
         }
