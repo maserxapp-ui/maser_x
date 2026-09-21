@@ -1808,14 +1808,14 @@ if (user && user.role === 'driver') {
               <div style={{ backgroundColor: '#f8fafc', padding: '10px 5px', borderRadius: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px' }}>السائق المخصص</div>
                 <div style={{ fontWeight: 'bold', color: '#0f172a', margin: '3px 0', fontSize: '11px' }}>
-                  {assignedDriver?.name || user.driver_name || 'لم يحدد بعد'}
+                  {assignedDriver?.name || studentData?.driver_name || user?.driver_name || 'لم يحدد بعد'}
                 </div>
-                {assignedDriver && (
+                {(assignedDriver || studentData?.driver || user?.driver) && (
                   <button
                     onClick={() => setIsStudentChatOpen(true)}
-                    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}
+                    style={{ display: 'inline-block', marginTop: '6px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', cursor: 'pointer' }}
                   >
-                    💬 مراسلة السائق
+                    مراسلة السائق 💬
                   </button>
                 )}
               </div>
