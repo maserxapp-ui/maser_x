@@ -484,7 +484,40 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const student = currentStudent;
 // 📌 حفظ آخر حالة للسائق لمنع إطلاق الإشعار عند تعديل الطالبة لبياناتها الخاصّة
   const lastDriverStatusRef = React.useRef(user?.driver_status || null);
-
+  // 🔔 ربط جهاز الطالبة بـ OneSignal لاستلام الإشعارات في شريط الموبايل
+  React.useEffect(() => {
+    const studentId = student?.id || user?.id;
+    if (studentId && window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        // تسجيل معرف الطالبة في OneSignal
+        await OneSignal.login(String(studentId));
+        // طلب إذن الإشعارات من الطالبة
+        await OneSignal.Notifications.requestPermission();
+      });
+    }
+  }, [student?.id, user?.id]);
+// 🚀 دالة إرسال الإشعار المباشر عبر OneSignal
+  const sendPushNotificationToStudent = async (studentId, statusMessage) => {
+    try {
+      await fetch("https://onesignal.com/api/v1/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": "Basic os_v2_app_yboihim2jzb6zfcksv6qkhtrslpklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2q3z75ilea3h6eyaha"
+        },
+        body: JSON.stringify({
+          app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
+          include_aliases: { external_id: [String(studentId)] },
+          target_channel: "push",
+          contents: { ar: statusMessage, en: statusMessage },
+          headings: { ar: "🚗 تحديث من السائق", en: "Driver Update" }
+        })
+      });
+      console.log("تم إرسال الإشعار بنجاح ✅");
+    } catch (err) {
+      console.error("خطأ في إرسال الإشعار:", err);
+    }
+  };
   React.useEffect(() => {
     // 1. طلب إذن الإشعارات من المتصفح عند فتح الصفحة
     if ("Notification" in window) {
@@ -2525,7 +2558,17 @@ if (!students || students.length === 0) {
           {/* 🚗 أزرار التحكم بالرحلة */}
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
             <button
-              onClick={handleStartJourney}
+              onClick={async (e) => {
+  handleStartJourney(e);
+  
+  // 🔔 إرسال الإشعار المباشر لشريط الموبايل لجميع الطلاب
+  const studentList = assignedStudents || students || [];
+  studentList.forEach((student) => {
+    if (student?.id) {
+      sendPushNotificationToStudent(student.id, "السائق في طريقه إليكم الآن 🚗");
+    }
+  });
+}}
               disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
                 driverTripStatus === 'on_the_way' 
