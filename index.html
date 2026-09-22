@@ -39,13 +39,16 @@
       });
     </script>
 
-    <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت -->
+    <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت مع الحفاظ على إشعارات OneSignal -->
     <script>
-      // 1️⃣ مسح ملفات التخزين المؤقت القديمة (Service Worker) التي تسبب تجمد التطبيق
+      // 1️⃣ مسح ملفات التخزين المؤقت القديمة مع استثناء ملف إشعارات OneSignal
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (registrations) {
           for (let registration of registrations) {
-            registration.unregister();
+            const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || '';
+            if (!scriptUrl.includes('OneSignal')) {
+              registration.unregister();
+            }
           }
         });
       }
@@ -56,8 +59,8 @@
         if (document.visibilityState === 'hidden') {
           lastLeaveTime = Date.now();
         } else if (document.visibilityState === 'visible') {
-          // إذا ترك المستخدم التطبيق في الخلفية لأكثر من ثانيتين، يتم عمل التحديث تلقائياً
-          if (lastLeaveTime && Date.now() - lastLeaveTime > 2000) {
+          // إذا ترك المستخدم التطبيق في الخلفية لأكثر من 5 ثوانٍ، يتم عمل التحديث تلقائياً
+          if (lastLeaveTime && Date.now() - lastLeaveTime > 5000) {
             window.location.reload();
           }
         }
