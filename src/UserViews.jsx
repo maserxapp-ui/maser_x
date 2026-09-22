@@ -774,7 +774,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         .from('students')
         .select('*')
         .eq('id', studentId)
-        .single();
+        .maybeSingle();
 
       if (updatedStudent) {
         let driverInfo = null;
