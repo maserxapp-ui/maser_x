@@ -2463,7 +2463,7 @@ if (!students || students.length === 0) {
 
         // 3. منع الإنهاء إذا لم تمضِ 30 دقيقة
         if (elapsedMinutes < 15 ) {
-          alert(`⏱️ لا يمكنك إتمام الرحلة الآن! يجب الانتظار ${remainingMinutes} `);
+          alert(`⏱️ لا يمكنك إتمام الرحلة الآن! يجب الانتظار `);
           return;
         }
 
