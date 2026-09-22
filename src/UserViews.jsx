@@ -482,7 +482,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [studentData, setStudentData] = useState(user);
   const currentStudent = studentData || user;
   const student = currentStudent;
- // 🔔 نظام الإشعارات والتحديثات اللحظية (يدعم الموبايل والمتصفحات)
+// 📌 حفظ آخر حالة للسائق لمنع إطلاق الإشعار عند تعديل الطالب لبياناته (مثل زر أنا أداوم غداً)
+  const lastDriverStatusRef = React.useRef(user?.driver_status || null);
+
   React.useEffect(() => {
     // 1. طلب إذن الإشعارات من المتصفح
     if ("Notification" in window) {
@@ -493,7 +495,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     if (!user?.id) return;
 
-    // 2. الاستماع لتحديثات حالة السائق
+    // 2. الاستماع لتحديثات حالة السائق (فقط عند التغيير الحقيقي من قبل السائق)
     const statusChannel = supabase
       .channel(`student_notif_status_${user.id}_${Date.now()}`)
       .on(
@@ -506,27 +508,32 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         },
         (payload) => {
           const updatedStudent = payload.new;
-          const statusText = updatedStudent.driver_status || "🚗 السائق في طريقه إليكم الآن!";
+          const newStatus = updatedStudent.driver_status;
 
-          // أ) محاولة إرسال إشعار للموبايل/الحاسوب
-          if ("Notification" in window && Notification.permission === "granted") {
-            try {
-              new Notification("🚗 تحديث من السائق", {
-                body: statusText,
-                icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
-              });
-            } catch (err) {
-              // حل بديل لـ Android Chrome
-              if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-                navigator.serviceWorker.ready.then((reg) => {
-                  reg.showNotification("🚗 تحديث من السائق", { body: statusText });
+          // 🎯 الشرط الأهم: يتأكد أن النص تغير فعلياً عن الحالة السابقة
+          if (newStatus && newStatus !== lastDriverStatusRef.current) {
+            // تحديث القيمة في الذاكرة لتجنب التكرار
+            lastDriverStatusRef.current = newStatus;
+
+            // أ) محاولة إرسال إشعار للموبايل/الحاسوب
+            if ("Notification" in window && Notification.permission === "granted") {
+              try {
+                new Notification("🚗 تحديث من السائق", {
+                  body: newStatus,
+                  icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
                 });
+              } catch (err) {
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                  navigator.serviceWorker.ready.then((reg) => {
+                    reg.showNotification("🚗 تحديث من السائق", { body: newStatus });
+                  });
+                }
               }
             }
-          }
 
-          // ب) تنبيه منبثق داخل التطبيق لضمان وصول التحديث للطالب فوراً
-          alert(`🚗 تحديث من السائق:\n${statusText}`);
+            // ب) تنبيه منبثق داخل الشاشة
+            alert(`🚗 تحديث من السائق:\n${newStatus}`);
+          }
         }
       )
       .subscribe();
