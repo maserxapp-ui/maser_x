@@ -1956,87 +1956,88 @@ if (user && user.role === 'driver') {
           </div>
         </div>
           </div>
-      ) : (
-       {/* ⚙️ تبويب الإعدادات (يظهر فقط عند الضغط على زر الإعدادات) */}
-{activeTab === 'settings' && (
-  <div style={{ padding: '20px' }}>
-    <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-      <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>اسم المشترك:</span>
-          <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.name || user?.name}</span>
-        </div>
+    )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
-          <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.phone || user?.phone}</span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
-          <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.university || user?.university || 'غير محدد'}</span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
-          <span style={{ fontWeight: 'bold', color: '#059669' }}>{(currentStudent?.price || user?.price) ? `${currentStudent?.price || user?.price} د.ع` : 'غير محدد'}</span>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
-          <span style={{ fontWeight: 'bold', color: (currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '#d97706' : '#16a34a' }}>
-            {(currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
-          </span>
-        </div>
-
-        {/* 💳 كارت تفاصيل الاشتراك الشهري */}
-        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px dashed #e2e8f0' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px' }}>💳 حالة الاشتراك الشهري</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
-              <b>{(currentStudent?.subscription_start_date || user?.subscription_start_date) ? new Date(currentStudent?.subscription_start_date || user?.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>⏳ الأيام المتبقية:</span>
-              <b style={{ color: (typeof remainingSubscriptionDays !== 'undefined' && remainingSubscriptionDays <= 5) ? '#dc2626' : '#16a34a' }}>
-                {typeof remainingSubscriptionDays !== 'undefined' ? remainingSubscriptionDays : 0} يوم
-              </b>
+    {/* ⚙️ تبويب الإعدادات (يظهر فقط عند اختيار تبويب الإعدادات) */}
+    {activeTab === 'settings' && (
+      <div style={{ padding: '20px' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>اسم المشترك:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.name || user?.name}</span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
-              <b>{(currentStudent?.subscription_expiry || user?.subscription_expiry) ? new Date(currentStudent?.subscription_expiry || user?.subscription_expiry).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.phone || user?.phone}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.university || user?.university || 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: '#059669' }}>{(currentStudent?.price || user?.price) ? `${currentStudent?.price || user?.price} د.ع` : 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: (currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '#d97706' : '#16a34a' }}>
+                {(currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
+              </span>
+            </div>
+
+            {/* 💳 كارت تفاصيل الاشتراك الشهري */}
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px dashed #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px' }}>💳 حالة الاشتراك الشهري</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
+                  <b>{(currentStudent?.subscription_start_date || user?.subscription_start_date) ? new Date(currentStudent?.subscription_start_date || user?.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>⏳ الأيام المتبقية:</span>
+                  <b style={{ color: (typeof remainingSubscriptionDays !== 'undefined' && remainingSubscriptionDays <= 5) ? '#dc2626' : '#16a34a' }}>
+                    {typeof remainingSubscriptionDays !== 'undefined' ? remainingSubscriptionDays : 0} يوم
+                  </b>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
+                  <b>{(currentStudent?.subscription_expiry || user?.subscription_expiry) ? new Date(currentStudent?.subscription_expiry || user?.subscription_expiry).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>السائق المخصص:</span>
+              <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
+                {assignedDriver?.name || currentStudent?.driver_name || user?.driver_name || 'لم يحدد بعد'}
+              </span>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
-          <span style={{ color: '#64748b' }}>السائق المخصص:</span>
-          <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
-            {assignedDriver?.name || currentStudent?.driver_name || user?.driver_name || 'لم يحدد بعد'}
-          </span>
+          {/* 🚪 زر تسجيل الخروج داخل الإعدادات */}
+          <button 
+            onClick={() => {
+              localStorage.removeItem('maser_currentUser');
+              localStorage.removeItem('maser_viewMode');
+              localStorage.removeItem('maser_loginRole');
+              if (typeof handleLogout === 'function') handleLogout();
+            }}
+            style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            🚪 تسجيل الخروج
+          </button>
         </div>
       </div>
-    </div>
-  </div>
-)}
-            <button 
-  onClick={() => {
-    // 🗑️ مسح بيانات الجلسة من ذاكرة الجهاز
-    localStorage.removeItem('maser_currentUser');
-    localStorage.removeItem('maser_viewMode');
-    localStorage.removeItem('maser_loginRole');
-
-    // 🔄 تنفيذ دالة تسجيل الخروج الأصلية
-    if (typeof handleLogout === 'function') handleLogout();
-  }}
-  style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-  🚪 تسجيل الخروج
-</button>
+    )}
           </div>
         </div>
       )}
