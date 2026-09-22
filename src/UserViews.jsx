@@ -1967,28 +1967,38 @@ if (user && user.role === 'driver') {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>اسم المشترك:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.name || user?.name}</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                {(typeof currentStudent !== 'undefined' && currentStudent?.name) || (typeof user !== 'undefined' && user?.name) || 'غير محدد'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.phone || user?.phone}</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                {(typeof currentStudent !== 'undefined' && currentStudent?.phone) || (typeof user !== 'undefined' && user?.phone) || 'غير محدد'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{currentStudent?.university || user?.university || 'غير محدد'}</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
+                {(typeof currentStudent !== 'undefined' && currentStudent?.university) || (typeof user !== 'undefined' && user?.university) || 'غير محدد'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
-              <span style={{ fontWeight: 'bold', color: '#059669' }}>{(currentStudent?.price || user?.price) ? `${currentStudent?.price || user?.price} د.ع` : 'غير محدد'}</span>
+              <span style={{ fontWeight: 'bold', color: '#059669' }}>
+                {((typeof currentStudent !== 'undefined' && currentStudent?.price) || (typeof user !== 'undefined' && user?.price)) 
+                  ? `${(typeof currentStudent !== 'undefined' && currentStudent?.price) || user?.price} د.ع` 
+                  : 'غير محدد'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
-              <span style={{ fontWeight: 'bold', color: (currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '#d97706' : '#16a34a' }}>
-                {(currentStudent?.status || user?.status) === 'متاخر' || (currentStudent?.status || user?.status) === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
+              <span style={{ fontWeight: 'bold', color: ((typeof currentStudent !== 'undefined' && currentStudent?.status) || (typeof user !== 'undefined' && user?.status)) === 'متاخر' || ((typeof currentStudent !== 'undefined' && currentStudent?.status) || (typeof user !== 'undefined' && user?.status)) === 'متأخر' ? '#d97706' : '#16a34a' }}>
+                {((typeof currentStudent !== 'undefined' && currentStudent?.status) || (typeof user !== 'undefined' && user?.status)) === 'متاخر' || ((typeof currentStudent !== 'undefined' && currentStudent?.status) || (typeof user !== 'undefined' && user?.status)) === 'متأخر' ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
               </span>
             </div>
 
@@ -1998,19 +2008,27 @@ if (user && user.role === 'driver') {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
-                  <b>{(currentStudent?.subscription_start_date || user?.subscription_start_date) ? new Date(currentStudent?.subscription_start_date || user?.subscription_start_date).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+                  <b>
+                    {((typeof currentStudent !== 'undefined' && currentStudent?.subscription_start_date) || (typeof user !== 'undefined' && user?.subscription_start_date)) 
+                      ? new Date((typeof currentStudent !== 'undefined' && currentStudent?.subscription_start_date) || user?.subscription_start_date).toLocaleDateString('ar-EG') 
+                      : 'غير محدد'}
+                  </b>
                 </div>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>⏳ الأيام المتبقية:</span>
-                  <b style={{ color: (typeof remainingSubscriptionDays !== 'undefined' && remainingSubscriptionDays <= 5) ? '#dc2626' : '#16a34a' }}>
-                    {typeof remainingSubscriptionDays !== 'undefined' ? remainingSubscriptionDays : 0} يوم
+                  <b style={{ color: '#16a34a' }}>
+                    {(typeof remainingSubscriptionDays !== 'undefined' ? remainingSubscriptionDays : 0)} يوم
                   </b>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
-                  <b>{(currentStudent?.subscription_expiry || user?.subscription_expiry) ? new Date(currentStudent?.subscription_expiry || user?.subscription_expiry).toLocaleDateString('ar-EG') : 'غير محدد'}</b>
+                  <b>
+                    {((typeof currentStudent !== 'undefined' && currentStudent?.subscription_expiry) || (typeof user !== 'undefined' && user?.subscription_expiry)) 
+                      ? new Date((typeof currentStudent !== 'undefined' && currentStudent?.subscription_expiry) || user?.subscription_expiry).toLocaleDateString('ar-EG') 
+                      : 'غير محدد'}
+                  </b>
                 </div>
               </div>
             </div>
@@ -2018,7 +2036,7 @@ if (user && user.role === 'driver') {
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>السائق المخصص:</span>
               <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
-                {assignedDriver?.name || currentStudent?.driver_name || user?.driver_name || 'لم يحدد بعد'}
+                {(typeof assignedDriver !== 'undefined' && assignedDriver?.name) || (typeof currentStudent !== 'undefined' && currentStudent?.driver_name) || (typeof user !== 'undefined' && user?.driver_name) || 'لم يحدد بعد'}
               </span>
             </div>
           </div>
@@ -2030,6 +2048,7 @@ if (user && user.role === 'driver') {
               localStorage.removeItem('maser_viewMode');
               localStorage.removeItem('maser_loginRole');
               if (typeof handleLogout === 'function') handleLogout();
+              window.location.reload();
             }}
             style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
           >
