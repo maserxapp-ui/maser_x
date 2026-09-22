@@ -496,14 +496,15 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       });
     }
   }, [student?.id, user?.id]);
-// 🚀 دالة إرسال الإشعار المباشر عبر OneSignal
+// 🚀 دالة إرسال الإشعار المعدلة بمفتاح الأمان الصحيح
   const sendPushNotificationToStudent = async (studentId, statusMessage) => {
     try {
-      await fetch("https://onesignal.com/api/v1/notifications", {
+      const response = await fetch("https://onesignal.com/api/v1/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          "Authorization": "Basic os_v2_app_yboihim2jzb6zfcksv6qkhtrslpklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2q3z75ilea3h6eyaha"
+          // ⚠️ تم تغيير Basic إلى Key هنا لكي يقبل OneSignal الطلب
+          "Authorization": "Key os_v2_app_yboihim2jzb6zfcksv6qkhtrslpklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2q3z75ilea3h6eyaha"
         },
         body: JSON.stringify({
           app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
@@ -513,7 +514,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           headings: { ar: "🚗 تحديث من السائق", en: "Driver Update" }
         })
       });
-      console.log("تم إرسال الإشعار بنجاح ✅");
+
+      const resData = await response.json();
+      console.log("استجابة سيرفر OneSignal:", resData);
     } catch (err) {
       console.error("خطأ في إرسال الإشعار:", err);
     }
