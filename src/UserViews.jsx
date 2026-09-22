@@ -1958,9 +1958,9 @@ if (user && user.role === 'driver') {
           </div>
     )}
 
-{/* ⚙️ تبويب الإعدادات (آمن ومحمي من الانهيار) */}
+{/* ⚙️ تبويب الإعدادات (آمن بنسبة 100% وبدون متغيرات مفقودة) */}
     {activeTab === 'settings' && (
-      <div style={{ padding: '20px', minHeight: '70vh' }}>
+      <div style={{ padding: '20px', minHeight: '60vh' }}>
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
           
@@ -1968,30 +1968,22 @@ if (user && user.role === 'driver') {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>اسم المشترك:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {user?.name || 'غير محدد'}
-              </span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.name || 'غير محدد'}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {user?.phone || 'غير محدد'}
-              </span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.phone || 'غير محدد'}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
-              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {user?.university || 'غير محدد'}
-              </span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.university || 'غير محدد'}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
-              <span style={{ fontWeight: 'bold', color: '#059669' }}>
-                {user?.price ? `${user.price} د.ع` : 'غير محدد'}
-              </span>
+              <span style={{ fontWeight: 'bold', color: '#059669' }}>{user?.price ? `${user.price} د.ع` : 'غير محدد'}</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
@@ -2019,9 +2011,7 @@ if (user && user.role === 'driver') {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>السائق المخصص:</span>
-              <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
-                {user?.driver_name || 'لم يحدد بعد'}
-              </span>
+              <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{user?.driver_name || 'لم يحدد بعد'}</span>
             </div>
 
           </div>
