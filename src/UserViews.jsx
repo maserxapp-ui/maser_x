@@ -482,16 +482,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [studentData, setStudentData] = useState(user);
   const currentStudent = studentData || user;
   const student = currentStudent;
-  // 🔔 نظام الإشعارات والتحديثات اللحظية (أسماء قنوات فريدة)
+ // 🔔 نظام الإشعارات والتحديثات اللحظية (يدعم الموبايل والمتصفحات)
   React.useEffect(() => {
     // 1. طلب إذن الإشعارات من المتصفح
     if ("Notification" in window) {
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission().then((permission) => {
-          if (permission === "granted") {
-            console.log("تم تفعيل إذن الإشعارات بنجاح ✅");
-          }
-        });
+        Notification.requestPermission();
       }
     }
 
@@ -510,42 +506,33 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         },
         (payload) => {
           const updatedStudent = payload.new;
-          if (Notification.permission === "granted" && updatedStudent.driver_status) {
-            new Notification("🚗 تحديث من السائق", {
-              body: updatedStudent.driver_status,
-              icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
-            });
-          }
-        }
-      )
-      .subscribe();
+          const statusText = updatedStudent.driver_status || "🚗 السائق في طريقه إليكم الآن!";
 
-    // 3. الاستماع للرسائل الجديدة من السائق
-    const chatChannel = supabase
-      .channel(`student_notif_chat_${user.id}_${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `student_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newMsg = payload.new;
-          if (newMsg.sender_role === 'driver' && Notification.permission === "granted") {
-            new Notification("💬 رسالة جديدة من السائق", {
-              body: newMsg.text || "أرسل السائق رسالة جديدة",
-              icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
-            });
+          // أ) محاولة إرسال إشعار للموبايل/الحاسوب
+          if ("Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification("🚗 تحديث من السائق", {
+                body: statusText,
+                icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+              });
+            } catch (err) {
+              // حل بديل لـ Android Chrome
+              if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then((reg) => {
+                  reg.showNotification("🚗 تحديث من السائق", { body: statusText });
+                });
+              }
+            }
           }
+
+          // ب) تنبيه منبثق داخل التطبيق لضمان وصول التحديث للطالب فوراً
+          alert(`🚗 تحديث من السائق:\n${statusText}`);
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(statusChannel);
-      supabase.removeChannel(chatChannel);
     };
   }, [user?.id]);
   const [showEmpLogin, setShowEmpLogin] = useState(false);
