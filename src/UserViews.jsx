@@ -1970,23 +1970,7 @@ if (user && user.role === 'driver') {
   supabase={supabase}
 />
 
-{/* 🔻 الشريط السفلي */}
-<div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
-  
-  <button 
-    onClick={() => setActiveTab('main')}
-    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
-    <span style={{ fontSize: '22px' }}>🏠</span>
-    <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
-  </button>
 
-  <button 
-    onClick={() => setActiveTab('settings')}
-    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
-    <span style={{ fontSize: '22px' }}>⚙️</span>
-    <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
-  </button>
-</div>
           
 {/* 💬 نافذة المحادثة المباشرة مع السائق */}
 <ChatModal
@@ -2008,10 +1992,7 @@ if (user && user.role === 'driver') {
     )}
           </div>
         )}
-      </div>
-    );
-  }
-{/* ⚙️ تبويب الإعدادات (آمن بنسبة 100% وبدون متغيرات مفقودة) */}
+      {/* ⚙️ تبويب الإعدادات (آمن بنسبة 100% وبدون متغيرات مفقودة) */}
     {activeTab === 'settings' && (
       <div style={{ padding: '20px', minHeight: '60vh' }}>
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
@@ -2082,6 +2063,27 @@ if (user && user.role === 'driver') {
         </div>
       </div>
     )}
+     {/* 🔻 الشريط السفلي */}
+<div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
+  
+  <button 
+    onClick={() => setActiveTab('main')}
+    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
+    <span style={{ fontSize: '22px' }}>🏠</span>
+    <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
+  </button>
+
+  <button 
+    onClick={() => setActiveTab('settings')}
+    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
+    <span style={{ fontSize: '22px' }}>⚙️</span>
+    <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
+  </button>
+</div> 
+      </div>
+    );
+  }
+
 
   // 🚗 مكون واجهة السائق الشامل والمصحح
   function DriverView({ user, setUser, supabase }) {
