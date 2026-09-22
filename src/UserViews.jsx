@@ -482,6 +482,72 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [studentData, setStudentData] = useState(user);
   const currentStudent = studentData || user;
   const student = currentStudent;
+  // 🔔 نظام الإشعارات والتحديثات اللحظية
+  React.useEffect(() => {
+    // 1. طلب إذن الإشعارات من المتصفح
+    if ("Notification" in window) {
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            console.log("تم تفعيل إذن الإشعارات بنجاح ✅");
+          }
+        });
+      }
+    }
+
+    if (!user?.id) return;
+
+    // 2. الاستماع لتحديثات حالة السائق (مثل: "أنا في طريقي إليكم")
+    const statusChannel = supabase
+      .channel(`student_realtime_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'students',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const updatedStudent = payload.new;
+          if (Notification.permission === "granted" && updatedStudent.driver_status) {
+            new Notification("🚗 تحديث من السائق", {
+              body: updatedStudent.driver_status,
+              icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. الاستماع للرسائل الجديدة من السائق في الشات
+    const chatChannel = supabase
+      .channel(`chat_realtime_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `student_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new;
+          if (newMsg.sender_role === 'driver' && Notification.permission === "granted") {
+            new Notification("💬 رسالة جديدة من السائق", {
+              body: newMsg.text || "أرسل السائق رسالة جديدة",
+              icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(statusChannel);
+      supabase.removeChannel(chatChannel);
+    };
+  }, [user?.id]);
   const [showEmpLogin, setShowEmpLogin] = useState(false);
   // 🟢 جلب الموظفات مع فحص شامل واحتياطي لكائن Supabase
   const [fetchedEmployeesList, setFetchedEmployeesList] = useState([]);
