@@ -482,7 +482,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [studentData, setStudentData] = useState(user);
   const currentStudent = studentData || user;
   const student = currentStudent;
-  // 🔔 نظام الإشعارات والتحديثات اللحظية
+  // 🔔 نظام الإشعارات والتحديثات اللحظية (أسماء قنوات فريدة)
   React.useEffect(() => {
     // 1. طلب إذن الإشعارات من المتصفح
     if ("Notification" in window) {
@@ -497,9 +497,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     if (!user?.id) return;
 
-    // 2. الاستماع لتحديثات حالة السائق (مثل: "أنا في طريقي إليكم")
+    // 2. الاستماع لتحديثات حالة السائق
     const statusChannel = supabase
-      .channel(`student_realtime_${user.id}`)
+      .channel(`student_notif_status_${user.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -520,9 +520,9 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       )
       .subscribe();
 
-    // 3. الاستماع للرسائل الجديدة من السائق في الشات
+    // 3. الاستماع للرسائل الجديدة من السائق
     const chatChannel = supabase
-      .channel(`chat_realtime_${user.id}`)
+      .channel(`student_notif_chat_${user.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
