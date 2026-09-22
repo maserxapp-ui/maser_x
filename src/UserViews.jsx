@@ -1958,45 +1958,46 @@ if (user && user.role === 'driver') {
           </div>
     )}
 
-   {/* ⚙️ تبويب الإعدادات (يظهر فقط عند اختيار تبويب الإعدادات) */}
+{/* ⚙️ تبويب الإعدادات (آمن ومحمي من الانهيار) */}
     {activeTab === 'settings' && (
-      <div style={{ padding: '20px' }}>
+      <div style={{ padding: '20px', minHeight: '70vh' }}>
         <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
+            
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>اسم المشترك:</span>
               <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {String(currentStudent?.name || user?.name || 'غير محدد')}
+                {user?.name || 'غير محدد'}
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
               <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {String(currentStudent?.phone || user?.phone || 'غير محدد')}
+                {user?.phone || 'غير محدد'}
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
               <span style={{ fontWeight: 'bold', color: '#0f172a' }}>
-                {String(currentStudent?.university || user?.university || 'غير محدد')}
+                {user?.university || 'غير محدد'}
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
               <span style={{ fontWeight: 'bold', color: '#059669' }}>
-                {(currentStudent?.price || user?.price) ? `${currentStudent?.price || user?.price} د.ع` : 'غير محدد'}
+                {user?.price ? `${user.price} د.ع` : 'غير محدد'}
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
-              <span style={{ fontWeight: 'bold', color: '#16a34a' }}>
-                {String(currentStudent?.status || user?.status || 'مدفوع ومفعل')}
+              <span style={{ fontWeight: 'bold', color: (user?.status === 'متاخر' || user?.status === 'متأخر') ? '#d97706' : '#16a34a' }}>
+                {(user?.status === 'متاخر' || user?.status === 'متأخر') ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
               </span>
             </div>
 
@@ -2006,12 +2007,12 @@ if (user && user.role === 'driver') {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
-                  <b>{String(currentStudent?.subscription_start_date || user?.subscription_start_date || 'غير محدد')}</b>
+                  <b>{user?.subscription_start_date ? String(user.subscription_start_date) : 'غير محدد'}</b>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
-                  <b>{String(currentStudent?.subscription_expiry || user?.subscription_expiry || 'غير محدد')}</b>
+                  <b>{user?.subscription_expiry ? String(user.subscription_expiry) : 'غير محدد'}</b>
                 </div>
               </div>
             </div>
@@ -2019,20 +2020,17 @@ if (user && user.role === 'driver') {
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
               <span style={{ color: '#64748b' }}>السائق المخصص:</span>
               <span style={{ fontWeight: 'bold', color: '#0284c7' }}>
-                {String(assignedDriver?.name || currentStudent?.driver_name || user?.driver_name || 'لم يحدد بعد')}
+                {user?.driver_name || 'لم يحدد بعد'}
               </span>
             </div>
+
           </div>
 
           {/* 🚪 زر تسجيل الخروج */}
           <button 
             onClick={() => {
-              try {
-                localStorage.clear();
-                window.location.reload();
-              } catch (e) {
-                console.error(e);
-              }
+              localStorage.clear();
+              window.location.reload();
             }}
             style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
           >
