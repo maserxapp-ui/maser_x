@@ -482,11 +482,11 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   const [studentData, setStudentData] = useState(user);
   const currentStudent = studentData || user;
   const student = currentStudent;
-// 📌 حفظ آخر حالة للسائق لمنع إطلاق الإشعار عند تعديل الطالب لبياناته (مثل زر أنا أداوم غداً)
+// 📌 حفظ آخر حالة للسائق لمنع إطلاق الإشعار عند تعديل الطالبة لبياناتها الخاصّة
   const lastDriverStatusRef = React.useRef(user?.driver_status || null);
 
   React.useEffect(() => {
-    // 1. طلب إذن الإشعارات من المتصفح
+    // 1. طلب إذن الإشعارات من المتصفح عند فتح الصفحة
     if ("Notification" in window) {
       if (Notification.permission !== "granted" && Notification.permission !== "denied") {
         Notification.requestPermission();
@@ -495,7 +495,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     if (!user?.id) return;
 
-    // 2. الاستماع لتحديثات حالة السائق (فقط عند التغيير الحقيقي من قبل السائق)
+    // 2. الاستماع لتحديثات حالة السائق (مثل: "أنا في طريقي إليكم")
     const statusChannel = supabase
       .channel(`student_notif_status_${user.id}_${Date.now()}`)
       .on(
@@ -510,29 +510,72 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           const updatedStudent = payload.new;
           const newStatus = updatedStudent.driver_status;
 
-          // 🎯 الشرط الأهم: يتأكد أن النص تغير فعلياً عن الحالة السابقة
+          // التأكد من أن الحالة تغيرت فعلياً وليست مجرد تحديث لبيانات الطالبة الأخريات
           if (newStatus && newStatus !== lastDriverStatusRef.current) {
-            // تحديث القيمة في الذاكرة لتجنب التكرار
             lastDriverStatusRef.current = newStatus;
 
-            // أ) محاولة إرسال إشعار للموبايل/الحاسوب
+            // 📳 اهتزاز الموبايل عند التحديث
+            if ("vibrate" in navigator) {
+              navigator.vibrate([300, 100, 300]);
+            }
+
+            // 🔔 إرسال الإشعار المنبثق في شريط الموبايل العلوي عبر Service Worker
             if ("Notification" in window && Notification.permission === "granted") {
-              try {
-                new Notification("🚗 تحديث من السائق", {
-                  body: newStatus,
-                  icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
-                });
-              } catch (err) {
-                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-                  navigator.serviceWorker.ready.then((reg) => {
-                    reg.showNotification("🚗 تحديث من السائق", { body: newStatus });
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then((reg) => {
+                  reg.showNotification("🚗 تحديث من السائق", {
+                    body: newStatus,
+                    icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+                    vibrate: [300, 100, 300],
+                    tag: 'driver-status-notification'
                   });
-                }
+                });
+              } else {
+                new Notification("🚗 تحديث من السائق", { body: newStatus });
               }
             }
 
-            // ب) تنبيه منبثق داخل الشاشة
+            // 💬 تنبيه منبثق داخل الشاشة لضمان الرؤية
             alert(`🚗 تحديث من السائق:\n${newStatus}`);
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. الاستماع للرسائل الجديدة في الشات من السائق
+    const chatChannel = supabase
+      .channel(`student_notif_chat_${user.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `student_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new;
+          if (newMsg.sender_role === 'driver') {
+            const msgText = newMsg.text || "أرسل السائق رسالة جديدة";
+
+            if ("vibrate" in navigator) {
+              navigator.vibrate([200, 100, 200]);
+            }
+
+            if ("Notification" in window && Notification.permission === "granted") {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then((reg) => {
+                  reg.showNotification("💬 رسالة جديدة من السائق", {
+                    body: msgText,
+                    icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+                    vibrate: [200, 100, 200],
+                    tag: 'driver-chat-notification'
+                  });
+                });
+              } else {
+                new Notification("💬 رسالة جديدة من السائق", { body: msgText });
+              }
+            }
           }
         }
       )
@@ -540,6 +583,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
     return () => {
       supabase.removeChannel(statusChannel);
+      supabase.removeChannel(chatChannel);
     };
   }, [user?.id]);
   const [showEmpLogin, setShowEmpLogin] = useState(false);
