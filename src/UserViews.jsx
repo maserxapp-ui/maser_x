@@ -1958,39 +1958,41 @@ if (user && user.role === 'driver') {
           </div>
     )}
 
+{/* ⚙️ تبويب الإعدادات التجريبي */}
 {activeTab === 'settings' && (
   <div style={{ padding: '40px', textAlign: 'center', color: 'red', fontSize: '24px', fontWeight: 'bold' }}>
     🚨 تجربة: تبويب الإعدادات يشتغل بشكل صحيح!
   </div>
 )}
-      <ChatModal
+
+{/* 💬 مودال الشات */}
+<ChatModal
   isOpen={isStudentChatOpen}
   onClose={() => setIsStudentChatOpen(false)}
-  studentId={user.id}
-  driverId={assignedDriver?.id || user.driver_id}
+  studentId={user?.id}
+  driverId={assignedDriver?.id || user?.driver_id}
   currentUserRole="student"
   supabase={supabase}
 />
-     
-      {/* 🔻 الشريط السفلي */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
-        
-        <button 
-          onClick={() => setActiveTab('main')}
-          style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
-          <span style={{ fontSize: '22px' }}>🏠</span>
-          <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
-        </button>
 
-        
-        <button 
-          onClick={() => setActiveTab('settings')}
-          style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
-          <span style={{ fontSize: '22px' }}>⚙️</span>
-          <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
-        </button>
+{/* 🔻 الشريط السفلي */}
+<div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '10px 0', zIndex: 100, maxWidth: '500px', margin: '0 auto' }}>
+  
+  <button 
+    onClick={() => setActiveTab('main')}
+    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'main' ? '#0284c7' : '#94a3b8' }}>
+    <span style={{ fontSize: '22px' }}>🏠</span>
+    <span style={{ fontSize: '12px', fontWeight: activeTab === 'main' ? 'bold' : 'normal' }}>الرئيسية</span>
+  </button>
 
-      </div>
+  <button 
+    onClick={() => setActiveTab('settings')}
+    style={{ background: 'none', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer', color: activeTab === 'settings' ? '#0284c7' : '#94a3b8' }}>
+    <span style={{ fontSize: '22px' }}>⚙️</span>
+    <span style={{ fontSize: '12px', fontWeight: activeTab === 'settings' ? 'bold' : 'normal' }}>الإعدادات</span>
+  </button>
+</div>
+          
 {/* 💬 نافذة المحادثة المباشرة مع السائق */}
 <ChatModal
   isOpen={isChatOpen}
