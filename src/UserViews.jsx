@@ -1958,12 +1958,7 @@ if (user && user.role === 'driver') {
           </div>
     )}
 
-{/* ⚙️ تبويب الإعدادات التجريبي */}
-{activeTab === 'settings' && (
-  <div style={{ padding: '40px', textAlign: 'center', color: 'red', fontSize: '24px', fontWeight: 'bold' }}>
-    🚨 تجربة: تبويب الإعدادات يشتغل بشكل صحيح!
-  </div>
-)}
+
 
 {/* 💬 مودال الشات */}
 <ChatModal
@@ -2016,6 +2011,77 @@ if (user && user.role === 'driver') {
       </div>
     );
   }
+{/* ⚙️ تبويب الإعدادات (آمن بنسبة 100% وبدون متغيرات مفقودة) */}
+    {activeTab === 'settings' && (
+      <div style={{ padding: '20px', minHeight: '60vh' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', fontSize: '16px' }}>👤 معلومات الحساب الشخصي</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>اسم المشترك:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.name || 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>رقم الهاتف:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.phone || 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>الجهة / الجامعة:</span>
+              <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{user?.university || 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>قيمة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: '#059669' }}>{user?.price ? `${user.price} د.ع` : 'غير محدد'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>حالة الاشتراك:</span>
+              <span style={{ fontWeight: 'bold', color: (user?.status === 'متاخر' || user?.status === 'متأخر') ? '#d97706' : '#16a34a' }}>
+                {(user?.status === 'متاخر' || user?.status === 'متأخر') ? '🟡 متأخر بالدفع' : '🟢 مدفوع ومفعل'}
+              </span>
+            </div>
+
+            {/* 💳 كارت تفاصيل الاشتراك الشهري */}
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px dashed #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px' }}>💳 حالة الاشتراك الشهري</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
+                  <b>{user?.subscription_start_date ? String(user.subscription_start_date) : 'غير محدد'}</b>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
+                  <b>{user?.subscription_expiry ? String(user.subscription_expiry) : 'غير محدد'}</b>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>السائق المخصص:</span>
+              <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{user?.driver_name || 'لم يحدد بعد'}</span>
+            </div>
+
+          </div>
+
+          {/* 🚪 زر تسجيل الخروج */}
+          <button 
+            onClick={() => {
+              localStorage.clear();
+              window.location.reload();
+            }}
+            style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            🚪 تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    )}
 
   // 🚗 مكون واجهة السائق الشامل والمصحح
   function DriverView({ user, setUser, supabase }) {
