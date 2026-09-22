@@ -2203,7 +2203,7 @@ if (user && user.role === 'driver') {
       }
 
       // 🕒 نافذة المراسلة مفتوحة فقط من 6:00 صباحاً إلى 9:00 صباحاً
-      const canChat = baghdadHour >= 6 && baghdadHour < 9;
+      const canChat = true;
       setIsChatWindowOpen(canChat);
 
       const after9 = baghdadHour >= 21 || baghdadHour < 4;
@@ -2504,9 +2504,9 @@ if (!students || students.length === 0) {
     </h3>
     <div className="flex items-center gap-2">
       {!isChatWindowOpen && (
-        <span className="text-[10px] text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md font-bold">
-          🔒 المراسلة (6-9 ص)
-        </span>
+        <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">
+  💬 المراسلة مفعّلة
+</span>
       )}
       <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
         {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length} مداومين
