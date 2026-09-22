@@ -27,6 +27,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- 🔔 OneSignal Web Push SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "c05c83a1-9a4e-43ec-944a-957d051e7192",
+          notifyButton: { enable: false },
+        });
+      });
+    </script>
+
     <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت -->
     <script>
       // 1️⃣ مسح ملفات التخزين المؤقت القديمة (Service Worker) التي تسبب تجمد التطبيق
