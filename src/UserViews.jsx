@@ -2031,16 +2031,16 @@ if (user && user.role === 'driver') {
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px dashed #e2e8f0' }}>
               <h4 style={{ margin: '0 0 12px 0', color: '#0f172a', fontSize: '15px' }}>💳 حالة الاشتراك الشهري</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: '#334155' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
-                  <b>{user?.subscription_start_date ? String(user.subscription_start_date) : 'غير محدد'}</b>
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#64748b' }}>📅 تاريخ بداية الاشتراك:</span>
+            <b>{user?.subscription_start_date ? String(user.subscription_start_date).split('T')[0] : 'غير محدد'}</b>
+          </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
-                  <b>{user?.subscription_expiry ? String(user.subscription_expiry) : 'غير محدد'}</b>
-                </div>
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#64748b' }}>🏁 تاريخ نهاية الاشتراك:</span>
+            <b>{user?.subscription_expiry ? String(user.subscription_expiry).split('T')[0] : 'غير محدد'}</b>
+          </div>
+        </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f8fafc', paddingBottom: '8px' }}>
