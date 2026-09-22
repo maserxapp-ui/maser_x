@@ -2038,9 +2038,6 @@ if (user && user.role === 'driver') {
         </div>
       </div>
     )}
-          </div>
-        </div>
-      )}
       <ChatModal
   isOpen={isStudentChatOpen}
   onClose={() => setIsStudentChatOpen(false)}
