@@ -496,19 +496,21 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       });
     }
   }, [student?.id, user?.id]);
-// 🚀 دالة إرسال الإشعار المعدلة بمفتاح الأمان الصحيح
+// 🚀 دالة إرسال الإشعار المباشر مع كاشف الأخطاء المباشر
   const sendPushNotificationToStudent = async (studentId, statusMessage) => {
     try {
+      const targetId = String(studentId);
+
       const response = await fetch("https://onesignal.com/api/v1/notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          // ⚠️ تم تغيير Basic إلى Key هنا لكي يقبل OneSignal الطلب
           "Authorization": "Key os_v2_app_yboihim2jzb6zfcksv6qkhtrslpklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2q3z75ilea3h6eyaha"
         },
         body: JSON.stringify({
           app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
-          include_aliases: { external_id: [String(studentId)] },
+          include_external_user_ids: [targetId],
+          include_aliases: { external_id: [targetId] },
           target_channel: "push",
           contents: { ar: statusMessage, en: statusMessage },
           headings: { ar: "🚗 تحديث من السائق", en: "Driver Update" }
@@ -516,9 +518,17 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
       });
 
       const resData = await response.json();
-      console.log("استجابة سيرفر OneSignal:", resData);
+
+      // 🔍 إظهار نتيجة الإرسال على الشاشة مباشرةً
+      if (resData.errors) {
+        alert("❌ خطأ مفتاح API أو إعدادات: " + JSON.stringify(resData.errors));
+      } else if (resData.recipients === 0) {
+        alert("⚠️ تم الاتصال بـ OneSignal، لكن جهاز الطالبة غير مفعّل أو غير مسجّل بعد! (Recipients: 0)");
+      } else {
+        alert("✅ تم إرسال الإشعار بنجاح إلى (" + resData.recipients + ") جهاز!");
+      }
     } catch (err) {
-      console.error("خطأ في إرسال الإشعار:", err);
+      alert("❌ خطأ في الاتصال بالشبكة: " + err.message);
     }
   };
   React.useEffect(() => {
