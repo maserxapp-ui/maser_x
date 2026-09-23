@@ -7,7 +7,7 @@ export async function onRequestPost(context) {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": "Key os_v2_app_yboihim2jzb6zfcksv6qkhtrs1pklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2qz75ilea3h6eyaha"
+        "Authorization": "Basic os_v2_app_yboihim2jzb6zfcksv6qkhtrs1pklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2qz75ilea3h6eyaha"
       },
       body: JSON.stringify({
         app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
