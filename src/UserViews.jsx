@@ -2571,27 +2571,24 @@ if (!students || students.length === 0) {
           {/* 🚗 أزرار التحكم بالرحلة */}
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
             <button
-             onClick={async (e) => {
-          if (typeof handleStartJourney === 'function') {
-            handleStartJourney(e);
-          }
+            onClick={async (e) => {
+          console.log("🔘 تم الضغط على زر الرحلة");
 
-          // 🔔 إرسال الإشعار للطلاب بأمان وبدون أخطاء
+          // 1. تشغيل دالة بدَء الرحلة
           try {
-            const studentList = (typeof driverStudents !== 'undefined' ? driverStudents : [])
-                             || (typeof students !== 'undefined' ? students : []);
-
-            if (studentList && studentList.length > 0) {
-              studentList.forEach((student) => {
-                if (student?.id) {
-                  sendPushNotificationToStudent(student.id, "🚗 السائق في طريقه إليكم الآن");
-                }
-              });
-            } else {
-              sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+            if (typeof handleStartJourney === 'function') {
+              await handleStartJourney(e);
             }
           } catch (err) {
-            sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+            console.log("تنبيه في تحديث حالة الرحلة:", err);
+          }
+
+          // 2. إرسال الإشعار المباشر للطالبة
+          console.log("🚀 جاري إرسال الإشعار...");
+          try {
+            await sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+          } catch (err) {
+            alert("خطأ في دالة الإشعار: " + err.message);
           }
         }}
               disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
