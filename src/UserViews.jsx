@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
-// 🔔 دالة إرسال الإشعار المباشر عبر سيرفر OneSignal (معرّفة للجميع)
+// 🔔 دالة إرسال الإشعار المباشر عبر سيرفر OneSignal (مع معالجة CORS)
 const sendPushNotificationToStudent = async (studentId, messageText) => {
   try {
-    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+    const response = await fetch("https://corsproxy.io/?https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
