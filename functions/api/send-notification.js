@@ -3,10 +3,10 @@ export async function onRequestPost(context) {
     const body = await context.request.json().catch(() => ({}));
     const messageText = body.messageText || "🚗 السائق في طريقه إليكم الآن";
 
-    const apiKey = "os_v2_app_yboihim2jzb6zfcksv6qkhtrskoctrum7mbu7qefq4gef6dp2odews6jl7nqkpvweaa2vkxooahzfnfj3sahc5i57ak4njwm4c6mpfa";
+    const apiKey = "os_v2_app_yboihim2jzb6zfcksv6qkhtrsk3liabpivneigvfcpk4d7dphoxqwxgh7eeeq5naorw25mzacrm3zanurzad5bl45hzfnykfjfvhsba";
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
 
-    const response = await fetch("https://onesignal.com/api/v1/notifications", {
+    const response = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
