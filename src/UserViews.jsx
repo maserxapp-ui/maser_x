@@ -1,36 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
-// 🔔 دالة إرسال الإشعار المباشر عبر سيرفر OneSignal (بروكسي متوافق مع POST)
+// 🔔 دالة إرسال الإشعار المباشر عبر سيرفر OneSignal (مع نظام البدائل التلقائية)
 const sendPushNotificationToStudent = async (studentId, messageText) => {
-  try {
-    const targetUrl = "https://onesignal.com/api/v1/notifications";
-    const proxyUrl = "https://thingproxy.freeboard.io/fetch/" + targetUrl;
+  const targetUrl = "https://onesignal.com/api/v1/notifications";
+  
+  // روابط البروكسي النشطة
+  const proxies = [
+    `https://corsproxy.org/?${encodeURIComponent(targetUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+  ];
 
-    const response = await fetch(proxyUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Key os_v2_app_yboihim2jzb6zfcksv6qkhtrs1pklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2qz75ilea3h6eyaha"
-      },
-      body: JSON.stringify({
-        app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
-        included_segments: ["Subscribed Users"],
-        contents: { ar: messageText, en: messageText },
-        headings: { ar: "تحديث من السائق 🚗", en: "Driver Update" }
-      })
-    });
+  const payload = {
+    app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
+    included_segments: ["Subscribed Users"],
+    contents: { ar: messageText, en: messageText },
+    headings: { ar: "تحديث من السائق 🚗", en: "Driver Update" }
+  };
 
-    const data = await response.json();
-    console.log("استجابة OneSignal:", data);
-    
-    if (data.id) {
-      alert(`تم إرسال الإشعار بنجاح! 🎉\nعدد الأجهزة المستلمة: ${data.recipients || 0}`);
-    } else {
-      alert(`تنبيه من OneSignal: ${JSON.stringify(data.errors || data)}`);
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Key os_v2_app_yboihim2jzb6zfcksv6qkhtrs1pklyguuvjuykmy4i4jbggu3ijoyepqxcqcohkquobnv23u2aqj3ycfcxbph2qz75ilea3h6eyaha"
+  };
+
+  let isSent = false;
+  let lastError = null;
+
+  for (const proxyUrl of proxies) {
+    try {
+      console.log("🚀 جاري المحاولة عبر سيرفر الإرسال...");
+      const response = await fetch(proxyUrl, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      console.log("استجابة سيرفر الإشعارات:", data);
+
+      if (data.id || response.ok) {
+        alert(`تم إرسال الإشعار بنجاح! 🎉\nعدد الأجهزة المستلمة: ${data.recipients || 0}`);
+        isSent = true;
+        break;
+      }
+    } catch (err) {
+      console.warn("تنبيه في سيرفر البروكسي، جاري استخدام الخيار البديل...", err);
+      lastError = err;
     }
-  } catch (error) {
-    console.error("خطأ في الاتصال بـ OneSignal:", error);
-    alert("فشل الاتصال بسيرفر الإشعارات: " + error.message);
+  }
+
+  if (!isSent) {
+    alert("فشل الاتصال بسيرفر الإشعارات: " + (lastError?.message || "Failed to fetch"));
   }
 };
 // 💬 مكون نافذة المحادثة المباشرة (الرسائل السريعة فقط + لون نص أسود واضح)
