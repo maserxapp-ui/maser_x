@@ -3,15 +3,15 @@ export async function onRequestPost(context) {
     const body = await context.request.json().catch(() => ({}));
     const messageText = body.messageText || "🚗 السائق في طريقه إليكم الآن";
 
-    // ضع المفتاح الجديد المنسوخ هنا بين القوسين
-    const apiKey = "os_v2_app_yboihim2jzb6zfcksv6qkhtrsitzwaiepiluwwmd73avwu7jnahozpjstnws47aup43g6qrzcvxg2aqplbkyshdqseqkvcpxfrzynny";
+    const apiKey = "os_v2_app_yboihim2jzb6zfcksv6qkhtrsitzwaiepiluwwmd73avwu7jnahozpjstnws47aup43g6qrzcvxg2aqplbkyshdqseqkvcnxfrzynny";
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
 
-    const response = await fetch("https://api.onesignal.com/notifications", {
+    // محاولة الإرسال بصيغة Basic المعتمدة لمفاتيح التطبيقات
+    const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": `Key ${apiKey}`
+        "Authorization": `Basic ${apiKey}`
       },
       body: JSON.stringify({
         app_id: appId,
@@ -23,11 +23,16 @@ export async function onRequestPost(context) {
 
     const data = await response.json();
 
+    // طباعة الاستجابة بالتفصيل لتظهر في شاشة Real-time Logs
+    console.log("OneSignal Status Code:", response.status);
+    console.log("OneSignal Full Response:", JSON.stringify(data));
+
     return new Response(JSON.stringify(data), {
       status: response.status,
       headers: { "Content-Type": "application/json" }
     });
   } catch (err) {
+    console.log("Function Error:", err.message);
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
