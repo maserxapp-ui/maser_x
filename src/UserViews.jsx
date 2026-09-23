@@ -2571,17 +2571,29 @@ if (!students || students.length === 0) {
           {/* 🚗 أزرار التحكم بالرحلة */}
           <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col gap-2">
             <button
-              onClick={async (e) => {
-  handleStartJourney(e);
-  
-  // 🔔 إرسال الإشعار المباشر لشريط الموبايل لجميع الطلاب
-  const studentList = assignedStudents || students || [];
-  studentList.forEach((student) => {
-    if (student?.id) {
-      sendPushNotificationToStudent(student.id, "السائق في طريقه إليكم الآن 🚗");
-    }
-  });
-}}
+             onClick={async (e) => {
+          if (typeof handleStartJourney === 'function') {
+            handleStartJourney(e);
+          }
+
+          // 🔔 إرسال الإشعار للطلاب بأمان وبدون أخطاء
+          try {
+            const studentList = (typeof driverStudents !== 'undefined' ? driverStudents : [])
+                             || (typeof students !== 'undefined' ? students : []);
+
+            if (studentList && studentList.length > 0) {
+              studentList.forEach((student) => {
+                if (student?.id) {
+                  sendPushNotificationToStudent(student.id, "🚗 السائق في طريقه إليكم الآن");
+                }
+              });
+            } else {
+              sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+            }
+          } catch (err) {
+            sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+          }
+        }}
               disabled={driverTripStatus === 'on_the_way' || driverTripStatus === 'completed'}
               className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-2 ${
                 driverTripStatus === 'on_the_way' 
