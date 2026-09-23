@@ -3,17 +3,28 @@ export async function onRequestPost(context) {
     const body = await context.request.json().catch(() => ({}));
     const messageText = body.messageText || "🚗 السائق في طريقه إليكم الآن";
 
-    const apiKey = "os_v2_app_yboihim2jzb6zfcksv6qkhtrsk3liabpivneigvfcpk4d7dphoxqwxgh7eeeq5naorw25mzacrm3zanurzad5bl45hzfnykfjfvhsba";
+    // قراءة المفتاح تلقائياً وأمان من متغيرات بيئة Cloudflare
+    const apiKey = context.env.ONESIGNAL_API_KEY;
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({ 
+        error: "لم يتم العثور على ONESIGNAL_API_KEY في متغيرات بيئة Cloudflare" 
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
 
     const response = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": "Key " + apiKey
+        "Authorization": "Key " + apiKey.trim()
       },
       body: JSON.stringify({
         app_id: appId,
+        target_channel: "push",
         included_segments: ["Subscribed Users"],
         contents: { ar: messageText, en: messageText },
         headings: { ar: "تحديث من السائق 🚗", en: "Driver Update" }
@@ -26,6 +37,7 @@ export async function onRequestPost(context) {
       status: response.status,
       headers: { "Content-Type": "application/json" }
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
