@@ -9,8 +9,7 @@ export async function onRequestPost(context) {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        // تم تغيير الصيغة هنا لتوافق مفاتيح v2
-        "Authorization": `Bearer ${apiKey}`
+        "Authorization": `Key ${apiKey}`
       },
       body: JSON.stringify({
         app_id: "c05c83a1-9a4e-43ec-944a-957d051e7192",
