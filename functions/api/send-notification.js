@@ -3,7 +3,6 @@ export async function onRequestPost(context) {
     const body = await context.request.json().catch(() => ({}));
     const messageText = body.messageText || "🚗 السائق في طريقه إليكم الآن";
 
-    // قراءة المفتاح من متغيرات البيئة وتنظيفه من المسافات
     const apiKey = (context.env.ONESIGNAL_API_KEY || "").trim();
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
 
@@ -14,6 +13,7 @@ export async function onRequestPost(context) {
       });
     }
 
+    // إرسال الإشعار لجميع المشتركين (شامل متصفحات الويب والموبايل)
     const response = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
       headers: {
@@ -22,7 +22,6 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         app_id: appId,
-        target_channel: "push",
         included_segments: ["Subscribed Users"],
         contents: { ar: messageText, en: messageText },
         headings: { ar: "تحديث من السائق 🚗", en: "Driver Update" }
