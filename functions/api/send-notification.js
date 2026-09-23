@@ -3,14 +3,12 @@ export async function onRequestPost(context) {
     const body = await context.request.json().catch(() => ({}));
     const messageText = body.messageText || "🚗 السائق في طريقه إليكم الآن";
 
-    // قراءة المفتاح تلقائياً وأمان من متغيرات بيئة Cloudflare
-    const apiKey = context.env.ONESIGNAL_API_KEY;
+    // قراءة المفتاح من متغيرات البيئة وتنظيفه من المسافات
+    const apiKey = (context.env.ONESIGNAL_API_KEY || "").trim();
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ 
-        error: "لم يتم العثور على ONESIGNAL_API_KEY في متغيرات بيئة Cloudflare" 
-      }), {
+      return new Response(JSON.stringify({ error: "لم يتم العثور على ONESIGNAL_API_KEY في Cloudflare" }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
@@ -20,7 +18,7 @@ export async function onRequestPost(context) {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Authorization": "Key " + apiKey.trim()
+        "Authorization": `Key ${apiKey}`
       },
       body: JSON.stringify({
         app_id: appId,
