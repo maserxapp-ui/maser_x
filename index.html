@@ -34,19 +34,23 @@
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "c05c83a1-9a4e-43ec-944a-957d051e7192",
+          serviceWorkerPath: "/OneSignalSDKWorker.js",
+          serviceWorkerParam: { scope: "/" },
           notifyButton: { enable: false },
+          allowLocalhostAsSecureOrigin: true
         });
       });
     </script>
 
     <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت مع الحفاظ على إشعارات OneSignal -->
     <script>
-      // 1️⃣ مسح ملفات التخزين المؤقت القديمة مع استثناء ملف إشعارات OneSignal
+      // 1️⃣ مسح ملفات التخزين المؤقت القديمة مع حماية ملفات OneSignal أثناء التثبيت
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (registrations) {
           for (let registration of registrations) {
-            const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || '';
-            if (!scriptUrl.includes('OneSignal')) {
+            const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
+            // حظر الحذف إذا كان المسار يحتوي على OneSignal أو إذا كان قيد التثبيت
+            if (scriptUrl && !scriptUrl.includes('OneSignal') && !scriptUrl.includes('OneSignalSDKWorker')) {
               registration.unregister();
             }
           }
@@ -59,7 +63,6 @@
         if (document.visibilityState === 'hidden') {
           lastLeaveTime = Date.now();
         } else if (document.visibilityState === 'visible') {
-          // إذا ترك المستخدم التطبيق في الخلفية لأكثر من 5 ثوانٍ، يتم عمل التحديث تلقائياً
           if (lastLeaveTime && Date.now() - lastLeaveTime > 5000) {
             window.location.reload();
           }
