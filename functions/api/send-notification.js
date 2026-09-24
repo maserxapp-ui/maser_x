@@ -1,7 +1,7 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // 1️⃣ قراءة البيانات القادمة من شاشة محادثة الطالب في الواجهة
+  // 1️⃣ قراءة البيانات القادمة من الواجهة أو نافذة محادثة الطالب
   let frontendData = {};
   try {
     frontendData = await request.json();
@@ -12,7 +12,7 @@ export async function onRequestPost(context) {
   const ONESIGNAL_APP_ID = "c05c83a1-9a4e-43ec-944a-957d051e7192";
   const apiKey = (env.ONESIGNAL_API_KEY || "").trim();
 
-  // 2️⃣ استخراج نص الرسالة المحددة من قائمة المحادثة السريعة
+  // 2️⃣ استخراج النص المرسل من شاشة المحادثة أو زر الرحلة
   let customMessage = 
     frontendData.messageText || 
     frontendData.message || 
@@ -20,17 +20,18 @@ export async function onRequestPost(context) {
     frontendData.contents?.ar || 
     "رسالة جديدة من السائق 💬";
 
-  // إذا كانت القيمة القادمة مجرد رقم كود، يتم استبدالها بنص افتراضي مناسب
+  // إذا كان النص القادم مجرد أرقام، نضع بدلاً منه نصاً واضحاً
   if (!isNaN(String(customMessage).trim())) {
-    customMessage = "تحديث جديد من السائق 🚗";
+    customMessage = "السائق في الطريق إليكم الآن 🚗";
   }
 
   const customTitle = frontendData.title || "مسار X - رسالة من السائق";
 
-  // 3️⃣ تجهيز حمولة الإشعار لـ OneSignal
+  // 🎯 إرسال مباشر لكل المشتركين بدون التعثر في الفلترة
   const onesignalPayload = {
     app_id: ONESIGNAL_APP_ID,
     target_channel: "push",
+    included_segments: ["Subscribed Users", "Total Subscriptions"],
     contents: {
       ar: customMessage,
       en: customMessage
@@ -40,19 +41,6 @@ export async function onRequestPost(context) {
       en: customTitle
     }
   };
-
-  // 🎯 استهداف طالب محدد (إذا أرسلت الواجهة id أو رقم الموبايل الخاص بالطالب)
-  const targetStudent = frontendData.studentId || frontendData.phone || frontendData.targetUser;
-
-  if (targetStudent) {
-    // إرسال الإشعار فقط للبيانات المربوطة بتلك القيمة
-    onesignalPayload.filters = [
-      { field: "tag", key: "user_id", relation: "=", value: String(targetStudent) }
-    ];
-  } else {
-    // إذا لم يحدد طالب، يرسل لكل المشتركين
-    onesignalPayload.included_segments = ["Subscribed Users", "Total Subscriptions"];
-  }
 
   let onesignalStatus = 0;
   let onesignalResponse = {};
