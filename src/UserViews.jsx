@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
 // 🔔 دالة إرسال الإشعار المباشر عبر سيرفر Cloudflare الداخلي
-const sendPushNotificationToStudent = async (studentId, messageText) => {
+const sendPushNotificationToStudent = async (messageText) => {
   try {
     console.log("🚀 جاري طلب الإرسال من سيرفر Cloudflare الداخلي...");
     const response = await fetch("/api/send-notification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageText })
+      body: JSON.stringify({ 
+        messageText: messageText || "🚗 السائق في طريقه إليكم الآن" 
+      })
     });
 
     const data = await response.json();
     console.log("استجابة السيرفر الداخلي:", data);
 
     if (data.id) {
-      alert(`تم إرسال الإشعار بنجاح! 🎉\nعدد الأجهزة المستلمة: ${data.recipients || 0}`);
+      alert(`تم إرسال الإشعار بنجاح! 🎉`);
     } else {
+      // يظهر تفاصيل الخطأ مباشرة إذا رفض OneSignal الطلب
       alert(`تنبيه من OneSignal: ${JSON.stringify(data.errors || data)}`);
     }
   } catch (error) {
