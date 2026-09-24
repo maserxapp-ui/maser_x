@@ -672,7 +672,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // 🌟 عداد إجبار الشاشة وبطاقات السائق على التحديث المباشر
   const [, setForceUpdate] = React.useState(0);
 
-  // 1️⃣ التحديث التلقائي اللحظي المستمر الشامل (Auto Polling كل 3 ثوانٍ)
+ // 1️⃣ التحديث التلقائي اللحظي المستمر الشامل (Auto Polling كل 3 ثوانٍ)
   React.useEffect(() => {
     const autoFetch = async () => {
       try {
@@ -680,12 +680,12 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         const studentId = localUser?.id || studentData?.id || user?.id;
 
         if (studentId) {
-          // 1. جلب بيانات الطالب الحديثة
+          // 1. جلب بيانات الطالب الحديثة بدون إطلاق خطأ 406
           const { data: updatedStudent } = await supabase
             .from('students')
             .select('*')
             .eq('id', studentId)
-            .single();
+            .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
 
           if (updatedStudent) {
             let driverInfo = null;
@@ -697,7 +697,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
                 .from('drivers')
                 .select('*')
                 .eq('id', updatedStudent.driver_id)
-                .single();
+                .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
               driverInfo = d;
             }
 
@@ -707,7 +707,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
                 .from('drivers')
                 .select('*')
                 .eq('id', updatedStudent.return_driver_id)
-                .single();
+                .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
               returnDriverInfo = rd;
             }
 
@@ -747,7 +747,6 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
         console.error("خطأ في التحديث التلقائي:", err);
       }
     };
-
     autoFetch(); // تشغيل فوري أول مرة
     const interval = setInterval(autoFetch, 3000); // تكرار كل 3 ثوانٍ
     return () => clearInterval(interval);
