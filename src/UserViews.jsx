@@ -34,6 +34,21 @@ const DRIVER_QUICK_MESSAGES = [
   "👋 أين أنت؟", "📞 يرجى الرد.", "⚠️ سأغادر إذا لم تحضر.", "🚗 انطلقت من الموقع.", "🚦 يوجد زحام، سأصل متأخرًا قليلًا.",
   "🚗 انا يم مشترك اخر سأتي خلال دقائق.", "🏠 لقد وصلت.", "👍تمام", "🚗 سأمر عليك بعد قليل.", "👀 لا أستطيع رؤيتك."
 ];
+// 🔔 دالة إرسال إشعار الرسائل السريعة لـ OneSignal
+export const sendQuickNotification = async (msgText) => {
+  try {
+    await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: "مسار X - رسالة من السائق",
+        messageText: String(msgText)
+      })
+    });
+  } catch (e) {
+    console.error("خطأ إرسال الإشعار:", e);
+  }
+};
 
 const STUDENT_QUICK_MESSAGES = [
   "⚠️ تأخرت، يرجى الإسراع.", "👍 تم", "✅ أنا في الطريق", "⏳ أحتاج 5 دقائق.", "🙏 انتظرني قليلًا.",
@@ -403,6 +418,17 @@ React.useEffect(() => {
     };
 
     const { data, error } = await supabase.from('messages').insert([newMessage]).select();
+   // 🔔 إرسال إشعار فوري لموبايل الطالب إذا كان المراسِل هو السائق
+    if (currentUserRole === 'driver') {
+      fetch('/api/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: "مسار X - رسالة من السائق",
+          messageText: textToSend
+        })
+      }).catch(err => console.error("Notification Error:", err));
+    }
 
     if (error) {
       console.error("Error sending message:", error);
