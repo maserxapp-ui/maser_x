@@ -11,8 +11,15 @@ export async function onRequestPost(context) {
   const ONESIGNAL_APP_ID = "c05c83a1-9a4e-43ec-944a-957d051e7192";
   const apiKey = (env.ONESIGNAL_API_KEY || "").trim();
 
-  // 📝 استخراج النص والعنوان المبعوثين من لوحة السائق
-  const customMessage = frontendData.messageText || frontendData.message || "السائق في الطريق إليكم الآن 🚗";
+  // 📝 معالجة النص: إذا كان المرسل مجرد رقم (مثل 19)، يتم صياغة جملة عربية واضحة للطالب
+  const rawMsg = String(frontendData.messageText || frontendData.message || "").trim();
+  let customMessage = "السائق في الطريق إليكم الآن 🚗";
+
+  if (rawMsg && isNaN(rawMsg)) {
+    // إذا كان هناك نص حقيقي غير أرقام يتم استخدامه
+    customMessage = rawMsg;
+  }
+
   const customTitle = frontendData.title || "مسار X - تنبيه الرحلة";
 
   const onesignalPayload = {
