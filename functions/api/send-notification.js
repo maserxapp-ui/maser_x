@@ -7,13 +7,10 @@ export async function onRequestPost(context) {
     const appId = "c05c83a1-9a4e-43ec-944a-957d051e7192";
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "لم يتم العثور على ONESIGNAL_API_KEY في Cloudflare" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response(JSON.stringify({ error: "لم يتم العثور على ONESIGNAL_API_KEY" }), { status: 500 });
     }
 
-    // إرسال الإشعار لجميع المشتركين (شامل متصفحات الويب والموبايل)
+    // إرسال مباشر لجميع المشتركين النشطين وتجاهل معرّفات الداتا بيز القديمة
     const response = await fetch("https://api.onesignal.com/notifications", {
       method: "POST",
       headers: {
