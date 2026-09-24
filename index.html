@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0284c7" />
     <meta name="description" content="Masar X - منصة إدارة نقل الطلاب والرحلات" />
 
-    <!-- 🚫 منع المتصفح والتطبيق المثبت من حفظ نسخ قديمة (Fix PWA Freeze) -->
+    <!-- 🚫 منع المتصفح والتطبيق المثبت من حفظ نسخ قديمة -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -39,25 +39,16 @@
           notifyButton: { enable: false },
           allowLocalhostAsSecureOrigin: true
         });
+
+        // طلب إذن الإشعارات تلقائياً إذا لم يوافق عليه المستخدم بعد
+        if (OneSignal.Notifications && OneSignal.Notifications.permission !== true) {
+          await OneSignal.Notifications.requestPermission();
+        }
       });
     </script>
 
-    <!-- ⚡ سكريبت معالجة عدم التحديث في التطبيق المثبت مع الحفاظ على إشعارات OneSignal -->
+    <!-- ⚡ تحديث الصفحة عند العودة للتطبيق من الخلفية -->
     <script>
-      // 1️⃣ مسح ملفات التخزين المؤقت القديمة مع حماية ملفات OneSignal أثناء التثبيت
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-          for (let registration of registrations) {
-            const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || '';
-            // حظر الحذف إذا كان المسار يحتوي على OneSignal أو إذا كان قيد التثبيت
-            if (scriptUrl && !scriptUrl.includes('OneSignal') && !scriptUrl.includes('OneSignalSDKWorker')) {
-              registration.unregister();
-            }
-          }
-        });
-      }
-
-      // 2️⃣ إجبار التطبيق على إعادة الاتصال والتحديث فور الفتح من الخلفية
       let lastLeaveTime = 0;
       document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') {
