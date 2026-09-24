@@ -54,12 +54,12 @@ export async function onRequestPost(context) {
   return new Response(
     JSON.stringify({
       DIAGNOSTIC_REPORT: {
-        1_has_api_key: Boolean(apiKey),
-        2_api_key_length: apiKey.length,
-        3_received_from_frontend: frontendData,
-        4_sent_to_onesignal: onesignalPayload,
-        5_onesignal_http_status: onesignalStatus,
-        6_onesignal_raw_response: onesignalResponse
+        "1_has_api_key": Boolean(apiKey),
+        "2_api_key_length": apiKey.length,
+        "3_received_from_frontend": frontendData,
+        "4_sent_to_onesignal": onesignalPayload,
+        "5_onesignal_http_status": onesignalStatus,
+        "6_onesignal_raw_response": onesignalResponse
       }
     }, null, 2),
     {
