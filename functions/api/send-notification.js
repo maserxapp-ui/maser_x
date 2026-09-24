@@ -12,10 +12,11 @@ export async function onRequestPost(context) {
   const ONESIGNAL_APP_ID = "c05c83a1-9a4e-43ec-944a-957d051e7192";
   const apiKey = (env.ONESIGNAL_API_KEY || "").trim();
 
-  // 2️⃣ تجهيز الحمول الموجهة لـ OneSignal (استهداف كافة المشتركين)
+  // 2️⃣ تجهيز الحمول الموجهة لـ OneSignal (استهداف كافة أجهزة الـ Push المشتركة)
   const onesignalPayload = {
     app_id: ONESIGNAL_APP_ID,
-    included_segments: ["Subscribed Users"],
+    target_channel: "push",
+    included_segments: ["Subscribed Users", "Total Subscriptions"],
     contents: {
       ar: frontendData.message || frontendData.contents?.ar || "تحديث جديد من السائق",
       en: frontendData.message || frontendData.contents?.en || "New update"
