@@ -1,6 +1,7 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  // 1️⃣ قراءة البيانات القادمة من شاشة محادثة الطالب في الواجهة
   let frontendData = {};
   try {
     frontendData = await request.json();
@@ -11,21 +12,25 @@ export async function onRequestPost(context) {
   const ONESIGNAL_APP_ID = "c05c83a1-9a4e-43ec-944a-957d051e7192";
   const apiKey = (env.ONESIGNAL_API_KEY || "").trim();
 
-  // 📝 معالجة النص: إذا كان المرسل مجرد رقم (مثل 19)، يتم صياغة جملة عربية واضحة للطالب
-  const rawMsg = String(frontendData.messageText || frontendData.message || "").trim();
-  let customMessage = "السائق في الطريق إليكم الآن 🚗";
+  // 2️⃣ استخراج نص الرسالة المحددة من قائمة المحادثة السريعة
+  let customMessage = 
+    frontendData.messageText || 
+    frontendData.message || 
+    frontendData.text || 
+    frontendData.contents?.ar || 
+    "رسالة جديدة من السائق 💬";
 
-  if (rawMsg && isNaN(rawMsg)) {
-    // إذا كان هناك نص حقيقي غير أرقام يتم استخدامه
-    customMessage = rawMsg;
+  // إذا كانت القيمة القادمة مجرد رقم كود، يتم استبدالها بنص افتراضي مناسب
+  if (!isNaN(String(customMessage).trim())) {
+    customMessage = "تحديث جديد من السائق 🚗";
   }
 
-  const customTitle = frontendData.title || "مسار X - تنبيه الرحلة";
+  const customTitle = frontendData.title || "مسار X - رسالة من السائق";
 
+  // 3️⃣ تجهيز حمولة الإشعار لـ OneSignal
   const onesignalPayload = {
     app_id: ONESIGNAL_APP_ID,
     target_channel: "push",
-    included_segments: ["Subscribed Users", "Total Subscriptions"],
     contents: {
       ar: customMessage,
       en: customMessage
@@ -35,6 +40,19 @@ export async function onRequestPost(context) {
       en: customTitle
     }
   };
+
+  // 🎯 استهداف طالب محدد (إذا أرسلت الواجهة id أو رقم الموبايل الخاص بالطالب)
+  const targetStudent = frontendData.studentId || frontendData.phone || frontendData.targetUser;
+
+  if (targetStudent) {
+    // إرسال الإشعار فقط للبيانات المربوطة بتلك القيمة
+    onesignalPayload.filters = [
+      { field: "tag", key: "user_id", relation: "=", value: String(targetStudent) }
+    ];
+  } else {
+    // إذا لم يحدد طالب، يرسل لكل المشتركين
+    onesignalPayload.included_segments = ["Subscribed Users", "Total Subscriptions"];
+  }
 
   let onesignalStatus = 0;
   let onesignalResponse = {};
@@ -63,7 +81,7 @@ export async function onRequestPost(context) {
     JSON.stringify({
       DIAGNOSTIC_REPORT: {
         "1_has_api_key": Boolean(apiKey),
-        "2_sent_to_onesignal": onesignalPayload,
+        "2_sent_message": customMessage,
         "3_onesignal_raw_response": onesignalResponse
       }
     }, null, 2),
