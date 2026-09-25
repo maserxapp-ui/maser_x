@@ -269,6 +269,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
     // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
 const studentsData = (rawStudents || []).filter(student => {
+  if (student.line_type === 'internal_amarah') return false;
   const tomorrowStatus = String(student.tomorrow_status || '');
   const examNote = String(student.exam_note || '');
 
