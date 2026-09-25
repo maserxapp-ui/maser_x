@@ -415,6 +415,8 @@ const studentsData = (rawStudents || []).filter(student => {
   const [capacity, setCapacity] = useState('22');
   const [driverStatus, setDriverStatus] = useState('نشط');
   const [submittingDriver, setSubmittingDriver] = useState(false);
+  const [isOutsideCity, setIsOutsideCity] = useState(false);
+  const [districtName, setDistrictName] = useState('');
 
   // 1. جلب البيانات من Supabase
   useEffect(() => {
@@ -2234,6 +2236,36 @@ else if (confirmedAttending) {
                   </select>
                 </div>
               </div>
+
+              {/* خيار سائق خارج المدينة */}
+<div className="col-span-2 mt-3 pt-3 border-t border-slate-200">
+  <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700">
+    <input 
+      type="checkbox" 
+      checked={isOutsideCity} 
+      onChange={(e) => setIsOutsideCity(e.target.checked)}
+      className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+    />
+    هل السائق خارج المدينة؟ 📍
+  </label>
+</div>
+
+{/* حقل اسم المنطقة أو القضاء - يظهر فقط عند تفعيل الخيار */}
+{isOutsideCity && (
+  <div className="col-span-2 mt-2">
+    <label className="block text-xs font-semibold text-slate-600 mb-1">
+      اسم المنطقة أو القضاء *
+    </label>
+    <input 
+      type="text"
+      placeholder="مثال: الميمونة / المجر الكبير"
+      value={districtName}
+      onChange={(e) => setDistrictName(e.target.value)}
+      className="w-full px-3 py-2 border border-emerald-300 rounded-lg text-sm bg-emerald-50/30 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      required
+    />
+  </div>
+)}
 
               <div className="pt-3 flex items-center justify-end gap-2 border-t">
                 <button 
