@@ -166,14 +166,16 @@ export function InternalAmarahLines({ supabase }) {
   // 🎓 حفظ الطالب الجديد في خطوط العمارة
   const handleSaveStudent = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('students').insert([
+   const { error } = await supabase.from('students').insert([
       {
         name: newStudent.name,
         phone: newStudent.phone,
         password: newStudent.password,
         location: newStudent.location,
         subscription_price: Number(newStudent.subscription_price) || 0,
-        line_type: 'internal_amarah', // 👈 تمييزه بانه من خطوط العمارة
+        price: Number(newStudent.subscription_price) || 0, // 👈 يربط السعر بصفحة المشتركين مباشرة
+        monthly_price: Number(newStudent.subscription_price) || 0, // 👈 لضمان ظهور السعر في كافة التقارير
+        line_type: 'internal_amarah',
         tomorrow_status: 'لم يحدد'
       }
     ]);
