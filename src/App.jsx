@@ -919,6 +919,7 @@ const tomorrowName = daysOfWeek[tomorrowIndex];
 
 // 🟢 1. المداومون: فقط من اختار "أداوم غداً"
 const attendingStudents = (students || []).filter(student => {
+  if (student.line_type === 'internal_amarah') return false;
   const status = String(student.tomorrow_status || '');
   return status.includes('أداوم') && !status.includes('لا أداوم');
 });
