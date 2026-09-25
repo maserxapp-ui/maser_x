@@ -1515,15 +1515,15 @@ else if (confirmedAttending) {
                 🟢 الطلاب المداومون
               </h3>
               <span className="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-bold">
-                {attendingStudents.length}
+                {attendingStudents.filter(s => s.line_type !== 'internal_amarah').length}
               </span>
             </div>
 
             <div className="space-y-2 max-h-80 overflow-y-auto pl-1">
-              {attendingStudents.length === 0 ? (
+              {attendingStudents.filter(s => s.line_type !== 'internal_amarah').length === 0 ? (
                 <p className="text-xs text-emerald-500 text-center py-6 font-medium">لا يوجد طلاب يداومون</p>
               ) : (
-                attendingStudents.map(s => (
+                attendingStudents.filter(s => s.line_type !== 'internal_amarah').map(s => (
                   <div key={s.id} className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-sm text-xs flex justify-between items-center">
                     <div>
                       <div className="font-bold text-slate-800">{s.name}</div>
