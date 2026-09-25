@@ -50,6 +50,23 @@ export const sendQuickNotification = async (msgText) => {
   }
 };
 
+// دالة إرسال إشعار من الطالب إلى السائق 🔔
+export const sendStudentToDriverNotification = async (msgText, studentName, driverId) => {
+  try {
+    await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driverId: driverId, // ID السائق المستلم
+        title: `رسالة من الطالب: ${studentName || 'طالب'} 📩`,
+        messageText: String(msgText)
+      })
+    });
+  } catch (e) {
+    console.error("خطأ إرسال الإشعار للسائق:", e);
+  }
+};
+
 const STUDENT_QUICK_MESSAGES = [
   "⚠️ تأخرت، يرجى الإسراع.", "👍 تم", "✅ أنا في الطريق", "⏳ أحتاج 5 دقائق.", "🙏 انتظرني قليلًا.",
   "❌ لن أداوم اليوم.", "🚪 أنا أمام الباب.", "📍 لا أرى السيارة.", "👀 أين موقعك؟", "🙏 آسف على التأخير.",
