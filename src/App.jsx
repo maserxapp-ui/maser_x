@@ -837,7 +837,7 @@ const handleResetDriverWallet = async (driverId) => {
       capacity: parseInt(capacity, 10) || 0,
       status: driverStatus,
       is_outside_city: isOutsideCity,
-      district_name: isOutsideCity ? districtName : null
+      district_name: isOutsideCity ? districtName : null,
       trip_price: Number(driverTripPrice) || 0
     };
 
