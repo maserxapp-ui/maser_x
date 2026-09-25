@@ -753,6 +753,8 @@ const handleResetDriverWallet = async (driverId) => {
     setRoute('منطقة حي الخليج - الجامعة');
     setCapacity('22');
     setDriverStatus('نشط');
+    setIsOutsideCity(false);
+    setDistrictName('');
     setShowDriverModal(true);
   };
 
@@ -767,6 +769,8 @@ const handleResetDriverWallet = async (driverId) => {
     setRoute(driver.route || 'منطقة حي الخليج - الجامعة');
     setCapacity(driver.capacity?.toString() || '22');
     setDriverStatus(driver.status || 'نشط');
+    setIsOutsideCity(driver.is_outside_city || false);
+    setDistrictName(driver.district_name || '');
     setShowDriverModal(true);
     setDriverTripPrice(driver.trip_price || '');
   };
@@ -789,6 +793,8 @@ const handleResetDriverWallet = async (driverId) => {
       route: route,
       capacity: parseInt(capacity, 10) || 0,
       status: driverStatus,
+      is_outside_city: isOutsideCity,
+      district_name: isOutsideCity ? districtName : null
       trip_price: Number(driverTripPrice) || 0
     };
 
