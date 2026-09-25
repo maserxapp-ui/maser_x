@@ -314,14 +314,57 @@ const studentsData = (rawStudents || []).filter(student => {
     let currentDriverStudentCount = 0;
     const assignedStudentIds = new Set();
 
-    for (const student of randomizedStudents) {
-      if (currentDriverIndex >= drivers.length) {
-        console.warn('⚠️ تم استهلاك سعة جميع السائقين المتاحين!');
-        break;
+  for (const student of randomizedStudents) {
+      const studentDistrict = (student.line_name || student.district || student.address || '').trim();
+      let targetDriver = null;
+
+      // البحث عن السائق الحالي بالترتيب لضمان التقبيط
+      while (currentDriverIndex < drivers.length) {
+        const d = drivers[currentDriverIndex];
+        const dCapacity = Number(d.capacity) || 4;
+        const driverDistrict = (d.district_name || '').trim();
+
+        // 📍 فحص المطابقة حسب المنطقة
+        let isMatch = false;
+        if (d.is_outside_city) {
+          // سائق خارج المدينة -> يطابق طالب القضاء الخاص به فقط
+          isMatch = studentDistrict.includes(driverDistrict) || driverDistrict.includes(studentDistrict);
+        } else {
+          // سائق داخل المدينة -> يطابق الطلاب العاديين فقط
+          isMatch = !student.is_outside_city;
+        }
+
+        // إذا كان السائق مطابقاً والسيارة لم تقبّط بعد
+        if (isMatch && currentDriverStudentCount < dCapacity) {
+          targetDriver = d;
+          currentDriverStudentCount++;
+
+          // إذا تقبطت السيارة بهذا الطالب -> نجهز المؤشر للسائق التالي
+          if (currentDriverStudentCount >= dCapacity) {
+            currentDriverIndex++;
+            currentDriverStudentCount = 0;
+          }
+          break;
+        }
+
+        // إذا كانت سيارة السائق الحالي مقبّطة بالفعل -> ننتقل للذي بعده
+        if (currentDriverStudentCount >= dCapacity) {
+          currentDriverIndex++;
+          currentDriverStudentCount = 0;
+        } else {
+          // إذا كان السائق غير مطابق للطالب (مثل طالب خارج المدينة وسائق عادي) -> نتجاوزه مؤقتاً
+          break;
+        }
       }
 
-      const currentDriver = drivers[currentDriverIndex];
-      const capacity = Number(currentDriver.capacity) || 4; // سعة السيارة (4 افتراضياً)
+      // إذا لم نجد سائقاً متاحاً
+      if (!targetDriver) {
+        console.warn(`⚠️ لم يتم العثور على سائق مناسب ومتاح للطالب: ${student.name}`);
+        continue;
+      }
+
+      const currentDriver = targetDriver;
+      const capacity = Number(currentDriver.capacity) || 4;
 
       const driverPhoneVal = String(currentDriver.phone || currentDriver.username || currentDriver.id || '');
       const driverNameVal = String(currentDriver.name || currentDriver.phone || '');
