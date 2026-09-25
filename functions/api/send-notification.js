@@ -1,7 +1,7 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // 1️⃣ قراءة البيانات القادمة من الواجهة أو نافذة محادثة الطالب
+  // 1️⃣ قراءة البيانات القادمة من الواجهة
   let frontendData = {};
   try {
     frontendData = await request.json();
@@ -12,22 +12,23 @@ export async function onRequestPost(context) {
   const ONESIGNAL_APP_ID = "c05c83a1-9a4e-43ec-944a-957d051e7192";
   const apiKey = (env.ONESIGNAL_API_KEY || "").trim();
 
-  // 2️⃣ استخراج النص المرسل من شاشة المحادثة أو زر الرحلة
+  // 2️⃣ استخراج العنوان (إذا لم يرسل العنوان يضع عنوان عام)
+  const customTitle = frontendData.title || "مسار X - إشعار جديد 💬";
+
+  // 3️⃣ استخراج النص المرسل
   let customMessage = 
     frontendData.messageText || 
     frontendData.message || 
     frontendData.text || 
     frontendData.contents?.ar || 
-    "رسالة جديدة من السائق 💬";
+    "رسالة جديدة 💬";
 
-  // إذا كان النص القادم مجرد أرقام، نضع بدلاً منه نصاً واضحاً
-  if (!isNaN(String(customMessage).trim())) {
+  // إذا كان النص قادماً من السائق ومجرد رقم، نضع نصاً واضحاً
+  if (!isNaN(String(customMessage).trim()) && customTitle.includes("السائق")) {
     customMessage = "السائق في الطريق إليكم الآن 🚗";
   }
 
-  const customTitle = frontendData.title || "مسار X - رسالة من السائق";
-
-  // 🎯 إرسال مباشر لكل المشتركين بدون التعثر في الفلترة
+  // 🎯 إرسال الإشعار
   const onesignalPayload = {
     app_id: ONESIGNAL_APP_ID,
     target_channel: "push",
