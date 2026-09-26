@@ -439,27 +439,29 @@ React.useEffect(() => {
    // 🔔 إرسال إشعار فوري لموبايل الطالب إذا كان المراسِل هو السائق
    // إرسال إشعار فوري حسب نوع الراسل 🔔
         if (currentUserRole === 'driver') {
-          // إذا كان الراسل هو السائق -> يرسل إشعار للطالب
-          fetch('/api/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: "رسالة من السائق - مسار X",
-              messageText: textToSend
-            })
-          }).catch(err => console.error("Notification Error:", err));
-        } else {
-          // إذا كان الراسل هو الطالب -> يرسل إشعار للسائق
-          fetch('/api/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              driverId: driverId,
-              title: "رسالة جديدة من الطالب 📩",
-              messageText: textToSend
-            })
-          }).catch(err => console.error("Notification Error:", err));
-        }
+  // إذا كان الراسل هو السائق -> يرسل إشعار للطالب المحدد
+  fetch('/api/send-notification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      targetUserId: studentId, // 👈 إضافة معرّف الطالب هنا
+      title: "مسار X - رسالة من السائق",
+      messageText: textToSend
+    })
+  }).catch(err => console.error("Notification Error:", err));
+} else {
+  // إذا كان الراسل هو الطالب -> يرسل إشعار للسائق
+  fetch('/api/send-notification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      driverId: driverId,
+      targetUserId: driverId, // 👈 إضافة معرّف السائق هنا
+      title: "💬 رسالة جديدة من الطالب",
+      messageText: textToSend
+    })
+  }).catch(err => console.error("Notification Error:", err));
+}
 
     if (error) {
       console.error("Error sending message:", error);
@@ -2633,7 +2635,8 @@ if (!students || students.length === 0) {
           // 2. إرسال الإشعار المباشر للطالبة
           console.log("🚀 جاري إرسال الإشعار...");
           try {
-            await sendPushNotificationToStudent("السائق في طريقه إليكم الآن 🚗", student.id);
+           const targetStudentIds = (students || []).map(s => s.id);
+           await sendPushNotificationToStudent("السائق في طريقه إليكم الآن 🚗", targetStudentIds);
           } catch (err) {
             alert("خطأ في دالة الإشعار: " + err.message);
           }
