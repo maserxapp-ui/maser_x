@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
 // 🔔 دالة إرسال الإشعار المباشر عبر سيرفر Cloudflare الداخلي
-const sendPushNotificationToStudent = async (targetIds, messageText) => {
+const sendPushNotificationToStudent = async (messageText, studentId) => {
   try {
     console.log("🚀 Cloudflare جاري طلب الإرسال من سيرفر...");
     const response = await fetch("/api/send-notification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        targetUserId: targetIds, // 👈 يستقبل رقم طالب واحد أو مصفوفة أرقام طلاب السائق
-        messageText: messageText || "السائق في طريقه إليكم الآن 🚗"
+        messageText: messageText || "السائق في طريقه إليكم الآن 🚗",
+        targetUserId: studentId // 👈 يستلم رقم الطالب الصحيح
       })
     });
 
