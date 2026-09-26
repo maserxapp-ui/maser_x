@@ -28,7 +28,7 @@ export async function onRequestPost(context) {
     customMessage = "السائق في الطريق إليكم الآن 🚗";
   }
 
-  // 4️⃣ استخراج المعرف الخاص بالطالب المستهدف (إن وجد)
+  // 4️⃣ استخراج المعرف الخاص بالطالب المستهدف
   const targetUserId = frontendData.targetUserId || frontendData.studentId || frontendData.external_id;
 
   // 🎯 إعداد هيكل الإشعار لـ OneSignal
@@ -45,15 +45,23 @@ export async function onRequestPost(context) {
     }
   };
 
-  // 📍 التمييز بين الإشعار الخصوصي (لطالب) والإشعار العام (للجميع):
+  // 📍 التوجيه الخصوصي وحماية النظام من الإرسال للجميع بالخطأ:
   if (targetUserId) {
     // إرسال للطالب المحدد فقط عبر external_user_ids
     onesignalPayload.include_external_user_ids = Array.isArray(targetUserId)
       ? targetUserId.map(String)
       : [String(targetUserId)];
+  } else if (frontendData.isBroadcast === true) {
+    // لن يُرسل لجميع المشتركين إلا إذا تم طلب ذلك صراحة عبر isBroadcast: true
+    onesignalPayload.included_segments = ["Subscribed Users"];
   } else {
-    // إرسال عام لجميع المشتركين (في حال عدم تحديد طالب)
-    onesignalPayload.included_segments = ["Subscribed Users", "Total Subscriptions"];
+    // 🛑 حماية: إذا لم يتم تحديد طالب، نوقف الطلب بدلاً من الإرسال للجميع
+    return new Response(
+      JSON.stringify({ 
+        error: "لم يتم تحديد معرّف الطالب (targetUserId)، تم إيقاف الإشعار لمنع إرساله للجميع بالخطأ." 
+      }),
+      { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
+    );
   }
 
   let onesignalStatus = 0;
@@ -84,7 +92,7 @@ export async function onRequestPost(context) {
       DIAGNOSTIC_REPORT: {
         "1_has_api_key": Boolean(apiKey),
         "2_sent_message": customMessage,
-        "3_target_user": targetUserId || "عام (جميع الطلاب)",
+        "3_target_user": targetUserId,
         "4_onesignal_raw_response": onesignalResponse
       }
     }, null, 2),
