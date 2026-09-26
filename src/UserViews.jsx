@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { EmployeeLoginModal, EmployeeView, AdminEmployeeManagement, DriverEmployeeTab } from './EmployeeViews';
 // 🔔 دالة إرسال الإشعار المباشر عبر سيرفر Cloudflare الداخلي
-const sendPushNotificationToStudent = async (messageText) => {
+const sendPushNotificationToStudent = async (messageText, studentId) => {
   try {
-    console.log("🚀 جاري طلب الإرسال من سيرفر Cloudflare الداخلي...");
+    console.log("🚀 Cloudflare جاري طلب الإرسال من سيرفر...");
     const response = await fetch("/api/send-notification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        messageText: messageText || "🚗 السائق في طريقه إليكم الآن" 
+      body: JSON.stringify({
+        messageText: messageText || "السائق في طريقه إليكم الآن 🚗",
+        targetUserId: studentId // 👈 أضيفي هذا السطر لتحديد الطالب المستهدف
       })
     });
 
@@ -2632,7 +2633,7 @@ if (!students || students.length === 0) {
           // 2. إرسال الإشعار المباشر للطالبة
           console.log("🚀 جاري إرسال الإشعار...");
           try {
-            await sendPushNotificationToStudent("19", "🚗 السائق في طريقه إليكم الآن");
+            await sendPushNotificationToStudent("السائق في طريقه إليكم الآن 🚗", student.id);
           } catch (err) {
             alert("خطأ في دالة الإشعار: " + err.message);
           }
