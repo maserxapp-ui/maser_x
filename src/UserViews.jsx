@@ -2538,12 +2538,19 @@ if (!students || students.length === 0) {
 
       if (error) throw error;
 
-      // تحديث الواجهة والمحفظة مباشرة
+      // تحديث الواجهة والمحفظة والتخزين المحلي مباشرة لمنع عودته لـ 1 عند الريفريش
       setDriverTripStatus('completed');
-      setUser(prev => ({ 
-        ...prev, 
+      
+      const updatedUser = { 
+        ...user, 
         completed_trips: newCompletedCount 
-      }));
+      };
+
+      // 1️⃣ تحديث حالة React
+      setUser(updatedUser);
+
+      // 2️⃣ تحديث التخزين المحلي للمتصفح (حتى لا ترجع القيمة 1 عند عمل الريفريش)
+      localStorage.setItem('user', JSON.stringify(updatedUser));
 
       alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
     } catch (err) {
