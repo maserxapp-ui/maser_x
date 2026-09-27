@@ -1379,6 +1379,41 @@ const fetchStudentsForDriver = async (driver) => {
       alert("❌ حدث خطأ أثناء تصفير الرحلة: " + err.message);
     }
   };
+  // ⬇️ ألصقي دالة التصفير الجديدة هنا بالضبط ⬇️
+    const handleCancelTomorrowStatus = async () => {
+      try {
+        const studentId = studentData?.id || student?.id || user?.id;
+        if (!studentId) {
+          alert("❌ تعذر تحديد حساب الطالبة!");
+          return;
+        }
+
+        const { error } = await supabase
+          .from('students')
+          .update({ 
+            tomorrow_status: null,
+            attending_tomorrow: false 
+          })
+          .eq('id', studentId);
+
+        if (error) {
+          alert("❌ حدث خطأ أثناء تصفير الحالة: " + error.message);
+          return;
+        }
+
+        if (typeof setTomorrowStatus === 'function') {
+          setTomorrowStatus(null);
+        }
+        
+        if (typeof fetchStudentData === 'function') {
+          await fetchStudentData();
+        }
+
+        alert("تم الانسحاب وإلغاء تحديد حالة الدوام لغدٍ بنجاح! 🔄");
+      } catch (err) {
+        alert("حدث خطأ في الاتصال بالشبكة!");
+      }
+    };
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
   if (!user) return;
@@ -1870,6 +1905,28 @@ if (user && user.role === 'driver') {
 >
   📍 تحديد / تحديث موقعي على الخريطة
 </button>
+
+              {/* 🟢 ألصقي كود الزر الجديد هنا بالضبط 👇 */}
+        <button
+          onClick={handleCancelTomorrowStatus}
+          style={{
+            width: '100%',
+            marginTop: '8px',
+            padding: '10px',
+            borderRadius: '10px',
+            border: '1px solid #cbd5e1',
+            backgroundColor: '#f8fafc',
+            color: '#64748b',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}>
+          🔄 الانسحاب من الدوام غداً (تصفير التحديد)
+        </button>
 
               {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
               {!isWorkDay && (
