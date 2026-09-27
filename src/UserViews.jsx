@@ -1392,7 +1392,6 @@ const fetchStudentsForDriver = async (driver) => {
           .from('students')
           .update({ 
             tomorrow_status: null,
-            attending_tomorrow: false 
           })
           .eq('id', studentId);
 
