@@ -2524,8 +2524,9 @@ if (!students || students.length === 0) {
   alert("عذراً، لا يوجد طلاب مخصصون لك حالياً لإتمام الرحلة!");
   return;
 }
-      // 5️⃣ حساب عدد الرحلات الجديد وتحديث حالة السائق
-      const newCompletedCount = (user.completed_trips || 0) + 1;
+     // 5️⃣ حساب عدد الرحلات الجديد بتعديل الرقم لمنع مشكلة (11 و 12)
+      const currentTrips = Number(user.completed_trips || 0);
+      const newCompletedCount = currentTrips + 1;
 
       const { error } = await supabase
         .from('drivers')
@@ -2539,7 +2540,10 @@ if (!students || students.length === 0) {
 
       // تحديث الواجهة والمحفظة مباشرة
       setDriverTripStatus('completed');
-      setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+      setUser(prev => ({ 
+        ...prev, 
+        completed_trips: newCompletedCount 
+      }));
 
       alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
     } catch (err) {
