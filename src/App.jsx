@@ -267,26 +267,28 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     // 1️⃣ جلب بيانات السائقين والطلاب من Supabase
     const { data: drivers, error: dErr } = await supabase.from('drivers').select('*').eq('is_accepting_trips', true);
     const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
+    
     // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
-const studentsData = (rawStudents || []).filter(student => {
-  if (student.line_type === 'internal_amarah') return false;
-  const tomorrowStatus = String(student.tomorrow_status || '');
-  const examNote = String(student.exam_note || '');
+    const studentsData = (rawStudents || []).filter(student => {
+      if (student.line_type === 'internal_amarah') return false;
+      const tomorrowStatus = String(student.tomorrow_status || '');
+      const examNote = String(student.exam_note || '');
 
-  // 1. فحص الاستثناء: إذا احتوى حقل exam_note على كلمة "امتحان" أو "لدي امتحان غداً"
-  const hasExamException = examNote.includes('امتحان') || examNote.includes('لدي امتحان غداً');
+      // 1. فحص الاستثناء: إذا احتوى حقل exam_note على كلمة "امتحان" أو "لدي امتحان غداً"
+      const hasExamException = examNote.includes('امتحان') || examNote.includes('لدي امتحان غداً');
 
-  // 2. فحص الدوام الاعتيادي (زر "أداوم غداً")
-  const isAttending = tomorrowStatus.includes('أداوم') || student.is_attending === true;
+      // 2. فحص الدوام الاعتيادي (زر "أداوم غداً")
+      const isAttending = tomorrowStatus.includes('أداوم') || student.is_attending === true;
 
-  // 3. استبعاد الطالب إذا اختار "لا أداوم غداً" بشرط عدم وجود امتحان عنده
-  if (tomorrowStatus.includes('لا أداوم') && !hasExamException) {
-    return false;
-  }
+      // 3. استبعاد الطالب إذا اختار "لا أداوم غداً" بشرط عدم وجود امتحان عنده
+      if (tomorrowStatus.includes('لا أداوم') && !hasExamException) {
+        return false;
+      }
 
-  // ضمه إلى التوزيع فوراً إذا كان مداوماً أو لديه امتحان
-  return isAttending || hasExamException;
-});
+      // ضمه إلى التوزيع فوراً إذا كان مداوماً أو لديه امتحان
+      return isAttending || hasExamException;
+    });
+
     if (dErr || sErr || !drivers || drivers.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد سائقون متاحون أو حدث خطأ في جلب البيانات!');
       return;
@@ -314,14 +316,14 @@ const studentsData = (rawStudents || []).filter(student => {
     let currentDriverStudentCount = 0;
     const assignedStudentIds = new Set();
 
-  for (const student of randomizedStudents) {
+    for (const student of randomizedStudents) {
       const studentDistrict = (student.line_name || student.district || student.address || '').trim();
       let targetDriver = null;
 
-      // البحث عن السائق الحالي بالترتيب لضمان التقبيط
-      while (currentDriverIndex < drivers.length) {
-        const d = drivers[currentDriverIndex];
-        const dCapacity = Number(d.capacity) || 4;
+      // البحث عن السائق الحالي المناسب بالترتيب لضمان التقبيط
+      let checkIdx = currentDriverIndex;
+      while (checkIdx < drivers.length) {
+        const d = drivers[checkIdx];
         const driverDistrict = (d.district_name || '').trim();
 
         // 📍 فحص المطابقة حسب المنطقة
@@ -334,27 +336,11 @@ const studentsData = (rawStudents || []).filter(student => {
           isMatch = !student.is_outside_city;
         }
 
-        // إذا كان السائق مطابقاً والسيارة لم تقبّط بعد
-        if (isMatch && currentDriverStudentCount < dCapacity) {
+        if (isMatch) {
           targetDriver = d;
-          currentDriverStudentCount++;
-
-          // إذا تقبطت السيارة بهذا الطالب -> نجهز المؤشر للسائق التالي
-          if (currentDriverStudentCount >= dCapacity) {
-            currentDriverIndex++;
-            currentDriverStudentCount = 0;
-          }
           break;
         }
-
-        // إذا كانت سيارة السائق الحالي مقبّطة بالفعل -> ننتقل للذي بعده
-        if (currentDriverStudentCount >= dCapacity) {
-          currentDriverIndex++;
-          currentDriverStudentCount = 0;
-        } else {
-          // إذا كان السائق غير مطابق للطالب (مثل طالب خارج المدينة وسائق عادي) -> نتجاوزه مؤقتاً
-          break;
-        }
+        checkIdx++;
       }
 
       // إذا لم نجد سائقاً متاحاً
@@ -380,12 +366,15 @@ const studentsData = (rawStudents || []).filter(student => {
         .eq('id', student.id);
 
       assignedStudentIds.add(student.id);
-      currentDriverStudentCount++;
 
-      // 🔴 عند تقبيط السيارة الانتقال للسائق التالي
-      if (currentDriverStudentCount >= capacity) {
-        currentDriverIndex++;
-        currentDriverStudentCount = 0;
+      // 🔴 زيادة عداد المقاعد وتحديث مؤشر السائق عند تقبيط السيارة بالكامل
+      if (currentDriver.id === drivers[currentDriverIndex]?.id) {
+        currentDriverStudentCount++;
+
+        if (currentDriverStudentCount >= capacity) {
+          currentDriverIndex++;
+          currentDriverStudentCount = 0;
+        }
       }
     }
 
