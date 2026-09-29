@@ -2794,7 +2794,7 @@ if (!students || students.length === 0) {
 
   {loading ? (
     <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
-  ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').length === 0 ? (
+  ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور' || String(s.exam_note || '').includes('امتحان')).length === 0 ? (
     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
       <p className="text-2xl">📭</p>
       <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
@@ -2806,7 +2806,7 @@ if (!students || students.length === 0) {
     </div>
   ) : (
     <div className="space-y-2">
-      {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور').map((student, index) => {
+      {students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور' || String(s.exam_note || '').includes('امتحان')).map((student, index) => {
         const isAbsent = absentStudentsList.includes(student);
         return (
           <div 
