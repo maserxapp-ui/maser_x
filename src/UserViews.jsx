@@ -551,8 +551,7 @@ React.useEffect(() => {
 }
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
-  // ⚙️ تعريف متغير نسبة الاستقطاع وجلب قيمته من قاعدة البيانات
-  const [employeePercentage, setEmployeePercentage] = useState('15');
+ const [employeePercentage, setEmployeePercentage] = useState('15');
 
   useEffect(() => {
     const fetchPercentage = async () => {
@@ -562,13 +561,14 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
           .select('value')
           .eq('key', 'employee_percentage')
           .maybeSingle();
-        if (data?.value) setEmployeePercentage(data.value);
-      } catch (err) {
-        console.error('خطأ في جلب النسبة:', err);
-      }
+        if (data?.value) {
+          setEmployeePercentage(data.value);
+          window.employeePercentage = data.value;
+        }
+      } catch (e) {}
     };
     fetchPercentage();
-  }, []);
+  }, [supabase]);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(() => {
@@ -3383,7 +3383,7 @@ if (!students || students.length === 0) {
       fontWeight: 'bold'
     }}>
       <span style={{ fontSize: '18px' }}>💡</span>
-      <span><b>ملاحظة للسائق:</b> نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي <b>{employeePercentage}%</b>.</span>
+      <span><b>ملاحظة للسائق:</b> نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي <b>{window.employeePercentage || employeePercentage || '15'}%</b>.</span>
     </div>
 
     {/* بطاقة عرض المعلمات والرحلات */}
