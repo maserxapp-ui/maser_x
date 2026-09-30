@@ -745,7 +745,32 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             .select('*')
             .eq('id', studentId)
             .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
+// 💳 جلب وتحديث بيانات المحفظة والرحلات المباشرة للسائق
+        const driverId = localUser?.driver_id || localUser?.id || user?.id;
+        if (driverId) {
+          const { data: updatedDriver } = await supabase
+            .from('drivers')
+            .select('completed_trips, trip_price, points, trip_status')
+            .eq('id', driverId)
+            .maybeSingle();
 
+          if (updatedDriver) {
+            // 1️⃣ تحديث حالة الواجهة لتظهر القيم فوراً
+            if (typeof setDriverData === 'function') {
+              setDriverData(prev => ({ ...prev, ...updatedDriver }));
+            }
+
+            // 2️⃣ تحديث الـ localStorage لتبقى القيم ثابتة عند الـ Refresh
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            localStorage.setItem('user', JSON.stringify({
+              ...currentUser,
+              completed_trips: updatedDriver.completed_trips,
+              trip_price: updatedDriver.trip_price,
+              points: updatedDriver.points,
+              trip_status: updatedDriver.trip_status
+            }));
+          }
+        }
           if (updatedStudent) {
             let driverInfo = null;
             let returnDriverInfo = null;
