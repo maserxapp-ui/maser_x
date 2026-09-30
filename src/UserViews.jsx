@@ -3081,7 +3081,7 @@ if (!students || students.length === 0) {
                   ? 'bg-emerald-600 text-white cursor-not-allowed opacity-90' 
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer'
               }`}>
-              {std.is_boarded_return ? '🙋‍♀️ صعدت معك' : '🙋‍♀️ صعود الطالبة'}
+              {std.is_boarded_return ? '🙋‍♀️ صعدت معي' : '🙋‍♀️ صعود الطالبة'}
             </button>
 
             {/* 🏁 زر إيصال الطالبة (ضغط لمرة واحدة فقط) */}
