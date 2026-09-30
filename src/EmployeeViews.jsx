@@ -873,6 +873,23 @@ const resetForm = () => {
     <div className="p-4 space-y-4 dir-rtl text-right font-sans">
       <div className="flex justify-between items-center bg-[#162238] border border-[#233554] p-4 rounded-xl shadow-md text-white">
         <h2 className="font-extrabold text-[#f97316] text-lg">👩‍🏫 إدارة الموظفات والمعلمات</h2>
+        {/* ⚙️ مربع التحكم بنسبة استقطاع الموظفات */}
+<div className="flex items-center gap-2 bg-slate-800 text-white px-3 py-1.5 rounded-xl border border-slate-700">
+  <span className="text-xs font-bold">نسبة استقطاع السائق:</span>
+  <input
+    type="number"
+    value={employeePercentage}
+    onChange={(e) => setEmployeePercentage(e.target.value)}
+    className="w-14 p-1 text-center bg-slate-900 text-amber-400 font-bold rounded-lg border border-slate-600 text-sm focus:outline-none"
+  />
+  <span className="text-xs font-bold text-amber-400">%</span>
+  <button
+    onClick={saveEmployeePercentage}
+    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded-lg font-bold transition-all"
+  >
+    حفظ
+  </button>
+</div>
         <button
           onClick={() => { resetForm(); setShowModal(true); }}
           className="bg-[#f97316] hover:bg-[#ea580c] text-white text-xs px-4 py-2.5 rounded-xl font-bold shadow-md transition-all cursor-pointer"
