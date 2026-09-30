@@ -551,6 +551,24 @@ React.useEffect(() => {
 }
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
+  // ⚙️ تعريف متغير نسبة الاستقطاع وجلب قيمته من قاعدة البيانات
+  const [employeePercentage, setEmployeePercentage] = useState('15');
+
+  useEffect(() => {
+    const fetchPercentage = async () => {
+      try {
+        const { data } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'employee_percentage')
+          .maybeSingle();
+        if (data?.value) setEmployeePercentage(data.value);
+      } catch (err) {
+        console.error('خطأ في جلب النسبة:', err);
+      }
+    };
+    fetchPercentage();
+  }, []);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(() => {
