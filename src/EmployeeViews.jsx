@@ -868,7 +868,32 @@ const resetForm = () => {
     has_exception: false,
   });
 };
-  
+  // ⚙️ حالة ودوال نسبة استقطاع الموظفات
+  const [employeePercentage, setEmployeePercentage] = useState('15');
+
+  useEffect(() => {
+    const fetchPercentage = async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'employee_percentage')
+        .maybeSingle();
+      if (data?.value) setEmployeePercentage(data.value);
+    };
+    fetchPercentage();
+  }, []);
+
+  const saveEmployeePercentage = async () => {
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'employee_percentage', value: employeePercentage });
+      if (error) throw error;
+      alert('🎉 تم تحديث نسبة استقطاع الموظفات بنجاح!');
+    } catch (err) {
+      alert('حدث خطأ أثناء الحفظ: ' + err.message);
+    }
+  };
   return (
     <div className="p-4 space-y-4 dir-rtl text-right font-sans">
       <div className="flex justify-between items-center bg-[#162238] border border-[#233554] p-4 rounded-xl shadow-md text-white">
