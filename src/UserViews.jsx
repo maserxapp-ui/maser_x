@@ -2662,7 +2662,7 @@ if (!students || students.length === 0) {
         const updatedUser = {
           ...user,
           completed_trips: newCompletedCount,
-          trip_price: (user?.trip_price || 0) + (tripPrice || 0), // 👈 إضافة المبلغ الجديد للمحفظة
+          trip_price: (user?.trip_price || 0) + (trip_Price || 0), // 👈 إضافة المبلغ الجديد للمحفظة
           trip_status: 'completed'
         };
 
