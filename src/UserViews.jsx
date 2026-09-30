@@ -1379,40 +1379,60 @@ const fetchStudentsForDriver = async (driver) => {
       alert("❌ حدث خطأ أثناء تصفير الرحلة: " + err.message);
     }
   };
-  // ⬇️ ألصقي دالة التصفير الجديدة هنا بالضبط ⬇️
-    const handleCancelTomorrowStatus = async () => {
-      try {
-        const studentId = studentData?.id || student?.id || user?.id;
-        if (!studentId) {
-          alert("❌ تعذر تحديد حساب الطالبة!");
-          return;
-        }
+ // ⬇️ دالة التصفير الشاملة لإلغاء انسحاب الطالبة وتفريغ بيانات السائق بالكامل ⬇️
+const handleCancelTomorrowStatus = async () => {
+  try {
+    const studentId = studentData?.id || student?.id || user?.id;
+    if (!studentId) {
+      alert("❌ تعذر تحديد حساب الطالبة!");
+      return;
+    }
 
-        const { error } = await supabase
-          .from('students')
-          .update({ 
-            tomorrow_status: null,
-          })
-          .eq('id', studentId);
-
-        if (error) {
-          alert("❌ حدث خطأ أثناء تصفير الحالة: " + error.message);
-          return;
-        }
-
-        if (typeof setTomorrowStatus === 'function') {
-          setTomorrowStatus(null);
-        }
+    // 1️⃣ تصفير كافة الحقول الخاصة بالسائق والدوام والاستثناء والركوب في Supabase
+    const { error } = await supabase
+      .from('students')
+      .update({ 
+        tomorrow_status: null,     // تصفير حالة الدوام
+        driver_id: null,           // إلغاء رقم السائق
+        driver_name: null,         // إلغاء اسم السائق
+        driver_phone: null,        // إلغاء هاتف السائق
+        assigned_driver: null,     // إلغاء السائق المخصص
+        exam_note: null,           // تصفير ملاحظة الامتحان/الاستثناء
         
-        if (typeof fetchStudentData === 'function') {
-          await fetchStudentData();
-        }
+        // تصفير حالات الصعود والرحلة (من الصورة الأولى)
+        is_boarded: false,
+        finish_status: null,
+        return_driver_id: null,
+        return_approved: false,
+        is_boarded_return: false,
+        is_dropped_return: false
+      })
+      .eq('id', studentId);
 
-        alert("تم الانسحاب وإلغاء تحديد حالة الدوام لغدٍ بنجاح! 🔄");
-      } catch (err) {
-        alert("حدث خطأ في الاتصال بالشبكة!");
-      }
-    };
+    if (error) {
+      alert("❌ حدث خطأ أثناء تصفير الحالة: " + error.message);
+      return;
+    }
+
+    // 2️⃣ تحديث الحالات المحلية في الواجهة
+    if (typeof setTomorrowStatus === 'function') {
+      setTomorrowStatus(null);
+    }
+    
+    if (typeof fetchStudentData === 'function') {
+      await fetchStudentData();
+    }
+
+    if (typeof fetchStudents === 'function') {
+      await fetchStudents();
+    }
+
+    alert("تم الانسحاب وإلغاء تحديد حالة الدوام وتفريغ بيانات السائق بنجاح! 🔄");
+  } catch (err) {
+    console.error("خطأ التصفير:", err);
+    alert("حدث خطأ في الاتصال بالشبكة!");
+  }
+};
   // 🔔 إرسال الإشعار للإدارة والسائق
 const handleStudentAction = async (actionType, labelText) => {
   if (!user) return;
