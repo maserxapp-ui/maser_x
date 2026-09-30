@@ -2642,18 +2642,26 @@ if (!students || students.length === 0) {
   return;
 }
      // 5️⃣ حساب عدد الرحلات الجديد بتعديل الرقم لمنع مشكلة (11 و 12)
-      const currentTrips = Number(user.completed_trips || 0);
-      const newCompletedCount = currentTrips + 1;
+     const currentTrips = Number(user.completed_trips || 0);
+        const newCompletedCount = currentTrips + 1;
 
-      const { error } = await supabase
-        .from('drivers')
-        .update({ 
-          trip_status: 'completed',
-          completed_trips: newCompletedCount 
-        })
-        .eq('id', user.id);
+        // 💰 حساب المبلغ الجديد الإجمالي للمحفظة
+        const currentPrice = Number(user?.trip_price || 0);
+        // ضعي هنا السعر المضاف للرحلة (مثلاً إذا كانت أجرة الرحلة 10000 أو متغير السعر لديك)
+        const addedAmount = typeof tripPrice !== 'undefined' ? Number(tripPrice) : 10000; 
+        const newTotalPrice = currentPrice + addedAmount;
 
-      if (error) throw error;
+        // 🟢 تحديث Supabase (إضافة trip_price لقاعدة البيانات)
+        const { error } = await supabase
+          .from('drivers')
+          .update({
+            trip_status: 'completed',
+            completed_trips: newCompletedCount,
+            trip_price: newTotalPrice // 👈 نعم، ينضاف هنا حتى يحفظ في Supabase!
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
 
       // تحديث الواجهة والمحفظة والتخزين المحلي مباشرة لمنع عودته لـ 1 عند الريفريش
       setDriverTripStatus('completed');
