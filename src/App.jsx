@@ -752,6 +752,30 @@ setGroupName(student.group_name || '');
       }
     }
   }
+  // 🔄 دالة تصفير رحلة الذهاب لطلاب السائق
+  const handleResetGoTrip = async (driver) => {
+    if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة الذهاب للسائق (${driver.name})؟`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ 
+          driver_id: null,
+          driver_name: '' 
+        })
+        .eq('driver_id', driver.id);
+
+      if (error) throw error;
+
+      alert(`🎉 تم تصفير طلاب رحلة الذهاب للسائق ${driver.name} بنجاح!`);
+      
+      if (typeof fetchDrivers === 'function') fetchDrivers();
+      if (typeof fetchStudents === 'function') fetchStudents();
+
+    } catch (err) {
+      alert('حدث خطأ أثناء تصفير رحلة الذهاب: ' + err.message);
+    }
+  };
 const handleResetDriverWallet = async (driverId) => {
   if (!window.confirm("هل أنتِ متأكدة من تصفير ومحاسبة هذا السائق؟")) return;
 
@@ -1878,6 +1902,13 @@ else if (confirmedAttending) {
 >
   💳 محاسبة وتصفير
 </button>
+                              <button
+                    onClick={() => handleResetGoTrip(driver)}
+                    className="text-amber-600 hover:text-amber-800 bg-amber-50 p-1.5 rounded-md font-bold text-xs"
+                    title="تصفير طلاب رحلة الذهاب"
+                  >
+                    🌅 تصفير الذهاب
+                  </button>
                               <button 
                                 onClick={() => handleDeleteDriver(driver.id, driver.name)}
                                 className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
