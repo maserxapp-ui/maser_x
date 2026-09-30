@@ -3365,7 +3365,7 @@ if (!students || students.length === 0) {
       fontWeight: 'bold'
     }}>
       <span style={{ fontSize: '18px' }}>💡</span>
-      <span>ملاحظة للسائق: نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي <b>15%</b>.</span>
+      <span><b>ملاحظة للسائق:</b> نسبة الاستقطاع من مبلغ اشتراك المعلمة / الموظفة هي <b>{employeePercentage}%</b>.</span>
     </div>
 
     {/* بطاقة عرض المعلمات والرحلات */}
