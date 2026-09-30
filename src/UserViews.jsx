@@ -731,21 +731,76 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   // 🌟 عداد إجبار الشاشة وبطاقات السائق على التحديث المباشر
   const [, setForceUpdate] = React.useState(0);
 
- // 1️⃣ التحديث التلقائي اللحظي المستمر الشامل (Auto Polling كل 3 ثوانٍ)
+ // 1️⃣ التحديث التلقائي اللحظي المستمر الشامل (Auto Polling كل 3 ثوانٍ - تحديث صامت)
   React.useEffect(() => {
     const autoFetch = async () => {
       try {
         const localUser = JSON.parse(localStorage.getItem('studentData') || localStorage.getItem('user') || '{}');
         const studentId = localUser?.id || studentData?.id || user?.id;
 
+        // 1️⃣ جلب بيانات الطالب وتحديث واجهته صامتاً
         if (studentId) {
-          // 1. جلب بيانات الطالب الحديثة بدون إطلاق خطأ 406
           const { data: updatedStudent } = await supabase
             .from('students')
             .select('*')
             .eq('id', studentId)
-            .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
-// 💳 جلب وتحديث بيانات المحفظة والرحلات المباشرة للسائق
+            .maybeSingle();
+
+          if (updatedStudent) {
+            let driverInfo = null;
+            let returnDriverInfo = null;
+
+            // جلب بيانات سائق الذهاب
+            if (updatedStudent.driver_id) {
+              const { data: d } = await supabase
+                .from('drivers')
+                .select('*')
+                .eq('id', updatedStudent.driver_id)
+                .maybeSingle();
+              driverInfo = d;
+            }
+
+            // جلب بيانات سائق العودة
+            if (updatedStudent.return_driver_id) {
+              const { data: rd } = await supabase
+                .from('drivers')
+                .select('*')
+                .eq('id', updatedStudent.return_driver_id)
+                .maybeSingle();
+              returnDriverInfo = rd;
+            }
+
+            // دمج كافة البيانات
+            const completeUserData = {
+              ...updatedStudent,
+              driver: driverInfo ? { ...driverInfo, phone: '' } : null,
+              return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
+              driver_name: driverInfo?.name || updatedStudent.driver_name || '',
+              driver_phone: '',
+              car_type: driverInfo?.car_type || updatedStudent.car_type || '',
+              car_number: driverInfo?.car_number || updatedStudent.car_number || '',
+              car_color: driverInfo?.car_color || updatedStudent.car_color || '',
+              car_model: driverInfo?.car_type || updatedStudent.car_type || updatedStudent.car_model || '',
+              status: updatedStudent.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
+              driver_status: driverInfo?.status || updatedStudent.driver_status || '',
+              trip_status: updatedStudent.trip_status || driverInfo?.trip_status || updatedStudent.status || '',
+            };
+
+            // 🛑 الشرط المنقذ: نتحقق أولاً هل تغيرت البيانات فعلياً عن الموجودة بالذاكرة؟
+            const hasDataChanged = JSON.stringify(studentData) !== JSON.stringify(completeUserData);
+
+            if (hasDataChanged) {
+              setStudentData(completeUserData);
+              if (driverInfo) {
+                setAssignedDriver(driverInfo);
+              }
+              localStorage.setItem('user', JSON.stringify(completeUserData));
+              localStorage.setItem('studentData', JSON.stringify(completeUserData));
+            }
+          }
+        }
+
+        // 2️⃣ جلب وتحديث بيانات السائق والمحفظة صامتاً
         const driverId = localUser?.driver_id || localUser?.id || user?.id;
         if (driverId) {
           const { data: updatedDriver } = await supabase
@@ -755,99 +810,37 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             .maybeSingle();
 
           if (updatedDriver) {
-            // 1️⃣ تحديث حالة السائق المحلية
-            if (typeof setDriverData === 'function') {
-              setDriverData(prev => ({ ...prev, ...updatedDriver }));
+            const isPriceChanged = Number(user?.trip_price) !== Number(updatedDriver.trip_price);
+            const isTripsChanged = Number(user?.completed_trips) !== Number(updatedDriver.completed_trips);
+
+            // نحدث فقط إذا تغير السعر أو عدد الرحلات
+            if (isPriceChanged || isTripsChanged) {
+              if (typeof setDriverData === 'function') {
+                setDriverData(prev => ({ ...prev, ...updatedDriver }));
+              }
+              if (typeof setUser === 'function') {
+                setUser(prev => ({ ...prev, ...updatedDriver }));
+              }
+
+              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+              const updatedUserData = {
+                ...currentUser,
+                completed_trips: updatedDriver.completed_trips,
+                trip_price: updatedDriver.trip_price,
+                points: updatedDriver.points,
+                trip_status: updatedDriver.trip_status
+              };
+
+              localStorage.setItem('user', JSON.stringify(updatedUserData));
             }
-
-            // 2️⃣ 🔴 تحديث حالة المستخدم الرئيسية للتطبيق (كي لا تختفي البيانات عند الـ Refresh)
-            if (typeof setUser === 'function') {
-              setUser(prev => ({ ...prev, ...updatedDriver }));
-            }
-
-            // 3️⃣ تحديث الـ localStorage لمفتاحي 'user' و 'studentData' لمنع رجوع القيم القديمة
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            const updatedUserData = {
-              ...currentUser,
-              completed_trips: updatedDriver.completed_trips,
-              trip_price: updatedDriver.trip_price,
-              points: updatedDriver.points,
-              trip_status: updatedDriver.trip_status
-            };
-
-            localStorage.setItem('user', JSON.stringify(updatedUserData));
-            
-            // في حال كان التطبيق يقرأ بيانات الجلسة من studentData عند التحميل
-            if (localStorage.getItem('studentData')) {
-              const currentStudentData = JSON.parse(localStorage.getItem('studentData') || '{}');
-              localStorage.setItem('studentData', JSON.stringify({
-                ...currentStudentData,
-                ...updatedDriver
-              }));
-            }
-          }
-        }
-          if (updatedStudent) {
-            let driverInfo = null;
-            let returnDriverInfo = null;
-
-            // 2. جلب بيانات سائق الذهاب المحدثة (شاملة تفاصيل السيارة)
-            if (updatedStudent.driver_id) {
-              const { data: d } = await supabase
-                .from('drivers')
-                .select('*')
-                .eq('id', updatedStudent.driver_id)
-                .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
-              driverInfo = d;
-            }
-
-            // 3. جلب بيانات سائق العودة
-            if (updatedStudent.return_driver_id) {
-              const { data: rd } = await supabase
-                .from('drivers')
-                .select('*')
-                .eq('id', updatedStudent.return_driver_id)
-                .maybeSingle(); // 👈 تصحيح: تغيير .single() إلى .maybeSingle()
-              returnDriverInfo = rd;
-            }
-
-            // 4. دمج كافة البيانات المكتملة
-            const completeUserData = {
-              ...updatedStudent,
-              driver: driverInfo ? { ...driverInfo, phone: '' } : null,
-              return_driver: returnDriverInfo ? { ...returnDriverInfo, phone: '' } : null,
-              
-              driver_name: driverInfo?.name || updatedStudent.driver_name || '',
-              driver_phone: '', // إخفاء الهاتف
-
-              // 🚗 تفاصيل السيارة اللحظية من جدول السائقين
-              car_type: driverInfo?.car_type || updatedStudent.car_type || '',
-              car_number: driverInfo?.car_number || updatedStudent.car_number || '',
-              car_color: driverInfo?.car_color || updatedStudent.car_color || '',
-              car_model: driverInfo?.car_type || updatedStudent.car_type || updatedStudent.car_model || '',
-
-              // 🚀 حالات الرحلة وإشعار "في طريقه إليكم"
-              status: updatedStudent.status || driverInfo?.status || (driverInfo ? 'تم التوزيع' : 'بانتظار التوزيع'),
-              driver_status: driverInfo?.status || updatedStudent.driver_status || '',
-              trip_status: updatedStudent.trip_status || driverInfo?.trip_status || updatedStudent.status || '',
-            };
-
-            // 5. تحديث حالات React اللحظية لتظهر الشاشة فوراً
-            setStudentData(completeUserData);
-            if (driverInfo) {
-              setAssignedDriver(driverInfo);
-            }
-
-            // 6. تحديث التخزين المحلي
-            localStorage.setItem('user', JSON.stringify(completeUserData));
-            localStorage.setItem('studentData', JSON.stringify(completeUserData));
           }
         }
       } catch (err) {
         console.error("خطأ في التحديث التلقائي:", err);
       }
     };
-    autoFetch(); // تشغيل فوري أول مرة
+
+    autoFetch(); // تشغيل فوري
     const interval = setInterval(autoFetch, 3000); // تكرار كل 3 ثوانٍ
     return () => clearInterval(interval);
   }, [studentData?.id]);
