@@ -2646,7 +2646,14 @@ if (!students || students.length === 0) {
         const newCompletedCount = currentTrips + 1;
 
         const currentWalletPrice = Number(user?.trip_price || 0);
-        const addedTripPrice = typeof tripPrice !== 'undefined' ? Number(tripPrice) : 10000;
+        
+        // 💰 حساب أجرة الرحلة الفعلية فقط (من سعر الطلاب أو المتغير دون إضافة 10,000 عشوائية)
+        const addedTripPrice = Number(
+          typeof tripPrice !== 'undefined' && tripPrice !== null
+            ? tripPrice
+            : (students?.reduce((sum, st) => sum + Number(st.price || st.trip_price || 0), 0) || 0)
+        );
+
         const newTotalPrice = currentWalletPrice + addedTripPrice;
 
         // 2️⃣ تحديث قاعدة البيانات Supabase
