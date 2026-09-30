@@ -2868,9 +2868,9 @@ if (!students || students.length === 0) {
   </div>
 
   
-{(loading && (!students || students.length === 0)) ? (
+   {(loading && (!students || students.length === 0)) ? (
     <p className="text-center text-xs text-slate-400 py-6">جاري تحميل قائمة الطلاب من قاعدة البيانات...</p>
-  ) : students.filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور' || String(s.exam_note || '').includes('امتحان')).length === 0 ? (
+  ) : (Array.isArray(students) ? students : []).filter(s => s.tomorrow_status === 'أداوم غداً' || s.tomorrow_status === 'حضور' || String(s.exam_note || '').includes('امتحان')).length === 0 ? (
     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-900 space-y-2">
       <p className="text-2xl">📭</p>
       <p className="text-xs font-bold">لا يوجد رحلات مخصصة لك حاليا</p>
