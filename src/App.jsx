@@ -752,18 +752,21 @@ setGroupName(student.group_name || '');
       }
     }
   }
-  // 🔄 دالة تصفير رحلة الذهاب لطلاب السائق
+ // 🔄 دالة تصفير رحلة الذهاب فقط لطلاب السائق
   const handleResetGoTrip = async (driver) => {
     if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة الذهاب للسائق (${driver.name})؟`)) return;
 
     try {
+      // تصفير حقول رحلة الذهاب فقط في قاعدة البيانات
       const { error } = await supabase
         .from('students')
         .update({ 
           driver_id: null,
-          driver_name: '' 
+          driver_name: null,
+          driver_phone: null,
+          assigned_driver: null
         })
-        .eq('driver_id', driver.id);
+        .or(`driver_id.eq.${driver.id},assigned_driver.eq.${driver.name}`);
 
       if (error) throw error;
 
