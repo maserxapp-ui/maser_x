@@ -755,20 +755,36 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             .maybeSingle();
 
           if (updatedDriver) {
-            // 1️⃣ تحديث حالة الواجهة لتظهر القيم فوراً
+            // 1️⃣ تحديث حالة السائق المحلية
             if (typeof setDriverData === 'function') {
               setDriverData(prev => ({ ...prev, ...updatedDriver }));
             }
 
-            // 2️⃣ تحديث الـ localStorage لتبقى القيم ثابتة عند الـ Refresh
+            // 2️⃣ 🔴 تحديث حالة المستخدم الرئيسية للتطبيق (كي لا تختفي البيانات عند الـ Refresh)
+            if (typeof setUser === 'function') {
+              setUser(prev => ({ ...prev, ...updatedDriver }));
+            }
+
+            // 3️⃣ تحديث الـ localStorage لمفتاحي 'user' و 'studentData' لمنع رجوع القيم القديمة
             const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            localStorage.setItem('user', JSON.stringify({
+            const updatedUserData = {
               ...currentUser,
               completed_trips: updatedDriver.completed_trips,
               trip_price: updatedDriver.trip_price,
               points: updatedDriver.points,
               trip_status: updatedDriver.trip_status
-            }));
+            };
+
+            localStorage.setItem('user', JSON.stringify(updatedUserData));
+            
+            // في حال كان التطبيق يقرأ بيانات الجلسة من studentData عند التحميل
+            if (localStorage.getItem('studentData')) {
+              const currentStudentData = JSON.parse(localStorage.getItem('studentData') || '{}');
+              localStorage.setItem('studentData', JSON.stringify({
+                ...currentStudentData,
+                ...updatedDriver
+              }));
+            }
           }
         }
           if (updatedStudent) {
