@@ -2912,7 +2912,7 @@ if (!students || students.length === 0) {
                     : 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
                 }`}
               >
-                {student.is_boarded ? '✔️ صعدت معك' : '🙋‍♂️ صعد معي'}
+                {student.is_boarded ? '✔️ صعدت معي' : '🙋‍♂️ صعد معي'}
               </button>
 
               <button
