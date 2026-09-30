@@ -2658,17 +2658,26 @@ if (!students || students.length === 0) {
       // تحديث الواجهة والمحفظة والتخزين المحلي مباشرة لمنع عودته لـ 1 عند الريفريش
       setDriverTripStatus('completed');
       
-      const updatedUser = { 
-        ...user, 
-        completed_trips: newCompletedCount 
-      };
+      // 🎯 تحديث كائن المستخدم شاملاً (الرحلات المكتملة + سعر/أرباح المحفظة)
+        const updatedUser = {
+          ...user,
+          completed_trips: newCompletedCount,
+          trip_price: (user?.trip_price || 0) + (tripPrice || 0), // 👈 إضافة المبلغ الجديد للمحفظة
+          trip_status: 'completed'
+        };
 
-      // 1️⃣ تحديث حالة React
-      setUser(updatedUser);
+        // 1️⃣ تحديث حالة React لجميع المتغيرات بالواجهة
+        setUser(updatedUser);
+        if (typeof setDriverData === 'function') {
+          setDriverData(prev => ({ ...prev, ...updatedUser }));
+        }
 
-      // 2️⃣ تحديث التخزين المحلي للمتصفح (حتى لا ترجع القيمة 1 عند عمل الريفريش)
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
+        // 2️⃣ تحديث التخزين المحلي للمتصفح (user و studentData) لمنع ضياع البيانات عند الـ Refresh
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (localStorage.getItem('studentData')) {
+          const currentStudent = JSON.parse(localStorage.getItem('studentData') || '{}');
+          localStorage.setItem('studentData', JSON.stringify({ ...currentStudent, ...updatedUser }));
+        }
       alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك.');
     } catch (err) {
       alert('خطأ في إتمام الرحلة: ' + err.message);
