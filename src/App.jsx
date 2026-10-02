@@ -787,6 +787,32 @@ setGroupName(student.group_name || '');
       alert('حدث خطأ أثناء تصفير رحلة الذهاب: ' + err.message);
     }
   };
+  // 🌆 دالة تصفير رحلة العودة (الرحلة الثانية) للطلاب
+  const handleResetReturnTrip = async (driver) => {
+    if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة العودة للسائق (${driver.name})؟`)) return;
+
+    try {
+      const { error: studentError } = await supabase
+        .from('students')
+        .update({ 
+          return_driver_id: null,
+          return_approved: false,
+          is_boarded_return: false,
+          is_dropped_return: false
+        })
+        .eq('return_driver_id', driver.id);
+
+      if (studentError) throw studentError;
+
+      alert(`🎉 تم تصفير رحلة العودة للسائق ${driver.name} بنجاح!`);
+      
+      if (typeof fetchDrivers === 'function') fetchDrivers();
+      if (typeof fetchStudents === 'function') fetchStudents();
+
+    } catch (err) {
+      alert('حدث خطأ أثناء تصفير رحلة العودة: ' + err.message);
+    }
+  };
 const handleResetDriverWallet = async (driverId) => {
   if (!window.confirm("هل أنتِ متأكدة من تصفير ومحاسبة هذا السائق؟")) return;
 
@@ -1920,6 +1946,13 @@ else if (confirmedAttending) {
                   >
                     🌅 تصفير الذهاب
                   </button>
+                             {/* 🌆 زر تصفير العودة الجديد */}
+<button
+  onClick={() => handleResetReturnTrip(driver)}
+  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm transition-all"
+>
+  🌆 تصفير العودة
+</button> 
                               <button 
                                 onClick={() => handleDeleteDriver(driver.id, driver.name)}
                                 className="text-rose-500 hover:text-rose-700 bg-rose-50 p-1.5 rounded-md font-bold text-xs"
