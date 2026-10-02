@@ -752,13 +752,13 @@ setGroupName(student.group_name || '');
       }
     }
   }
- // 🔄 دالة تصفير رحلة الذهاب فقط لطلاب السائق
-  const handleResetGoTrip = async (driver) => {
+  
+ const handleResetGoTrip = async (driver) => {
     if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة الذهاب للسائق (${driver.name})؟`)) return;
 
     try {
-      // تصفير حقول رحلة الذهاب فقط في قاعدة البيانات
-      const { error } = await supabase
+      // 1️⃣ تصفير حقول رحلة الذهاب للطلاب في جدول الطلاب
+      const { error: studentError } = await supabase
         .from('students')
         .update({ 
           driver_id: null,
@@ -768,9 +768,17 @@ setGroupName(student.group_name || '');
         })
         .or(`driver_id.eq.${driver.id},assigned_driver.eq.${driver.name}`);
 
-      if (error) throw error;
+      if (studentError) throw studentError;
 
-      alert(`🎉 تم تصفير طلاب رحلة الذهاب للسائق ${driver.name} بنجاح!`);
+      // 2️⃣ تصفير حقل حالة الرحلة (trip_status) في جدول السائقين
+      const { error: driverError } = await supabase
+        .from('drivers')
+        .update({ trip_status: null })
+        .eq('id', driver.id);
+
+      if (driverError) throw driverError;
+
+      alert(`🎉 تم تصفير رحلة الذهاب وحالة السائق ${driver.name} بنجاح!`);
       
       if (typeof fetchDrivers === 'function') fetchDrivers();
       if (typeof fetchStudents === 'function') fetchStudents();
