@@ -254,7 +254,7 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// 🎯 3. دالة التوزيع المقتصدة (ملء سيارة تلو الأخرى + مراعاة الاستثناءات)
+// 🎯 3. دالة التوزيع المقتصدة (المعدلة والمحمية من التكرار وتجاوز السعة)
 const handleAutoDistribute = async (e, isAutomatic = false) => {
   if (e && e.preventDefault) e.preventDefault();
   const autoMode = typeof e === 'boolean' ? e : isAutomatic;
@@ -265,136 +265,120 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
 
   try {
     // 1️⃣ جلب بيانات السائقين والطلاب من Supabase
-    const { data: drivers, error: dErr } = await supabase.from('drivers').select('*').eq('is_accepting_trips', true);
-    const { data: rawStudents, error: sErr } = await supabase.from('students').select('*');
-    
-    // 🎯 تصفية الطلاب: توزيع المداومين (أداوم غداً) وأصحاب الاستثناءات فقط
-    const studentsData = (rawStudents || []).filter(student => {
-      if (student.line_type === 'internal_amarah') return false;
-      const tomorrowStatus = String(student.tomorrow_status || '');
-      const examNote = String(student.exam_note || '');
+    const { data: drivers, error: dErr } = await supabase
+      .from('drivers')
+      .select('*')
+      .eq('is_accepting_trips', true);
 
-      // 1. فحص الاستثناء: إذا احتوى حقل exam_note على كلمة "امتحان" أو "لدي امتحان غداً"
-      const hasExamException = examNote.includes('امتحان') || examNote.includes('لدي امتحان غداً');
-
-      // 2. فحص الدوام الاعتيادي (زر "أداوم غداً")
-      const isAttending = tomorrowStatus.includes('أداوم') || student.is_attending === true;
-
-      // 3. استبعاد الطالب إذا اختار "لا أداوم غداً" بشرط عدم وجود امتحان عنده
-      if (tomorrowStatus.includes('لا أداوم') && !hasExamException) {
-        return false;
-      }
-
-      // ضمه إلى التوزيع فوراً إذا كان مداوماً أو لديه امتحان
-      return isAttending || hasExamException;
-    });
+    const { data: rawStudents, error: sErr } = await supabase
+      .from('students')
+      .select('*');
 
     if (dErr || sErr || !drivers || drivers.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد سائقون متاحون أو حدث خطأ في جلب البيانات!');
       return;
     }
 
-    // 2️⃣ تحديد يوم غد بتوقيت بغداد
-    const baghdadNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Baghdad' });
-    const baghdadTomorrow = new Date(baghdadNowStr);
-    baghdadTomorrow.setDate(baghdadTomorrow.getDate() + 1);
-    const daysArabic = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const tomorrowDay = daysArabic[baghdadTomorrow.getDay()];
+    // 2️⃣ تصفية الطلاب المداومين أو أصحاب الاستثناءات فقط
+    const eligibleStudents = (rawStudents || []).filter(student => {
+      if (student.line_type === 'internal_amarah') return false;
+      const tomorrowStatus = String(student.tomorrow_status || '');
+      const examNote = String(student.exam_note || '');
 
-    const eligibleStudents = studentsData;
+      const hasExamException = examNote.includes('امتحان') || examNote.includes('لدي امتحان غداً');
+      const isAttending = tomorrowStatus.includes('أداوم') || student.is_attending === true;
+
+      if (tomorrowStatus.includes('لا أداوم') && !hasExamException) {
+        return false;
+      }
+      return isAttending || hasExamException;
+    });
 
     if (eligibleStudents.length === 0) {
-      if (!autoMode) alert(`⚠️ لا يوجد طلاب مداومون ليوم غد (${tomorrowDay})!`);
+      if (!autoMode) alert('⚠️ لا يوجد طلاب مداومون ليوم غد!');
       return;
     }
+
+    // 3️⃣ خطوة جوهرية: تصفير تعيينات جميع الطلاب أولاً لمنع تراكم الطالبات القدامى
+    await supabase
+      .from('students')
+      .update({
+        driver_id: null,
+        driver_phone: null,
+        driver_name: null,
+        assigned_driver: null
+      })
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // تحديث للجميع
 
     // 4️⃣ خلط الطلاب المداومين عشوائياً
     const randomizedStudents = shuffleArray(eligibleStudents);
 
-    // 5️⃣ التوزيع بالتتابع (تفتيل سيارة كاملة ثم الانتقال للتالية)
-    let currentDriverIndex = 0;
-    let currentDriverStudentCount = 0;
-    const assignedStudentIds = new Set();
+    // 5️⃣ إنشاء خريطة لتتبع سعة كل سائق بدقة (Map)
+    const driverAssignments = {}; // { driverId: [studentObjects] }
+    const driverCounts = {};      // { driverId: currentCount }
 
+    drivers.forEach(d => {
+      driverAssignments[d.id] = [];
+      driverCounts[d.id] = 0;
+    });
+
+    // 6️⃣ التوزيع الذكي الدقيق مع احترام سعة كل سائق (الحد الأقصى 4 أو حسب capacity)
     for (const student of randomizedStudents) {
       const studentDistrict = (student.line_name || student.district || student.address || '').trim();
-      let targetDriver = null;
+      let assignedDriver = null;
 
-      // البحث عن السائق الحالي المناسب بالترتيب لضمان التقبيط
-      let checkIdx = currentDriverIndex;
-      while (checkIdx < drivers.length) {
-        const d = drivers[checkIdx];
+      for (const d of drivers) {
+        const capacity = Number(d.capacity) || 4;
+        const currentCount = driverCounts[d.id] || 0;
+
+        // إذا كانت السيارة ممتلئة، انتقل للسائق التالي
+        if (currentCount >= capacity) continue;
+
+        // فحص المطابقة حسب المنطقة
         const driverDistrict = (d.district_name || '').trim();
-
-        // 📍 فحص المطابقة حسب المنطقة
         let isMatch = false;
+
         if (d.is_outside_city) {
-          // سائق خارج المدينة -> يطابق طالب القضاء الخاص به فقط
           isMatch = studentDistrict.includes(driverDistrict) || driverDistrict.includes(studentDistrict);
         } else {
-          // سائق داخل المدينة -> يطابق الطلاب العاديين فقط
           isMatch = !student.is_outside_city;
         }
 
         if (isMatch) {
-          targetDriver = d;
-          break;
+          assignedDriver = d;
+          break; // وجدنا سائق متاح وغير ممتلئ
         }
-        checkIdx++;
       }
 
-      // إذا لم نجد سائقاً متاحاً
-      if (!targetDriver) {
-        console.warn(`⚠️ لم يتم العثور على سائق مناسب ومتاح للطالب: ${student.name}`);
-        continue;
-      }
-
-      const currentDriver = targetDriver;
-      const capacity = Number(currentDriver.capacity) || 4;
-
-      const driverPhoneVal = String(currentDriver.phone || currentDriver.username || currentDriver.id || '');
-      const driverNameVal = String(currentDriver.name || currentDriver.phone || '');
-
-      await supabase
-        .from('students')
-        .update({
-          driver_id: currentDriver.id,
-          driver_phone: driverPhoneVal,
-          driver_name: driverNameVal,
-          assigned_driver: driverNameVal
-        })
-        .eq('id', student.id);
-
-      assignedStudentIds.add(student.id);
-
-      // 🔴 زيادة عداد المقاعد وتحديث مؤشر السائق عند تقبيط السيارة بالكامل
-      if (currentDriver.id === drivers[currentDriverIndex]?.id) {
-        currentDriverStudentCount++;
-
-        if (currentDriverStudentCount >= capacity) {
-          currentDriverIndex++;
-          currentDriverStudentCount = 0;
-        }
+      // إذا تم العثور على سائق متاح ومطابق
+      if (assignedDriver) {
+        driverAssignments[assignedDriver.id].push(student.id);
+        driverCounts[assignedDriver.id]++;
+      } else {
+        console.warn(`⚠️️ لم يتم العثور على مقعد متاح للطالب: ${student.name}`);
       }
     }
 
-    // 6️⃣ تفريغ الطلاب الغائبين أو من لم تكفِهم السيارات
-    const unassignedStudents = studentsData.filter(s => !assignedStudentIds.has(s.id));
+    // 7️⃣ تحديث قاعدة البيانات دفعة واحدة حسب كل سائق (Bulk Update) لتفادي تعليق الشبكة
+    for (const d of drivers) {
+      const studentIds = driverAssignments[d.id];
+      if (studentIds && studentIds.length > 0) {
+        const driverPhoneVal = String(d.phone || d.username || d.id || '');
+        const driverNameVal = String(d.name || d.phone || '');
 
-    for (const student of unassignedStudents) {
-      await supabase
-        .from('students')
-        .update({
-          driver_id: null,
-          driver_phone: null,
-          driver_name: null,
-          assigned_driver: null
-        })
-        .eq('id', student.id);
+        await supabase
+          .from('students')
+          .update({
+            driver_id: d.id,
+            driver_phone: driverPhoneVal,
+            driver_name: driverNameVal,
+            assigned_driver: driverNameVal
+          })
+          .in('id', studentIds); // تحديث المجموعة كاملة بطلب واحد فقط!
+      }
     }
 
-    const usedDriversCount = currentDriverStudentCount > 0 ? currentDriverIndex + 1 : currentDriverIndex;
-    console.log(`✅ تم التوزيع بنجاح! عدد الطلاب: ${assignedStudentIds.size} | السيارات المستخدمة: ${usedDriversCount}`);
+    if (!autoMode) alert('✅ تم التوزيع بنجاح! تم ضبط 4 طالبات لكل سائق كحد أقصى.');
 
   } catch (error) {
     console.error('خطأ أثناء عملية التوزيع:', error);
