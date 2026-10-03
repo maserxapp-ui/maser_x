@@ -2467,22 +2467,40 @@ const { data: studentsData } = await supabase.from('students').select('*').neq('
   }, []);
 
   const handleReassignStudent = async (studentId, newDriverId) => {
-    try {
-      const { error } = await supabase
-        .from('students')
-        .update({ driver_id: newDriverId })
-        .eq('id', studentId);
+  try {
+    // 1️⃣ جلب بيانات السائق الجديد للوصول لاسمه ورقمه
+    const targetDriver = (drivers || []).find(d => String(d.id) === String(newDriverId));
+    const driverNameVal = targetDriver ? (targetDriver.name || targetDriver.phone || '') : null;
+    const driverPhoneVal = targetDriver ? (targetDriver.phone || targetDriver.username || '') : null;
 
-      if (error) throw error;
+    // 2️⃣ تحديث جميع الحقول الخاصة بالسائق في Supabase لمنع التكرار
+    const { error } = await supabase
+      .from('students')
+      .update({ 
+        driver_id: newDriverId || null,
+        driver_name: driverNameVal,
+        assigned_driver: driverNameVal,
+        driver_phone: driverPhoneVal
+      })
+      .eq('id', studentId);
 
-      setStudents(prev =>
-        prev.map(st => st.id === studentId ? { ...st, driver_id: newDriverId } : st)
-      );
-    } catch (err) {
-      alert('حدث خطأ أثناء نقل الطالب: ' + err.message);
-    }
-  };
+    if (error) throw error;
 
+    // 3️⃣ تحديث الحالة اللحظية (State) بكافة الحقول لمنع الخربطة بالشاشة
+    setStudents(prev =>
+      prev.map(st => st.id === studentId ? { 
+        ...st, 
+        driver_id: newDriverId,
+        driver_name: driverNameVal,
+        assigned_driver: driverNameVal,
+        driver_phone: driverPhoneVal
+      } : st)
+    );
+  } catch (err) {
+    alert('حدث خطأ أثناء نقل الطالب: ' + err.message);
+  }
+};
+  
   const handleApproveDistribution = async () => {
     try {
       await supabase
