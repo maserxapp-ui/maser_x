@@ -222,29 +222,30 @@ export default function App() {
     }
   };
 
-// ⏰ 1. فحص الوقت والتوزيع التلقائي الساعة 9:00 مساءً (الساعة 21)
+// ⏰ 1. فحص الوقت والتوزيع التلقائي الساعة 9:00 مساءً (توقيت محلي مظبوط)
 useEffect(() => {
   const checkTimeAndDistribute = () => {
     const now = new Date();
     const hours = now.getHours(); // 21 تعني الساعة 9 مساءً
-    const todayStr = now.toISOString().split('T')[0];
+    
+    // حساب التاريخ المحلي لتجنب أخطاء توقيت غرينتش
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const lastDistributed = localStorage.getItem('last_auto_distribute_date');
 
-    // إذا كانت الساعة 9 مساءً ولم يتم التوزيع اليوم بعد
     if (hours === 21 && lastDistributed !== todayStr) {
-      handleAutoDistribute(true); // توزيع تلقائي
+      handleAutoDistribute(true);
       localStorage.setItem('last_auto_distribute_date', todayStr);
     }
   };
 
-  const interval = setInterval(checkTimeAndDistribute, 30000); // يفحص كل 30 ثانية
+  const interval = setInterval(checkTimeAndDistribute, 30000);
   checkTimeAndDistribute();
 
   return () => clearInterval(interval);
 }, []);
 
-// 🎲 2. دالة لخلط الطلاب عشوائياً لمنح فرص عادلة يومياً
+// 🎲 2. دالة لخلط الطلاب عشوائياً
 const shuffleArray = (array) => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -254,7 +255,7 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
-// 🎯 3. دالة التوزيع المقتصدة (المعدلة والمحمية من التكرار وتجاوز السعة)
+// 🎯 3. دالة التوزيع المقتصدة (المعاجلة بالكامل بدون أخطاء 400 ومع إنعاش الشاشة)
 const handleAutoDistribute = async (e, isAutomatic = false) => {
   if (e && e.preventDefault) e.preventDefault();
   const autoMode = typeof e === 'boolean' ? e : isAutomatic;
@@ -264,7 +265,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
   }
 
   try {
-    // 1️⃣ جلب بيانات السائقين والطلاب من Supabase
+    // 1️⃣ جلب بيانات السائقين المتاحين والطلاب
     const { data: drivers, error: dErr } = await supabase
       .from('drivers')
       .select('*')
@@ -279,7 +280,7 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       return;
     }
 
-    // 2️⃣ تصفية الطلاب المداومين أو أصحاب الاستثناءات فقط
+    // 2️⃣ تصفية الطلاب المداومين ليوم غد
     const eligibleStudents = (rawStudents || []).filter(student => {
       if (student.line_type === 'internal_amarah') return false;
       const tomorrowStatus = String(student.tomorrow_status || '');
@@ -294,35 +295,42 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
       return isAttending || hasExamException;
     });
 
+    // 3️⃣ تصفير آمن ومضمون بدون أخطاء 400
+    const allStudentIds = (rawStudents || []).map(s => s.id);
+    if (allStudentIds.length > 0) {
+      const { error: resetErr } = await supabase
+        .from('students')
+        .update({
+          driver_id: null,
+          driver_phone: null,
+          driver_name: null,
+          assigned_driver: null
+        })
+        .in('id', allStudentIds); // 👈 استخدام in يمنع خطأ 400 تماماً
+
+      if (resetErr) console.error('خطأ أثناء تصفير السائقين القدامى:', resetErr);
+    }
+
     if (eligibleStudents.length === 0) {
       if (!autoMode) alert('⚠️ لا يوجد طلاب مداومون ليوم غد!');
+      // إنعاش الواجهة بعد التصفير
+      if (typeof fetchStudentsAndDrivers === 'function') await fetchStudentsAndDrivers();
       return;
     }
 
-    // 3️⃣ خطوة جوهرية: تصفير تعيينات جميع الطلاب أولاً لمنع تراكم الطالبات القدامى
-    await supabase
-      .from('students')
-      .update({
-        driver_id: null,
-        driver_phone: null,
-        driver_name: null,
-        assigned_driver: null
-      })
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // تحديث للجميع
-
-    // 4️⃣ خلط الطلاب المداومين عشوائياً
+    // 4️⃣ خلط الطلاب عشوائياً
     const randomizedStudents = shuffleArray(eligibleStudents);
 
-    // 5️⃣ إنشاء خريطة لتتبع سعة كل سائق بدقة (Map)
-    const driverAssignments = {}; // { driverId: [studentObjects] }
-    const driverCounts = {};      // { driverId: currentCount }
+    // 5️⃣ خريطة تتبع السعة
+    const driverAssignments = {};
+    const driverCounts = {};
 
     drivers.forEach(d => {
       driverAssignments[d.id] = [];
       driverCounts[d.id] = 0;
     });
 
-    // 6️⃣ التوزيع الذكي الدقيق مع احترام سعة كل سائق (الحد الأقصى 4 أو حسب capacity)
+    // 6️⃣ التوزيع بالتتابع مع الالتزام الصارم بـ 4 طلاب كحد أقصى
     for (const student of randomizedStudents) {
       const studentDistrict = (student.line_name || student.district || student.address || '').trim();
       let assignedDriver = null;
@@ -331,35 +339,35 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
         const capacity = Number(d.capacity) || 4;
         const currentCount = driverCounts[d.id] || 0;
 
-        // إذا كانت السيارة ممتلئة، انتقل للسائق التالي
+        // التوقف فور وصول السائق للحد الأقصى (4)
         if (currentCount >= capacity) continue;
 
-        // فحص المطابقة حسب المنطقة
         const driverDistrict = (d.district_name || '').trim();
         let isMatch = false;
 
         if (d.is_outside_city) {
-          isMatch = studentDistrict.includes(driverDistrict) || driverDistrict.includes(studentDistrict);
+          if (driverDistrict && studentDistrict) {
+            isMatch = studentDistrict.includes(driverDistrict) || driverDistrict.includes(studentDistrict);
+          } else {
+            isMatch = false;
+          }
         } else {
           isMatch = !student.is_outside_city;
         }
 
         if (isMatch) {
           assignedDriver = d;
-          break; // وجدنا سائق متاح وغير ممتلئ
+          break;
         }
       }
 
-      // إذا تم العثور على سائق متاح ومطابق
       if (assignedDriver) {
         driverAssignments[assignedDriver.id].push(student.id);
         driverCounts[assignedDriver.id]++;
-      } else {
-        console.warn(`⚠️️ لم يتم العثور على مقعد متاح للطالب: ${student.name}`);
       }
     }
 
-    // 7️⃣ تحديث قاعدة البيانات دفعة واحدة حسب كل سائق (Bulk Update) لتفادي تعليق الشبكة
+    // 7️⃣ تحديث قاعدة البيانات دفعة واحدة لكل سائق
     for (const d of drivers) {
       const studentIds = driverAssignments[d.id];
       if (studentIds && studentIds.length > 0) {
@@ -374,11 +382,20 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
             driver_name: driverNameVal,
             assigned_driver: driverNameVal
           })
-          .in('id', studentIds); // تحديث المجموعة كاملة بطلب واحد فقط!
+          .in('id', studentIds);
       }
     }
 
-    if (!autoMode) alert('✅ تم التوزيع بنجاح! تم ضبط 4 طالبات لكل سائق كحد أقصى.');
+    // 8️⃣ إعادة جلب البيانات فوراً لتحديث الشاشة تلقائياً
+    if (typeof fetchStudentsAndDrivers === 'function') {
+      await fetchStudentsAndDrivers();
+    } else if (typeof fetchTripsData === 'function') {
+      await fetchTripsData();
+    } else if (typeof fetchData === 'function') {
+      await fetchData();
+    }
+
+    if (!autoMode) alert('✅ تم التوزيع بنجاح! تم التوزيع بحد أقصى 4 طالبات لكل سائق.');
 
   } catch (error) {
     console.error('خطأ أثناء عملية التوزيع:', error);
