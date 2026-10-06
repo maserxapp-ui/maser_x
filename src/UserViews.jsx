@@ -3158,67 +3158,81 @@ if (!students || students.length === 0) {
               {std.is_boarded_return ? '🙋‍♀️ صعدت معي' : '🙋‍♀️ صعود الطالبة'}
             </button>
 
-            {/* 🏁 زر إيصال الطالبة وتحديث المحفظة */}
-            <button
-              disabled={std.is_dropped_return}
-              onClick={async () => {
-                if (std.is_dropped_return) return;
+            {/* 🏁 زر إيصال الطالبة وتحديث الرحلات المكتملة المضمون */}
+<button
+  disabled={std.is_dropped_return}
+  onClick={async () => {
+    if (std.is_dropped_return) return;
 
-                // 1️⃣ تحديث حالة إيصال الطالبة الحالية
-                await supabase
-                  .from('students')
-                  .update({ is_dropped_return: true })
-                  .eq('id', std.id);
+    try {
+      // 1️⃣ تحديث حالة إيصال الطالبة الحالية في جدول الطالبات
+      const { error: stdErr } = await supabase
+        .from('students')
+        .update({ is_dropped_return: true })
+        .eq('id', std.id);
 
-                // 2️⃣ تحديث قائمة القراءة في الواجهة
-                if (typeof fetchDriverReturnStudents === 'function') {
-                  await fetchDriverReturnStudents();
-                }
+      if (stdErr) {
+        alert('⚠️ خطأ في تحديث حالة الطالبة: ' + stdErr.message);
+        return;
+      }
 
-                // 3️⃣ جلب طالبات رحلة العودة المعتمدات لهذا السائق فقط
-                const { data: currentReturnList } = await supabase
-                  .from('students')
-                  .select('is_dropped_return')
-                  .eq('return_driver_id', user.id)
-                  .eq('return_approved', true);
+      // 2️⃣ تحديث قائمة القراءة في الواجهة
+      if (typeof fetchDriverReturnStudents === 'function') {
+        await fetchDriverReturnStudents();
+      }
 
-                if (currentReturnList && currentReturnList.length > 0) {
-                  const isAllDone = currentReturnList.every(s => s.is_dropped_return === true);
+      // 3️⃣ جلب طالبات رحلة العودة المعتمدات لهذا السائق فقط
+      const { data: currentReturnList, error: listErr } = await supabase
+        .from('students')
+        .select('is_dropped_return')
+        .eq('return_driver_id', user.id)
+        .eq('return_approved', true);
 
-                  if (isAllDone) {
-                    const tripPrice = 8000; // سعر الرحلة الثابت أو المحسوب
-                    const newCompletedCount = Number(user?.completed_trips || 0) + 1;
-                    const newBalance = Number(user?.wallet_balance || user?.balance || 0) + tripPrice;
+      if (listErr) {
+        console.error('خطأ في جلب القائمة:', listErr);
+        return;
+      }
 
-                    // 4️⃣ تحديث عدد الرحلات والمحفظة معاً في DB
-                    await supabase
-                      .from('drivers')
-                      .update({ 
-                        completed_trips: newCompletedCount,
-                        wallet_balance: newBalance
-                      })
-                      .eq('id', user.id);
+      if (currentReturnList && currentReturnList.length > 0) {
+        const isAllDone = currentReturnList.every(s => s.is_dropped_return === true);
 
-                    // 5️⃣ تحديث حالة المستخدم في الواجهة فوراً
-                    setUser(prev => ({ 
-                      ...prev, 
-                      completed_trips: newCompletedCount,
-                      wallet_balance: newBalance,
-                      balance: newBalance
-                    }));
+        if (isAllDone) {
+          const newCompletedCount = Number(user?.completed_trips || 0) + 1;
 
-                    alert(`🎉 ممتاز! تم إيصال جميع الطالبات بنجاح وتمت إضافة أجر الرحلة (${tripPrice.toLocaleString()} د.ع) إلى المحفظة.`);
-                  }
-                }
-              }}
-              className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none flex items-center gap-1 transition ${
-                std.is_dropped_return 
-                  ? 'bg-blue-600 text-white cursor-not-allowed opacity-90' 
-                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer'
-              }`}
-            >
-              {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
-            </button>
+          // 4️⃣ تحديث عدد الرحلات المكتملة في جدول drivers (تحويل القيمة لنص لتطابق نوع العمود text)
+          const { error: driverErr } = await supabase
+            .from('drivers')
+            .update({ 
+              completed_trips: String(newCompletedCount)
+            })
+            .eq('id', user.id);
+
+          if (driverErr) {
+            alert('❌ فشل الحفظ في Supabase: ' + driverErr.message);
+            return;
+          }
+
+          // 5️⃣ تحديث الحالة في الواجهة فقط بعد النجاح المؤكد في Supabase
+          setUser(prev => ({ 
+            ...prev, 
+            completed_trips: newCompletedCount
+          }));
+
+          alert(`🎉 ممتاز! تم إيصال جميع الطالبات وتوثيق الرحلة بنجاح في قاعدة البيانات.`);
+        }
+      }
+    } catch (err) {
+      alert('حدث خطأ غير متوقع: ' + err.message);
+    }
+  }}
+  className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none flex items-center gap-1 transition ${
+    std.is_dropped_return 
+      ? 'bg-blue-600 text-white cursor-not-allowed opacity-90' 
+      : 'bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer'
+  }`}
+>
+  {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
+</button>
 
             {/* 💬 مراسلة */}
             <button
