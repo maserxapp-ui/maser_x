@@ -3108,7 +3108,7 @@ if (!students || students.length === 0) {
         </div>
       )}
           {/* 🎒 طلاب الرحلة الثانية */}
-{returnTripStudents && returnTripStudents.length > 0 && returnTripStudents[0]?.return_approved && (
+{returnTripStudents && returnTripStudents.length > 0 && returnTripStudents.some(s => s.return_approved) && (
   <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm" dir="rtl">
     <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
       <div className="flex items-center gap-2">
@@ -3116,39 +3116,39 @@ if (!students || students.length === 0) {
         <h3 className="text-base font-bold text-slate-800 m-0">طلاب الرحلة الثانية</h3>
       </div>
       <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full">
-        {returnTripStudents.length} طالبات • معتمدة ✅
+        {returnTripStudents.filter(s => s.return_approved).length} طالبات • معتمدة ✅
       </span>
     </div>
 
     <div className="flex flex-col gap-3">
-      {returnTripStudents.map((std) => (
+      {returnTripStudents.filter(s => s.return_approved).map((std) => (
         <div key={std.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2.5">
           <div className="flex justify-between items-start">
-  <div>
-    {/* 👤 اسم الطالبة */}
-    <strong className="text-sm font-bold text-slate-900 block mb-1">
-      👩‍🎓 {std.name || std.full_name || 'اسم الطالبة غير محدد'}
-    </strong>
-    
-    {/* 🎓 الجامعة والمنطقة والسكن */}
-    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
-      <span>🎓 الجامعة: <b className="text-indigo-700 font-bold">{std.university || 'غير محدد'}</b></span>
-      <span>•</span>
-      <span>📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b></span>
-      <span>•</span>
-      <span>السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b></span>
-    </div>
-  </div>
-</div>
+            <div>
+              {/* 👤 اسم الطالبة */}
+              <strong className="text-sm font-bold text-slate-900 block mb-1">
+                👩‍🎓 {std.name || std.full_name || 'اسم الطالبة غير محدد'}
+              </strong>
+              
+              {/* 🎓 الجامعة والمنطقة والسكن */}
+              <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                <span>🎓 الجامعة: <b className="text-indigo-700 font-bold">{std.university || 'غير محدد'}</b></span>
+                <span>•</span>
+                <span>📍 القضاء: <b className="text-slate-700">{std.district || 'غير محدد'}</b></span>
+                <span>•</span>
+                <span>السكن: <b className="text-slate-700">{std.address || std.housing_address || 'غير محدد'}</b></span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-wrap gap-2 mt-1">
-            {/* 🙋‍♀️ زر صعود الطالبة (ضغط لمرة واحدة فقط) */}
+            {/* 🙋‍♀️ زر صعود الطالبة */}
             <button
               disabled={std.is_boarded_return}
               onClick={async () => {
                 if (std.is_boarded_return) return;
                 await supabase.from('students').update({ is_boarded_return: true }).eq('id', std.id);
-                fetchDriverReturnStudents();
+                if (typeof fetchDriverReturnStudents === 'function') await fetchDriverReturnStudents();
               }}
               className={`text-xs px-3.5 py-2 rounded-xl font-bold border-none flex items-center gap-1 transition ${
                 std.is_boarded_return 
@@ -3158,14 +3158,13 @@ if (!students || students.length === 0) {
               {std.is_boarded_return ? '🙋‍♀️ صعدت معي' : '🙋‍♀️ صعود الطالبة'}
             </button>
 
-            {/* 🏁 زر إيصال الطالبة (ضغط لمرة واحدة فقط) */}
+            {/* 🏁 زر إيصال الطالبة وتحديث المحفظة */}
             <button
               disabled={std.is_dropped_return}
               onClick={async () => {
                 if (std.is_dropped_return) return;
-                const newStatus = true;
 
-                // 1️⃣ تحديث حالة إيصال الطالبة إلى true دائماً
+                // 1️⃣ تحديث حالة إيصال الطالبة الحالية
                 await supabase
                   .from('students')
                   .update({ is_dropped_return: true })
@@ -3176,29 +3175,39 @@ if (!students || students.length === 0) {
                   await fetchDriverReturnStudents();
                 }
 
-                // 3️⃣ التحقق هل تم إيصال جميع طلاب الرحلة الثانية الآن؟
-                const { data: returnStudents } = await supabase
+                // 3️⃣ جلب طالبات رحلة العودة المعتمدات لهذا السائق فقط
+                const { data: currentReturnList } = await supabase
                   .from('students')
-                  .select('*')
-                  .or(`driver_id.eq.${user.id},return_driver_id.eq.${user.id}`)
+                  .select('is_dropped_return')
+                  .eq('return_driver_id', user.id)
                   .eq('return_approved', true);
 
-                if (returnStudents && returnStudents.length > 0) {
-                  const isAllDone = returnStudents.every(s => s.is_dropped_return === true);
+                if (currentReturnList && currentReturnList.length > 0) {
+                  const isAllDone = currentReturnList.every(s => s.is_dropped_return === true);
 
                   if (isAllDone) {
+                    const tripPrice = 8000; // سعر الرحلة الثابت أو المحسوب
                     const newCompletedCount = Number(user?.completed_trips || 0) + 1;
+                    const newBalance = Number(user?.wallet_balance || user?.balance || 0) + tripPrice;
 
-                    // إضافة أجر الرحلة للمحفظة في قاعدة البيانات
+                    // 4️⃣ تحديث عدد الرحلات والمحفظة معاً في DB
                     await supabase
                       .from('drivers')
-                      .update({ completed_trips: newCompletedCount })
+                      .update({ 
+                        completed_trips: newCompletedCount,
+                        wallet_balance: newBalance
+                      })
                       .eq('id', user.id);
 
-                    // تحديث المحفظة في الواجهة فوراً
-                    setUser(prev => ({ ...prev, completed_trips: newCompletedCount }));
+                    // 5️⃣ تحديث حالة المستخدم في الواجهة فوراً
+                    setUser(prev => ({ 
+                      ...prev, 
+                      completed_trips: newCompletedCount,
+                      wallet_balance: newBalance,
+                      balance: newBalance
+                    }));
 
-                    alert('🎉 ممتاز! تم إيصال جميع الطلاب بنجاح وتمت إضافة أجر الرحلة الثانية إلى المحفظة.');
+                    alert(`🎉 ممتاز! تم إيصال جميع الطالبات بنجاح وتمت إضافة أجر الرحلة (${tripPrice.toLocaleString()} د.ع) إلى المحفظة.`);
                   }
                 }
               }}
@@ -3211,6 +3220,7 @@ if (!students || students.length === 0) {
               {std.is_dropped_return ? '🏁 تم الإيصال' : '🏁 إيصال الطالبة'}
             </button>
 
+            {/* 💬 مراسلة */}
             <button
               onClick={() => {
                 setSelectedStudentForChat(std);
@@ -3223,7 +3233,7 @@ if (!students || students.length === 0) {
             {/* 🗺️ خيارات الخرائط والملاحة */}
             {std.latitude && std.longitude && (
               <div className="flex items-center gap-2 mt-2">
-                {/* 📍 1. Google Maps */}
+                {/* 📍 Google Maps */}
                 <a
                   href={`https://maps.google.com/?q=${std.latitude},${std.longitude}`}
                   target="_blank"
@@ -3233,7 +3243,7 @@ if (!students || students.length === 0) {
                   📍 Google Maps
                 </a>
 
-                {/* 🚙 2. زر Waze المباشر عبر Intent */}
+                {/* 🚙 Waze */}
                 <button
                   type="button"
                   onClick={() => {
