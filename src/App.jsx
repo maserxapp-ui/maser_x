@@ -1734,7 +1734,7 @@ else if (confirmedAttending) {
         
         {/* 💬 أيقونة الواتساب */}
         <a
-          href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}`}
+          href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '').startsWith('964') ? student.phone.replace(/[^0-9]/g, '') : '964' + student.phone.replace(/[^0-9]/g, '').replace(/^0/, '')}`}
           target="_blank"
           rel="noopener noreferrer"
           title="مراسلة عبر الواتساب"
