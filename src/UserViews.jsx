@@ -11,7 +11,7 @@ const sendPushNotificationToStudent = async (messageText, studentId) => {
         messageText: messageText || "السائق في طريقه إليكم الآن 🚗",
         targetUserId: studentId // 👈 يستلم رقم الطالب الصحيح
       })
-    });
+    });const handleFinishShift
 
     const data = await response.json();
     console.log("استجابة السيرفر الداخلي:", data);
@@ -1105,58 +1105,87 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   );
 
  
-// 🎓 دالة إنهاء الدوام والتجميع التلقائي لرحلة العودة + إرسال إشعار للإدارة عبر OneSignal
+// 🎓 دالة إنهاء الدوام المكتملة والمجهزة بنظام تشخيص الأخطاء الشامل بالكونسول (F12)
 const handleFinishShift = async () => {
+  console.group('🔍 [DIAGNOSTIC LOG] بدء عملية تسجيل إنهاء الدوام وإرسال الإشعار');
+
   try {
+    // 0️⃣ فحص بيانات المستخدم الحالي
+    console.log('👤 [Step 0] بيانات المستخدم الحالي:', user);
     if (!user?.id) {
+      console.error('❌ [Step 0 Error] لم يتم العثور على user.id');
       alert('⚠️ لم يتم العثور على بيانات المستخدم!');
+      console.groupEnd();
       return;
     }
 
     const studentName = user?.name || user?.full_name || user?.username || 'طالبة';
+    console.log(`🆔 ID الطالبة: ${user.id} | الاسم: ${studentName}`);
 
-    // 🛑 1️⃣ التحقق من أن سائق الذهاب قد أتم رحلة الصباح أولاً
+    // 🛑 1️⃣ التحقق من أن سائق الذهاب قد أتم الرحلة الصباحية أولاً
+    console.log('🔍 [Step 1] جلب سائق الذهاب المخصص للطالبة من جدول students...');
     const { data: studentData, error: studentErr } = await supabase
       .from('students')
       .select('driver_id')
       .eq('id', user.id)
       .maybeSingle();
 
-    if (studentErr) throw studentErr;
+    if (studentErr) {
+      console.error('❌ [Step 1 Error] خطأ في جلب driver_id الطالبة:', studentErr);
+      throw studentErr;
+    }
+
+    console.log('📌 بيانات الطالبة من Supabase:', studentData);
 
     if (!studentData || !studentData.driver_id) {
+      console.warn('⚠️ [Step 1 Warning] لم يتم تحديد سائق ذهاب للطالبة بعد.');
       alert('⚠️ لم يتم تحديد سائق لكِ في رحلة الذهاب بعد!');
+      console.groupEnd();
       return;
     }
 
+    console.log(`🚕 [Step 1] جلب حالة رحلة سائق الذهاب (ID: ${studentData.driver_id})...`);
     const { data: driverData, error: driverErr } = await supabase
       .from('drivers')
       .select('trip_status')
       .eq('id', studentData.driver_id)
       .maybeSingle();
 
-    if (driverErr) throw driverErr;
+    if (driverErr) {
+      console.error('❌ [Step 1 Error] خطأ في جلب حالة السائق:', driverErr);
+      throw driverErr;
+    }
+
+    console.log('📊 حالة السائق الحالية:', driverData);
 
     if (driverData?.trip_status !== 'completed') {
+      console.warn('⚠️ [Step 1 Warning] السائق لم يكمل رحلة الذهاب بعد. trip_status =', driverData?.trip_status);
       alert('⚠️ لا يمكنكِ الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلكِ بإتمام رحلة الذهاب الصباحية أولاً.');
+      console.groupEnd();
       return;
     }
 
     // 2️⃣ تحديث حالة الطالبة لرحلة العودة في جدول students
+    console.log('🔄 [Step 2] تحديث حالة الطالبة (finish_status = finished) في Supabase...');
     const { error: updateErr } = await supabase
       .from('students')
       .update({ 
-        finish_status: 'finished', // إنهاء الدوام
-        return_approved: false,     // تنتظر اعتماد الإدارة/السائق
-        is_boarded_return: false,   // تصفير حالة صعود العودة
-        is_dropped_return: false    // تصفير حالة إيصال العودة
+        finish_status: 'finished',
+        return_approved: false,
+        is_boarded_return: false,
+        is_dropped_return: false
       })
       .eq('id', user.id);
 
-    if (updateErr) throw updateErr;
+    if (updateErr) {
+      console.error('❌ [Step 2 Error] فشل تحديث جدول students:', updateErr);
+      throw updateErr;
+    }
+    console.log('✅ [Step 2 Success] تم تحديث حالة الطالبة بنجاح.');
 
     // 3️⃣ 🔔 إرسال إشعار فوري إلى جدول notifications للادارة في Supabase
-    await supabase
+    console.log('📝 [Step 3] إدخال صف جديد في جدول notifications...');
+    const { error: notifErr } = await supabase
       .from('notifications')
       .insert([
         {
@@ -1168,23 +1197,76 @@ const handleFinishShift = async () => {
         }
       ]);
 
-    // 🚀 [الجزء المضاف] 3.5️⃣ إرسال إشعار Push فوراً عبر OneSignal بواسطة API الخاص بك
-    try {
-      await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: '🎒 طلب رحلة عودة جديدة',
-          messageText: `الطالبة (${studentName}) أنهت دوامها الآن وتطلب تنسيق رحلة عودة.`,
-          isBroadcast: true
-        })
-      });
-    } catch (pushErr) {
-      console.error('خطأ إرسال إشعار OneSignal عبر الـ API:', pushErr);
+    if (notifErr) {
+      console.error('⚠️ [Step 3 Warning] فشل الإدخال في جدول notifications:', notifErr);
+    } else {
+      console.log('✅ [Step 3 Success] تم حفظ الإشعار في Supabase بنجاح.');
     }
 
-    // 4️⃣ 📝 تسجيل الطلب في جدول طلبات العودة (return_requests)
-    await supabase
+    // 4️⃣ 🚀 إرسال إشعار Push فوراً عبر الـ API الخاص بـ Cloudflare (/api/send-notification)
+    console.log('📡 [Step 4] جاري استدعاء API الإشعارات (/api/send-notification)...');
+    
+    const payload = {
+      title: '🎒 طلب رحلة عودة جديدة',
+      messageText: `الطالبة (${studentName}) أنهت دوامها الآن وتطلب رحلة عودة.`,
+      isBroadcast: true
+    };
+
+    console.log('📦 البيانات المرسلة لـ API الإشعارات (Payload):', payload);
+
+    try {
+      const apiStartTime = performance.now();
+      const res = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const apiEndTime = performance.now();
+      console.log(`⏱️ استغرق طلب الـ API حوالي: ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
+      console.log(`🌐 كود استجابة السيرفر (HTTP Status): ${res.status} (${res.statusText})`);
+
+      let resData;
+      try {
+        resData = await res.json();
+      } catch (jsonParseErr) {
+        console.error('❌ [Step 4 Error] فشل في قراءة الاستجابة كـ JSON:', jsonParseErr);
+        const rawText = await res.text();
+        console.log('📜 النص الخام الوارد من السيرفر:', rawText);
+      }
+
+      if (resData) {
+        console.log('📊 [Full DIAGNOSTIC REPORT] تقرير التشخيص الوارد من Cloudflare Pages:', resData);
+
+        const report = resData?.DIAGNOSTIC_REPORT;
+
+        if (report) {
+          console.group('⚙️ [تحليل تقرير التشخيص]');
+          console.log('1️⃣ هل مفتاح ONESIGNAL_API_KEY متوفر بالسيرفر؟', report['1_has_api_key'] ? '✅ نعم (موجود)' : '❌ لا (مفقود في Cloudflare Secrets!)');
+          console.log('2️⃣ النص المرسل:', report['2_sent_message']);
+          console.log('3️⃣ المستهدف:', report['3_target_user'] || 'الجميع (Broadcast)');
+          console.log('4️⃣ استجابة OneSignal الخام:', report['4_onesignal_raw_response']);
+
+          if (report['1_has_api_key'] === false) {
+            console.error('🛑 سبب عدم وصول الإشعار: مفتاح ONESIGNAL_API_KEY غير مضاف في Cloudflare Pages Variables/Secrets!');
+          }
+
+          if (report['4_onesignal_raw_response']?.errors) {
+            console.error('🛑 سبب رفض OneSignal للطلب:', report['4_onesignal_raw_response'].errors);
+          }
+          console.groupEnd();
+        } else if (resData?.error) {
+          console.error('❌ [API Error] السيرفر أرجع الخطأ التالي:', resData.error);
+        }
+      }
+
+    } catch (pushErr) {
+      console.error('💥 [Step 4 Fatal Error] فشل الاتصال برابط /api/send-notification:', pushErr);
+    }
+
+    // 5️⃣ 📝 تسجيل الطلب في جدول طلبات العودة (return_requests)
+    console.log('📝 [Step 5] إدخال طلب جديد في جدول return_requests...');
+    const { error: reqErr } = await supabase
       .from('return_requests')
       .insert([
         {
@@ -1195,39 +1277,51 @@ const handleFinishShift = async () => {
         }
       ]);
 
-    // 5️⃣ 🔄 كود التجميع التلقائي لكل 4 طالبات لرحلة العودة
+    if (reqErr) console.error('⚠️ [Step 5 Warning] خطأ حفظ return_requests:', reqErr);
+    else console.log('✅ [Step 5 Success] تم تسجيل الطلب في return_requests.');
+
+    // 6️⃣ 🔄 التجميع التلقائي لكل 4 طالبات لرحلة العودة
+    console.log('👥 [Step 6] فحص عدد الطالبات المنهيات للدوام وغير المخصص لهن سائق عودة...');
     const { data: unassignedStudents, error: fetchErr } = await supabase
       .from('students')
       .select('id')
       .eq('finish_status', 'finished')
       .is('return_driver_id', null);
 
-    if (fetchErr) console.error('خطأ جلب طالبات العودة:', fetchErr);
+    if (fetchErr) {
+      console.error('⚠️ [Step 6 Error] خطأ جلب طالبات العودة:', fetchErr);
+    } else {
+      console.log(`📊 عدد الطالبات المكتملات بانتظار سائق عودة: ${unassignedStudents?.length || 0}`);
 
-    if (unassignedStudents && unassignedStudents.length >= 4) {
-      const { data: drivers } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('is_accepting_trips', true);
+      if (unassignedStudents && unassignedStudents.length >= 4) {
+        console.log('🎉 اكتملت مجموعة من 4 طالبات! جاري البحث عن سائق متاحة...');
+        const { data: drivers } = await supabase
+          .from('drivers')
+          .select('id')
+          .eq('is_accepting_trips', true);
 
-      if (drivers && drivers.length > 0) {
-        const chosenDriver = drivers[0];
-        const groupOfFour = unassignedStudents.slice(0, 4).map(s => s.id);
+        if (drivers && drivers.length > 0) {
+          const chosenDriver = drivers[0];
+          const groupOfFour = unassignedStudents.slice(0, 4).map(s => s.id);
+          console.log(`🚕 تعيين السائق (${chosenDriver.id}) للطالبات التاليين:`, groupOfFour);
 
-        // تعيين سائق العودة للمجموعة
-        await supabase
-          .from('students')
-          .update({ 
-            return_driver_id: chosenDriver.id, 
-            return_approved: false 
-          })
-          .in('id', groupOfFour);
+          await supabase
+            .from('students')
+            .update({ 
+              return_driver_id: chosenDriver.id, 
+              return_approved: false 
+            })
+            .in('id', groupOfFour);
+        } else {
+          console.warn('⚠️ لا يوجد سائقون متاحون حالياً لتجميع المجموعة.');
+        }
       }
     }
 
-    alert('✅ تم تسجيل إنهاء دوامكِ بنجاح وإرسال إشعار للإدارة! سيتم تنسيق سيارة العودة لكِ قريباً.');
+    console.log('🎉 [FINISHED SUCCESSFULLY] اكتملت الدالة بنجاح تام!');
+    alert('✅ تم تسجيل إنهاء دوامكِ بنجاح وإرسال الإشعار للإدارة!');
     
-    // 6️⃣ تحديث الشاشة فوراً
+    // 7️⃣ تحديث الشاشة فوراً
     if (typeof fetchStudentData === 'function') {
       await fetchStudentData();
     } else {
@@ -1235,11 +1329,13 @@ const handleFinishShift = async () => {
     }
 
   } catch (err) {
-    console.error('خطأ أثناء تسجيل إنهاء الدوام لرحلة العودة:', err);
+    console.error('💥 [CRITICAL ERROR] حدث خطأ غير متوقع بالدالة:', err);
     alert('حدث خطأ أثناء حفظ الحالة، يرجى المحاولة مرة أخرى.');
+  } finally {
+    console.groupEnd();
   }
 };
-
+  
   // 🕒 حالات توقيت بغداد والعداد التنازلي
   const [baghdadTime, setBaghdadTime] = useState('');
   const [countdown, setCountdown] = useState('');
