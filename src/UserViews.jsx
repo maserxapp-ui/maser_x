@@ -11,7 +11,7 @@ const sendPushNotificationToStudent = async (messageText, studentId) => {
         messageText: messageText || "السائق في طريقه إليكم الآن 🚗",
         targetUserId: studentId // 👈 يستلم رقم الطالب الصحيح
       })
-    });const handleFinishShift
+    });
 
     const data = await response.json();
     console.log("استجابة السيرفر الداخلي:", data);
