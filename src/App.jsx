@@ -42,11 +42,17 @@ export default function App() {
     const saved = localStorage.getItem('maser_currentUser');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
   });
-  // 🔔 ربط لوحة الإدارة بـ OneSignal لتلقي إشعارات الأدمن فقط
+ // 🔔 ربط لوحة الإدارة بـ OneSignal بعد اكتمال التهيأة تماماً
   useEffect(() => {
-    if (window.OneSignal) {
-      window.OneSignal.login('admin');
-    }
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.login('admin');
+        console.log('✅ تم تسجيل متصفح الإدارة بنجاح في OneSignal (admin)');
+      } catch (err) {
+        console.error('⚠️ خطأ أثناء تسجيل الدخول لـ OneSignal:', err);
+      }
+    });
   }, []);
 
   // 🔄 التحديث التلقائي للذاكرة عند تغيير المستخدم
