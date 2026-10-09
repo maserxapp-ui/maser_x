@@ -1105,86 +1105,125 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   );
 
  
-// 🎓 دالة إنهاء الدوام والتجميع التلقائي لكل 4 طالبات
-  const handleFinishShift = async () => {
-    try {
-      if (!user?.id) return;
-
-      // 🛑 1️⃣ التحقق من أن سائق الذهاب المخصص للطالبة قد أتم رحلته أولاً
-      const { data: studentData, error: studentErr } = await supabase
-        .from('students')
-        .select('driver_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (studentErr) throw studentErr;
-
-      if (!studentData || !studentData.driver_id) {
-        alert('⚠️ لم يتم تحديد سائق لك في رحلة الذهاب بعد!');
-        return;
-      }
-
-      const { data: driverData, error: driverErr } = await supabase
-        .from('drivers')
-        .select('trip_status')
-        .eq('id', studentData.driver_id)
-        .maybeSingle();
-
-      if (driverErr) throw driverErr;
-
-      // إلغاء العملية إذا لم تكن رحلة السائق مكتملة
-      if (driverData?.trip_status !== 'completed') {
-        alert('⚠️ لا يمكنك الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلك بإتمام رحلة الذهاب أولاً.');
-        return;
-      }
-
-      // 2️⃣ تحديث حالة الطالبة إلى أنهت الدوام
-      const { error: updateErr } = await supabase
-        .from('students')
-        .update({ finish_status: 'finished' })
-        .eq('id', user.id);
-
-      if (updateErr) throw updateErr;
-
-      // 3️⃣ كود التجميع التلقائي الخاص بك
-      const { data: unassignedStudents, error: fetchErr } = await supabase
-        .from('students')
-        .select('id')
-        .eq('finish_status', 'finished')
-        .is('return_driver_id', null);
-
-      if (fetchErr) throw fetchErr;
-
-      if (unassignedStudents && unassignedStudents.length >= 4) {
-        const { data: drivers } = await supabase.from('drivers').select('id');
-
-        if (drivers && drivers.length > 0) {
-          const chosenDriver = drivers[0];
-          const groupOfFour = unassignedStudents.slice(0, 4).map(s => s.id);
-
-          await supabase
-            .from('students')
-            .update({ 
-              return_driver_id: chosenDriver.id, 
-              return_approved: false 
-            })
-            .in('id', groupOfFour);
-        }
-      }
-
-      alert('تم تسجيل إنهاء دوامك بنجاح! سيتم ترتيب سيارة العودة واعتمادها من الإدارة.');
-      
-      if (typeof fetchStudentData === 'function') {
-        fetchStudentData();
-      } else {
-        window.location.reload();
-      }
-
-    } catch (err) {
-      console.error('خطأ أثناء تسجيل إنهاء الدوام:', err);
-      alert('حدث خطأ أثناء حفظ الحالة، يرجى المحاولة مرة أخرى.');
+// 🎓 دالة إنهاء الدوام والتجميع التلقائي لرحلة العودة + إرسال إشعار للإدارة
+const handleFinishShift = async () => {
+  try {
+    if (!user?.id) {
+      alert('⚠️ لم يتم العثور على بيانات المستخدم!');
+      return;
     }
-  };
+
+    const studentName = user?.name || user?.full_name || user?.username || 'طالبة';
+
+    // 🛑 1️⃣ التحقق من أن سائق الذهاب قد أتم رحلة الصباح أولاً
+    const { data: studentData, error: studentErr } = await supabase
+      .from('students')
+      .select('driver_id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (studentErr) throw studentErr;
+
+    if (!studentData || !studentData.driver_id) {
+      alert('⚠️ لم يتم تحديد سائق لكِ في رحلة الذهاب بعد!');
+      return;
+    }
+
+    const { data: driverData, error: driverErr } = await supabase
+      .from('drivers')
+      .select('trip_status')
+      .eq('id', studentData.driver_id)
+      .maybeSingle();
+
+    if (driverErr) throw driverErr;
+
+    if (driverData?.trip_status !== 'completed') {
+      alert('⚠️ لا يمكنكِ الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلكِ بإتمام رحلة الذهاب الصباحية أولاً.');
+      return;
+    }
+
+    // 2️⃣ تحديث حالة الطالبة لرحلة العودة في جدول students
+    const { error: updateErr } = await supabase
+      .from('students')
+      .update({ 
+        finish_status: 'finished', // إنهاء الدوام
+        return_approved: false,     // تنتظر اعتماد الإدارة/السائق
+        is_boarded_return: false,   // تصفير حالة صعود العودة
+        is_dropped_return: false    // تصفير حالة إيصال العودة
+      })
+      .eq('id', user.id);
+
+    if (updateErr) throw updateErr;
+
+    // 3️⃣ 🔔 إرسال إشعار فوري إلى جدول notifications للادارة
+    await supabase
+      .from('notifications')
+      .insert([
+        {
+          title: '🎒 طلب رحلة عودة جديدة',
+          message: `الطالبة (${studentName}) أنهت دوامها الآن وتطلب تنسيق سيارة عودة.`,
+          student_id: user.id,
+          type: 'return_request',
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+    // 4️⃣ 📝 تسجيل الطلب في جدول طلبات العودة (return_requests)
+    await supabase
+      .from('return_requests')
+      .insert([
+        {
+          student_id: user.id,
+          student_name: studentName,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+    // 5️⃣ 🔄 كود التجميع التلقائي لكل 4 طالبات لرحلة العودة
+    const { data: unassignedStudents, error: fetchErr } = await supabase
+      .from('students')
+      .select('id')
+      .eq('finish_status', 'finished')
+      .is('return_driver_id', null);
+
+    if (fetchErr) console.error('خطأ جلب طالبات العودة:', fetchErr);
+
+    if (unassignedStudents && unassignedStudents.length >= 4) {
+      const { data: drivers } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('is_accepting_trips', true);
+
+      if (drivers && drivers.length > 0) {
+        const chosenDriver = drivers[0];
+        const groupOfFour = unassignedStudents.slice(0, 4).map(s => s.id);
+
+        // تعيين سائق العودة للمجموعة
+        await supabase
+          .from('students')
+          .update({ 
+            return_driver_id: chosenDriver.id, 
+            return_approved: false 
+          })
+          .in('id', groupOfFour);
+      }
+    }
+
+    alert('✅ تم تسجيل إنهاء دوامكِ بنجاح وإرسال إشعار للإدارة! سيتم تنسيق سيارة العودة لكِ قريباً.');
+    
+    // 6️⃣ تحديث الشاشة فوراً
+    if (typeof fetchStudentData === 'function') {
+      await fetchStudentData();
+    } else {
+      window.location.reload();
+    }
+
+  } catch (err) {
+    console.error('خطأ أثناء تسجيل إنهاء الدوام لرحلة العودة:', err);
+    alert('حدث خطأ أثناء حفظ الحالة، يرجى المحاولة مرة أخرى.');
+  }
+};
 
   // 🕒 حالات توقيت بغداد والعداد التنازلي
   const [baghdadTime, setBaghdadTime] = useState('');
