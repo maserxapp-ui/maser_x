@@ -42,6 +42,12 @@ export default function App() {
     const saved = localStorage.getItem('maser_currentUser');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
   });
+  // 🔔 ربط لوحة الإدارة بـ OneSignal لتلقي إشعارات الأدمن فقط
+  useEffect(() => {
+    if (window.OneSignal) {
+      window.OneSignal.login('admin');
+    }
+  }, []);
 
   // 🔄 التحديث التلقائي للذاكرة عند تغيير المستخدم
   useEffect(() => {
