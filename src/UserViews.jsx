@@ -1105,7 +1105,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
   );
 
  
-// 🎓 دالة إنهاء الدوام والتجميع التلقائي لرحلة العودة + إرسال إشعار للإدارة
+// 🎓 دالة إنهاء الدوام والتجميع التلقائي لرحلة العودة + إرسال إشعار للإدارة عبر OneSignal
 const handleFinishShift = async () => {
   try {
     if (!user?.id) {
@@ -1155,7 +1155,7 @@ const handleFinishShift = async () => {
 
     if (updateErr) throw updateErr;
 
-    // 3️⃣ 🔔 إرسال إشعار فوري إلى جدول notifications للادارة
+    // 3️⃣ 🔔 إرسال إشعار فوري إلى جدول notifications للادارة في Supabase
     await supabase
       .from('notifications')
       .insert([
@@ -1167,6 +1167,21 @@ const handleFinishShift = async () => {
           created_at: new Date().toISOString()
         }
       ]);
+
+    // 🚀 [الجزء المضاف] 3.5️⃣ إرسال إشعار Push فوراً عبر OneSignal بواسطة API الخاص بك
+    try {
+      await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🎒 طلب رحلة عودة جديدة',
+          messageText: `الطالبة (${studentName}) أنهت دوامها الآن وتطلب تنسيق رحلة عودة.`,
+          isBroadcast: true
+        })
+      });
+    } catch (pushErr) {
+      console.error('خطأ إرسال إشعار OneSignal عبر الـ API:', pushErr);
+    }
 
     // 4️⃣ 📝 تسجيل الطلب في جدول طلبات العودة (return_requests)
     await supabase
