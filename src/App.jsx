@@ -42,19 +42,24 @@ export default function App() {
     const saved = localStorage.getItem('maser_currentUser');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
   });
- // 🔔 ربط لوحة الإدارة بـ OneSignal بعد اكتمال التهيأة تماماً
+// 🔔 ربط الجهاز بـ OneSignal بصفة 'admin' فقط إذا كان المستخدم أدمن
   useEffect(() => {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OneSignal) => {
-      try {
-        await OneSignal.login('admin');
-        console.log('✅ تم تسجيل متصفح الإدارة بنجاح في OneSignal (admin)');
-      } catch (err) {
-        console.error('⚠️ خطأ أثناء تسجيل الدخول لـ OneSignal:', err);
-      }
-    });
-  }, []);
+    // نتحقق أولاً: هل المستعمل الحالي هو الإدارة فعلاً؟
+    const isAdmin = loginRole === 'admin' || viewMode === 'admin' || currentUser?.role === 'admin';
 
+    if (isAdmin) {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async (OneSignal) => {
+        try {
+          await OneSignal.login('admin');
+          console.log('✅ تم تسجيل هذا المتصفح بصفة (admin) للإدارة فقط');
+        } catch (err) {
+          console.error('⚠️ خطأ أثناء تسجيل الدخول لـ OneSignal:', err);
+        }
+      });
+    }
+  }, [loginRole, viewMode, currentUser]);
+  
   // 🔄 التحديث التلقائي للذاكرة عند تغيير المستخدم
   useEffect(() => {
     localStorage.setItem('maser_viewMode', viewMode);
