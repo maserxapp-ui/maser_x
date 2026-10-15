@@ -1163,7 +1163,7 @@ const handleFinishShift = async () => {
         body: JSON.stringify({
           title: '🎒 طلب رحلة عودة جديدة',
           messageText: `طالبة جديدة أنهت دوامها (${studentName})، يرجى ترتيب رحلة عودة لها 🚌`,
-          targetUserId: 'admin' // 🎯 موجه معرّف الإدارة فقط
+          targetUserId: 'admin_panel_v2'
         })
       });
     } catch (pushErr) {
