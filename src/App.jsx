@@ -47,7 +47,7 @@ export default function App() {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal) => {
       try {
-        await OneSignal.login('admin');
+        await OneSignal.login('admin_panel_v2');
         console.log('✅ تم تسجيل هذه الشاشة رسمياً بصفة (admin) لدى OneSignal');
       } catch (err) {
         console.error('⚠️ خطأ OneSignal:', err);
