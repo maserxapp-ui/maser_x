@@ -42,23 +42,49 @@ export default function App() {
     const saved = localStorage.getItem('maser_currentUser');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
   });
-// 🔔 ربط الجهاز بـ OneSignal بصفة 'admin' فقط إذا كان المستخدم أدمن
+// 🔔 1️⃣ تسجيل شاشة لوحة التحكم كـ admin رسمياً لدى OneSignal
   useEffect(() => {
-    // نتحقق أولاً: هل المستعمل الحالي هو الإدارة فعلاً؟
-    const isAdmin = loginRole === 'admin' || viewMode === 'admin' || currentUser?.role === 'admin';
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        await OneSignal.login('admin');
+        console.log('✅ تم تسجيل هذه الشاشة رسمياً بصفة (admin) لدى OneSignal');
+      } catch (err) {
+        console.error('⚠️ خطأ OneSignal:', err);
+      }
+    });
+  }, []);
 
-    if (isAdmin) {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async (OneSignal) => {
-        try {
-          await OneSignal.login('admin');
-          console.log('✅ تم تسجيل هذا المتصفح بصفة (admin) للإدارة فقط');
-        } catch (err) {
-          console.error('⚠️ خطأ أثناء تسجيل الدخول لـ OneSignal:', err);
+  // 🔔 2️⃣ تنبيه لحظي وصوتي مباشر يظهر فوراً على الشاشة عند طلب أي طالبة
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-dashboard-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          if (payload.new) {
+            // 🔊 تشغيل صوت تنبيه
+            try {
+              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+              audio.play().catch(() => {});
+            } catch (e) {}
+
+            // 💬 إظهار نافذة تنبيه فورية على شاشة الإدارة
+            alert(`🔔 ${payload.new.title || 'إشعار جديد'}\n\n${payload.new.message || ''}`);
+          }
         }
-      });
-    }
-  }, [loginRole, viewMode, currentUser]);
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   
   // 🔄 التحديث التلقائي للذاكرة عند تغيير المستخدم
   useEffect(() => {
