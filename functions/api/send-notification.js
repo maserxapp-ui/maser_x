@@ -28,13 +28,12 @@ export async function onRequestPost(context) {
     customMessage = "السائق في الطريق إليكم الآن 🚗";
   }
 
-  // 4️⃣ استخراج المعرف الخاص بالطالب المستهدف
+  // 4️⃣ استخراج المعرف الخاص بالطالب أو المستهدفين
   const targetUserId = frontendData.targetUserId || frontendData.studentId || frontendData.external_id;
 
-  // 🎯 إعداد هيكل الإشعار لـ OneSignal
+  // 🎯 إعداد هيكل الإشعار لـ OneSignal (تم حذف target_channel لمنع الخطأ 400)
   const onesignalPayload = {
     app_id: ONESIGNAL_APP_ID,
-    target_channel: "push",
     contents: {
       ar: customMessage,
       en: customMessage
@@ -46,19 +45,23 @@ export async function onRequestPost(context) {
   };
 
   // 📍 التوجيه الخصوصي وحماية النظام من الإرسال للجميع بالخطأ:
-  if (targetUserId) {
-    // إرسال للطالب المحدد فقط عبر external_user_ids
-    onesignalPayload.include_external_user_ids = Array.isArray(targetUserId)
-      ? targetUserId.map(String)
-      : [String(targetUserId)];
+  const hasArrayTargets = Array.isArray(targetUserId) && targetUserId.length > 0;
+  const hasSingleTarget = targetUserId && !Array.isArray(targetUserId);
+
+  if (hasArrayTargets) {
+    // إرسال لمجموعة مستهدفين محددين (مثلاً طالبات رحلة معينة)
+    onesignalPayload.include_external_user_ids = targetUserId.map(String);
+  } else if (hasSingleTarget) {
+    // إرسال لمستهدف واحد (مثلاً الأدمن أو سائق محدد)
+    onesignalPayload.include_external_user_ids = [String(targetUserId)];
   } else if (frontendData.isBroadcast === true) {
     // لن يُرسل لجميع المشتركين إلا إذا تم طلب ذلك صراحة عبر isBroadcast: true
     onesignalPayload.included_segments = ["Subscribed Users"];
   } else {
-    // 🛑 حماية: إذا لم يتم تحديد طالب، نوقف الطلب بدلاً من الإرسال للجميع
+    // 🛑 حماية: إذا لم يتم تحديد مستهدفين، نوقف الطلب بدلاً من الإرسال للجميع
     return new Response(
       JSON.stringify({ 
-        error: "لم يتم تحديد معرّف الطالب (targetUserId)، تم إيقاف الإشعار لمنع إرساله للجميع بالخطأ." 
+        error: "لم يتم تحديد معرّف مستهدف صحيح (targetUserId)، تم إيقاف الإشعار لمنع إرساله بالخطأ." 
       }),
       { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } }
     );
@@ -84,11 +87,13 @@ export async function onRequestPost(context) {
       onesignalResponse = { fetch_error: err.message };
     }
   } else {
-    onesignalResponse = { error: "مفتاح ONESIGNAL_API_KEY غير موجود" };
+    onesignalResponse = { error: "مفتاح ONESIGNAL_API_KEY غير موجود في Cloudflare Secrets" };
   }
 
   return new Response(
     JSON.stringify({
+      status: onesignalStatus,
+      sent_payload: onesignalPayload,
       DIAGNOSTIC_REPORT: {
         "1_has_api_key": Boolean(apiKey),
         "2_sent_message": customMessage,
