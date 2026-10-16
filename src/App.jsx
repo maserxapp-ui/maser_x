@@ -2745,68 +2745,80 @@ function AdminReturnTripsManager({ supabase }) {
     loadReturnData();
   }, []);
 
- // موافقة ونشر الباقة + إرسال إشعارات فورية للطالبات والسائق
+ // موافقة ونشر الباقة + تشخيص وطباعة تقرير OneSignal بالكونسل
   const handleApproveGroup = async (driverId) => {
     try {
-      const groupStudents = returnGroups[driverId]?.students || [];
-      const studentIds = groupStudents.map(s => s.id);
-      const targetDriverId = (driverId === 'unassigned' || !driverId) ? null : parseInt(driverId, 10);
+      console.log('🏁 بدء نشر رحلة العودة للرمز:', driverId);
 
-      if (studentIds.length === 0) {
-        alert('⚠️ لا يوجد طالبات في هذه المجموعة!');
-        return;
-      }
+      const groupData = returnGroups[driverId] || returnGroups[String(driverId)] || returnGroups[Number(driverId)];
+      const groupStudents = groupData?.students || [];
+      
+      // استخراج أرقام الطالبات بالشكل الصحيح
+      const studentIds = groupStudents.map(s => String(s.id || s.student_id)).filter(Boolean);
+      
+      const targetDriverId = (driverId === 'unassigned' || !driverId || driverId === 'null') 
+        ? null 
+        : String(driverId);
+
+      console.log('👥 الطالبات المستهدفات بالإشعار:', studentIds);
+      console.log('🚕 السائق المستهدف بالإشعار:', targetDriverId);
 
       // 1️⃣ تحديث حالة الطالبات والسائق في Supabase
-      const { error } = await supabase
-        .from('students')
-        .update({ 
-          return_driver_id: targetDriverId, 
-          return_approved: true 
-        })
-        .in('id', studentIds);
-
-      if (error) throw error;
-
-      // 2️⃣ 🔔 إرسال إشعار PUSH لكل طالبات هذه الرحلة حصراً
-      try {
-        await fetch('/api/send-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: '🚌 تم ترتيب رحلة العودة',
-            messageText: 'تم ترتيب رحلة عودة إليكِ، يرجى التوجه إلى مكان العودة المتفق عليه 📍',
-            targetUserId: studentIds.map(String) // 🎯 يرسل للطالبات المحددة بهذه الرحلة فقط
+      if (studentIds.length > 0) {
+        const { error } = await supabase
+          .from('students')
+          .update({ 
+            return_driver_id: targetDriverId ? parseInt(targetDriverId, 10) : null, 
+            return_approved: true 
           })
-        });
-        console.log('✅ تم إرسال إشعار العودة للطالبات بنجاح');
-      } catch (pushErr) {
-        console.error('خطأ إرسال إشعار الطالبات:', pushErr);
+          .in('id', studentIds);
+
+        if (error) throw error;
       }
 
-      // 3️⃣ 🔔 إرسال إشعار PUSH للسائق المخصص للرحلة حصراً
+      // 2️⃣ 🔔 إرسال إشعار PUSH لكل طالبات هذه الرحلة
+      if (studentIds.length > 0) {
+        try {
+          const resNotif = await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: '🚌 تم ترتيب رحلة العودة',
+              messageText: 'تم ترتيب رحلة عودة إليكِ، يرجى التوجه إلى مكان العودة المتفق عليه 📍',
+              targetUserId: studentIds
+            })
+          });
+          const resData = await resNotif.json();
+          console.log('📊 [تقرير OneSignal للطالبات]:', resData);
+        } catch (pushErr) {
+          console.error('❌ خطأ إرسال إشعار الطالبات:', pushErr);
+        }
+      }
+
+      // 3️⃣ 🔔 إرسال إشعار PUSH للسائق المخصص للرحلة
       if (targetDriverId) {
         try {
-          await fetch('/api/send-notification', {
+          const resDriverNotif = await fetch('/api/send-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               title: '🚖 رحلة عودة جديدة',
               messageText: 'تم ترتيب رحلة عودة إليك، يرجى التوجه إلى الموقف المتفق عليه لكي تأتي الطالبات عليك 📍',
-              targetUserId: String(targetDriverId) // 🎯 يرسل للسائق المخصص فقط
+              targetUserId: targetDriverId
             })
           });
-          console.log('✅ تم إرسال إشعار العودة للسائق بنجاح');
+          const resDriverData = await resDriverNotif.json();
+          console.log('📊 [تقرير OneSignal للسائق]:', resDriverData);
         } catch (pushErr) {
-          console.error('خطأ إرسال إشعار السائق:', pushErr);
+          console.error('❌ خطأ إرسال إشعار السائق:', pushDriverErr);
         }
       }
 
       alert('✅ تمت الموافقة ونشر رحلة العودة وإرسال الإشعارات بنجاح!');
-      loadReturnData();
+      if (typeof loadReturnData === 'function') loadReturnData();
 
     } catch (err) {
-      console.error('خطأ أثناء نشر رحلة العودة:', err);
+      console.error('💥 خطأ أثناء نشر رحلة العودة:', err);
       alert('حدث خطأ أثناء حفظ التغييرات، يرجى المحاولة مرة أخرى.');
     }
   };
