@@ -2745,24 +2745,72 @@ function AdminReturnTripsManager({ supabase }) {
     loadReturnData();
   }, []);
 
-  // موافقة ونشر الباقة
+ // موافقة ونشر الباقة + إرسال إشعارات فورية للطالبات والسائق
   const handleApproveGroup = async (driverId) => {
-    const groupStudents = returnGroups[driverId]?.students || [];
-    const studentIds = groupStudents.map(s => s.id);
-    const targetDriverId = (driverId === 'unassigned' || !driverId) ? null : parseInt(driverId, 10);
+    try {
+      const groupStudents = returnGroups[driverId]?.students || [];
+      const studentIds = groupStudents.map(s => s.id);
+      const targetDriverId = (driverId === 'unassigned' || !driverId) ? null : parseInt(driverId, 10);
 
-    await supabase
-      .from('students')
-      .update({ 
-        return_driver_id: targetDriverId, 
-        return_approved: true 
-      })
-      .in('id', studentIds);
+      if (studentIds.length === 0) {
+        alert('⚠️ لا يوجد طالبات في هذه المجموعة!');
+        return;
+      }
 
-    alert('✅ تمت الموافقة ونشر رحلة العودة بنجاح!');
-    loadReturnData();
+      // 1️⃣ تحديث حالة الطالبات والسائق في Supabase
+      const { error } = await supabase
+        .from('students')
+        .update({ 
+          return_driver_id: targetDriverId, 
+          return_approved: true 
+        })
+        .in('id', studentIds);
+
+      if (error) throw error;
+
+      // 2️⃣ 🔔 إرسال إشعار PUSH لكل طالبات هذه الرحلة حصراً
+      try {
+        await fetch('/api/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '🚌 تم ترتيب رحلة العودة',
+            messageText: 'تم ترتيب رحلة عودة إليكِ، يرجى التوجه إلى مكان العودة المتفق عليه 📍',
+            targetUserId: studentIds.map(String) // 🎯 يرسل للطالبات المحددة بهذه الرحلة فقط
+          })
+        });
+        console.log('✅ تم إرسال إشعار العودة للطالبات بنجاح');
+      } catch (pushErr) {
+        console.error('خطأ إرسال إشعار الطالبات:', pushErr);
+      }
+
+      // 3️⃣ 🔔 إرسال إشعار PUSH للسائق المخصص للرحلة حصراً
+      if (targetDriverId) {
+        try {
+          await fetch('/api/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: '🚖 رحلة عودة جديدة',
+              messageText: 'تم ترتيب رحلة عودة إليك، يرجى التوجه إلى الموقف المتفق عليه لكي تأتي الطالبات عليك 📍',
+              targetUserId: String(targetDriverId) // 🎯 يرسل للسائق المخصص فقط
+            })
+          });
+          console.log('✅ تم إرسال إشعار العودة للسائق بنجاح');
+        } catch (pushErr) {
+          console.error('خطأ إرسال إشعار السائق:', pushErr);
+        }
+      }
+
+      alert('✅ تمت الموافقة ونشر رحلة العودة وإرسال الإشعارات بنجاح!');
+      loadReturnData();
+
+    } catch (err) {
+      console.error('خطأ أثناء نشر رحلة العودة:', err);
+      alert('حدث خطأ أثناء حفظ التغييرات، يرجى المحاولة مرة أخرى.');
+    }
   };
-
+  
   // إعادة تعيين السائق للطالبة
   const handleReassignStudent = async (studentId, newDriverId) => {
     const formattedDriverId = newDriverId ? parseInt(newDriverId, 10) : null;
