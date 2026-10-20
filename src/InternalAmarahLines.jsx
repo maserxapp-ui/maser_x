@@ -69,7 +69,7 @@ export function InternalAmarahLines({ supabase }) {
     setNewDriver({ ...newDriver, destinations: updated });
   };
 
-  // 🤖 خوارزمية التوزيع التلقائي لطلاب العمارة المداومين غداً
+  // 🤖 خوارزمية التوزيع التلقائي لطلاب العمارة المداومين غداً (تم تصحيح عداد السعة)
   const handleAutoDistribute = async () => {
     setLoading(true);
     try {
@@ -84,14 +84,14 @@ export function InternalAmarahLines({ supabase }) {
         return;
       }
 
-      let assignedCount = 0;
-      const updates = [];
-
+      // 1️⃣ تصفير عداد سعة السائقين ليوم غد للبدء بتوزيع المداومين من جديد بشكل صحيح
       const driverCapacities = {};
       drivers.forEach((d) => {
-        const currentAssigned = students.filter((s) => s.driver_id === d.id).length;
-        driverCapacities[d.id] = currentAssigned;
+        driverCapacities[d.id] = 0;
       });
+
+      let assignedCount = 0;
+      const updates = [];
 
       commutingStudents.forEach((student) => {
         if (!student.location || student.location.trim() === '') return;
@@ -100,7 +100,7 @@ export function InternalAmarahLines({ supabase }) {
 
         const matchedDriver = drivers.find((driver) => {
           const driverDests = driver.destinations || [];
-          const maxCapacity = driver.capacity || 4;
+          const maxCapacity = Number(driver.capacity) || 4;
           const currentCount = driverCapacities[driver.id] || 0;
 
           const isMatched = driverDests.some((dest) => {
@@ -166,14 +166,14 @@ export function InternalAmarahLines({ supabase }) {
   // 🎓 حفظ الطالب الجديد في خطوط العمارة
   const handleSaveStudent = async (e) => {
     e.preventDefault();
-  const { error } = await supabase.from('students').insert([
+    const { error } = await supabase.from('students').insert([
       {
         name: newStudent.name,
         phone: newStudent.phone,
         password: newStudent.password,
         location: newStudent.location,
         subscription_price: newStudent.subscription_price || '0',
-        price: newStudent.subscription_price || '0', // 👈 هذا هو العامود الأساسي الموجود في جدول Supabase
+        price: newStudent.subscription_price || '0',
         line_type: 'internal_amarah',
         tomorrow_status: 'لم يحدد'
       }
@@ -239,7 +239,7 @@ export function InternalAmarahLines({ supabase }) {
         </div>
       </div>
 
-      {/* 1. تبويب التوزيع التلقائي وجدول المداومين الاحتياطي */}
+      {/* 1. تبويب التوزيع التلقائي وجدول المداومين */}
       {activeSubTab === 'distribution' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
@@ -256,7 +256,7 @@ export function InternalAmarahLines({ supabase }) {
             </button>
           </div>
 
-          {/* 📋 جدول المداومين غداً الاحتياطي (خاص بطلاب العمارة) */}
+          {/* 📋 جدول المداومين غداً (تمت إضافة إمكانية التعيين اليدوي مباشرة منه) */}
           <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 space-y-3">
             <div className="flex justify-between items-center border-b border-slate-700 pb-2">
               <h4 className="font-bold text-amber-400 text-sm flex items-center gap-2">
@@ -271,21 +271,34 @@ export function InternalAmarahLines({ supabase }) {
               <p className="text-xs text-slate-400 italic text-center py-3">لا يوجد طلاب عمارة محددين كـ "أداوم غداً" حالياً.</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {attendingStudents.map((std) => {
-                  const assignedDriver = drivers.find((d) => d.id === std.driver_id);
-                  return (
-                    <div key={std.id} className="bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs space-y-1">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="text-white">{std.name}</span>
-                        <span className="text-emerald-400">{std.location || 'غير محدد'}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex justify-between">
-                        <span>السائق: <strong className="text-amber-300">{assignedDriver ? assignedDriver.name : 'غير موزع'}</strong></span>
-                        <span>الاشتراك: {std.subscription_price || 0} د.ع</span>
-                      </div>
+                {attendingStudents.map((std) => (
+                  <div key={std.id} className="bg-slate-900 p-2.5 rounded-xl border border-slate-700 text-xs space-y-2">
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="text-white">{std.name}</span>
+                      <span className="text-emerald-400">{std.location || 'غير محدد'}</span>
                     </div>
-                  );
-                })}
+                    <div className="text-[11px] text-slate-400 flex justify-between items-center">
+                      <div className="flex items-center gap-1">
+                        <span>السائق:</span>
+                        <select
+                          value={std.driver_id || ''}
+                          onChange={async (e) => {
+                            const newDriverId = e.target.value ? parseInt(e.target.value, 10) : null;
+                            await supabase.from('students').update({ driver_id: newDriverId }).eq('id', std.id);
+                            fetchData();
+                          }}
+                          className="bg-slate-800 text-[11px] text-amber-300 p-1 rounded border border-slate-700"
+                        >
+                          <option value="">غير موزع</option>
+                          {drivers.map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <span>الاشتراك: {std.subscription_price || std.price || 0} د.ع</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -295,7 +308,7 @@ export function InternalAmarahLines({ supabase }) {
             {drivers.map((driver) => {
               const assignedStudents = students.filter((s) => s.driver_id === driver.id);
               const deductionRate = driver.manager_deduction || 15;
-              const totalSubs = assignedStudents.reduce((sum, s) => sum + (Number(s.subscription_price) || 0), 0);
+              const totalSubs = assignedStudents.reduce((sum, s) => sum + (Number(s.subscription_price || s.price) || 0), 0);
               const managerCut = totalSubs * (deductionRate / 100);
               const driverNet = totalSubs - managerCut;
 
@@ -363,9 +376,10 @@ export function InternalAmarahLines({ supabase }) {
                         <div key={std.id} className="flex justify-between items-center bg-slate-900/60 p-2 rounded-lg text-xs">
                           <span>{std.name} ({std.location || 'بدون موقع'})</span>
                           <select
-                            value={std.driver_id}
+                            value={std.driver_id || ''}
                             onChange={async (e) => {
-                              await supabase.from('students').update({ driver_id: e.target.value }).eq('id', std.id);
+                              const newDriverId = e.target.value ? parseInt(e.target.value, 10) : null;
+                              await supabase.from('students').update({ driver_id: newDriverId }).eq('id', std.id);
                               fetchData();
                             }}
                             className="bg-slate-800 text-[11px] text-amber-300 p-1 rounded border border-slate-700"
@@ -466,7 +480,7 @@ export function InternalAmarahLines({ supabase }) {
         </form>
       )}
 
-      {/* 3. تبويب إضافة سائق وو جهات */}
+      {/* 3. تبويب إضافة سائق ووجهات */}
       {activeSubTab === 'drivers' && (
         <form onSubmit={handleSaveDriver} className="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4">
           <h3 className="font-bold text-amber-300 text-sm border-b border-slate-700 pb-2">➕ إضافة سائق خط داخلي جديد</h3>
