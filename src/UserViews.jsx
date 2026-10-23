@@ -1093,7 +1093,7 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
 
 // 1️⃣ دالة حساب الأيام المتبقية (تعتبر الحساب مفعلاً 30 يوماً افتراضياً إذا لم يُحدد تاريخ بعد)
   const getRemainingSubscriptionDays = (expiryDateStr) => {
-    if (!expiryDateStr) return 30; // 💡 تمنع قفل الحسابات الجديدة
+   if (!expiryDateStr) return 28; // 💡 تمنع قفل الحسابات الجديدة (4 أسابيع)
     const today = new Date();
     const expiry = new Date(expiryDateStr);
     const diffTime = expiry - today;
