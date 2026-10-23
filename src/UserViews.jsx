@@ -1931,22 +1931,27 @@ if (user && user.role === 'driver') {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               
               {/* زر أداوم غداً */}
-              <button
-               أonClick={() => {
-  // 🔓 تفعيل استثنائي لهذا اليوم فقط (تم تعطيل القفل الزمني مؤقتاً)
-  const isRegistrationOpen = true; 
+              {/* 🟢 زر أداوم غداً */}
+<button
+  onClick={() => {
+    // 🔓 تفعيل استثنائي (القفل معطل مؤقتاً)
+    const isRegistrationOpen = true; 
 
-  if (!isRegistrationOpen) {
-    alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد تصفير النظام الساعة 6:00 مساءً.");
-    return;
-  }
+    if (!isRegistrationOpen) {
+      alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد تصفير النظام الساعة 6:00 مساءً.");
+      return;
+    }
 
-  if (!isWorkDay) {
-    alert(`في النظام (${tomorrowName}) ليس لديك دوام غداً ⚠️!`);
-  } else {
-    handleStudentAction('attending', 'أداوم غداً');
-  }
-}}
+    if (!isWorkDay) {
+      alert(`في النظام (${tomorrowName}) ليس لديك دوام غداً ⚠️!`);
+    } else {
+      handleStudentAction('attending', 'أداوم غداً');
+    }
+  }}
+>
+  🟢 أداوم غداً
+</button>
+              
                 style={{
                   padding: '12px 8px',
                   borderRadius: '10px',
