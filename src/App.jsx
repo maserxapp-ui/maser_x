@@ -227,15 +227,6 @@ export default function App() {
 
   // 🔄 ربط زر التصفير اليدوي بالدالة
   const handleManualResetTrips = () => performTripsReset(false);
-
-  // 🕒 2️⃣ المستمع التلقائي للوقت (يتحقق أوتوماتيكياً عند وصول الساعة 6:00 مساءً بتوقيت بغداد)
- 
-    // تشغيل الفحص فور فتح الصفحة
-    checkBaghdadTimeAndAutoReset();
-
-    // فحص دوري كل دقيقة لمراقبة حلول الساعة 6:00 مساءً مباشرة
-    const timerInterval = setInterval(checkBaghdadTimeAndAutoReset, 60 * 1000);
-
   
   const getBaghdadDateInfo = () => {
     const now = new Date();
