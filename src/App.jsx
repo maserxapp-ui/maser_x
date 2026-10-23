@@ -100,7 +100,7 @@ export default function App() {
   const ADMIN_PASSWORD = '582798'; 
  // 🔄 دالة تجديد الاشتراك الشهري للطالب عند ضغط الأدمن
   const handleRenewSubscription = async (student) => {
-    const confirmRenew = window.confirm(`هل ترغب بتجديد الاشتراك فعلاً للطالب/ـة (${student.full_name || student.name}) لمدة شهر كامل؟`);
+    const confirmRenew = window.confirm(`هل ترغب بتجديد الاشتراك فعلاً للطالب/ة (${student.full_name || student.name}) لمدة 4 أسابيع؟`);
     if (!confirmRenew) return;
 
     // حساب التاريخ الجديد باستخدام دالة المعرّفة في أعلى الملف
