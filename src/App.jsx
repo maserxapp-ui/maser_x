@@ -229,26 +229,7 @@ export default function App() {
   const handleManualResetTrips = () => performTripsReset(false);
 
   // 🕒 2️⃣ المستمع التلقائي للوقت (يتحقق أوتوماتيكياً عند وصول الساعة 6:00 مساءً بتوقيت بغداد)
-  useEffect(() => {
-    const checkBaghdadTimeAndAutoReset = () => {
-      try {
-        // حساب الوقت والتاريخ الحالي بضبط زمني لمدينة بغداد
-        const nowInBaghdad = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Baghdad" }));
-        const currentHour = nowInBaghdad.getHours(); // الساعة الحالية (0 إلى 23)
-        const baghdadTodayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Baghdad' }); // YYYY-MM-DD
-
-        const lastResetDate = localStorage.getItem('last_trips_auto_reset_date');
-
-        // إذا كانت الساعة 18 (6:00 مساءً) أو بعدها، ولم يتم التصفير التلقائي لتاريخ اليوم بعد:
-        if (currentHour >= 18 && lastResetDate !== baghdadTodayDate) {
-          console.log("⏰ حان موعد التصفير التلقائي (6:00 PM بتوقيت بغداد) - بدء المعالجة...");
-          performTripsReset(true);
-        }
-      } catch (err) {
-        console.error("خطأ في فحص الوقت التلقائي:", err);
-      }
-    };
-
+ 
     // تشغيل الفحص فور فتح الصفحة
     checkBaghdadTimeAndAutoReset();
 
