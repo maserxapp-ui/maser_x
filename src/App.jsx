@@ -142,14 +142,22 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, []);
-// 🔄 دالة التصفير الشاملة (حفظ الأرشيف + تصفير الطالبات + تصفير كافة السائقين)
-  const handleManualResetTrips = async () => {
-    const confirmReset = window.confirm(
-      "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
-    );
-    if (!confirmReset) return;
+// 🔄 1️⃣ الدالة الشاملة للتصفير (تتعامل مع التصفير اليدوي والآلي)
+  const performTripsReset = async (isAutomated = false) => {
+    // إذا كان التصفير يدوياً من زر الأدمن، نطلب التأكيد أولاً
+    if (!isAutomated) {
+      const confirmReset = window.confirm(
+        "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
+      );
+      if (!confirmReset) return;
+    }
 
     try {
+      console.log(isAutomated ? "⏰ جاري التصفير التلقائي للرحلات (الساعة 6:00 PM بغداد)..." : "🔄 جاري التصفير اليدوي...");
+
+      // حساب تاريخ اليوم بتوقيت بغداد بدقة (YYYY-MM-DD)
+      const baghdadTodayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Baghdad' });
+
       // 1️⃣ تنظيف الأرشيف القديم (حذف السجلات التي مضى عليها أكثر من 40 يوماً تلقائياً)
       const fortyDaysAgo = new Date();
       fortyDaysAgo.setDate(fortyDaysAgo.getDate() - 40);
@@ -168,12 +176,10 @@ export default function App() {
 
       // 3️⃣ حفظ نسخة اليوم في جدول الأرشيف (trip_history)
       if (attendedStudents && attendedStudents.length > 0) {
-        const todayDate = new Date().toISOString().split('T')[0];
-        
         const logsToInsert = attendedStudents.map(std => ({
           student_name: std.name,
-          driver_id: String(std.driver_id),
-          date: todayDate,
+          driver_id: String(std.driver_id || ''),
+          date: baghdadTodayDate,
           status: std.is_dropped_return ? 'أكمل الرحلتين' : 'ذهاب فقط'
         }));
 
@@ -211,13 +217,57 @@ export default function App() {
 
       if (driverErr) throw driverErr;
 
-      alert('✅ تم حفظ سجل اليوم في الأرشيف، وتنظيف السجلات القديمة، وتصفير جميع الرحلات بنجاح!');
-      window.location.reload();
+      if (isAutomated) {
+        // تسجل أن تصفير اليوم قد اكتمل لمنع تكراره لنفس اليوم
+        localStorage.setItem('last_trips_auto_reset_date', baghdadTodayDate);
+        console.log('✅ تم التصفير التلقائي لليوم بنجاح!');
+        window.location.reload();
+      } else {
+        alert('✅ تم حفظ سجل اليوم في الأرشيف، وتنظيف السجلات القديمة، وتصفير جميع الرحلات بنجاح!');
+        window.location.reload();
+      }
+
     } catch (err) {
-      console.error(err);
-      alert('❌ حدث خطأ أثناء التصفير: ' + err.message);
+      console.error('❌ خطأ أثناء التصفير:', err);
+      if (!isAutomated) {
+        alert('❌ حدث خطأ أثناء التصفير: ' + err.message);
+      }
     }
   };
+
+  // 🔄 ربط زر التصفير اليدوي بالدالة
+  const handleManualResetTrips = () => performTripsReset(false);
+
+  // 🕒 2️⃣ المستمع التلقائي للوقت (يتحقق أوتوماتيكياً عند وصول الساعة 6:00 مساءً بتوقيت بغداد)
+  useEffect(() => {
+    const checkBaghdadTimeAndAutoReset = () => {
+      try {
+        // حساب الوقت والتاريخ الحالي بضبط زمني لمدينة بغداد
+        const nowInBaghdad = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Baghdad" }));
+        const currentHour = nowInBaghdad.getHours(); // الساعة الحالية (0 إلى 23)
+        const baghdadTodayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Baghdad' }); // YYYY-MM-DD
+
+        const lastResetDate = localStorage.getItem('last_trips_auto_reset_date');
+
+        // إذا كانت الساعة 18 (6:00 مساءً) أو بعدها، ولم يتم التصفير التلقائي لتاريخ اليوم بعد:
+        if (currentHour >= 18 && lastResetDate !== baghdadTodayDate) {
+          console.log("⏰ حان موعد التصفير التلقائي (6:00 PM بتوقيت بغداد) - بدء المعالجة...");
+          performTripsReset(true);
+        }
+      } catch (err) {
+        console.error("خطأ في فحص الوقت التلقائي:", err);
+      }
+    };
+
+    // تشغيل الفحص فور فتح الصفحة
+    checkBaghdadTimeAndAutoReset();
+
+    // فحص دوري كل دقيقة لمراقبة حلول الساعة 6:00 مساءً مباشرة
+    const timerInterval = setInterval(checkBaghdadTimeAndAutoReset, 60 * 1000);
+
+    return () => clearInterval(timerInterval);
+  }, []);
+  
   const getBaghdadDateInfo = () => {
     const now = new Date();
     // تحويل الوقت لتوقيت بغداد بغض النظر عن جهاز المستخدم
