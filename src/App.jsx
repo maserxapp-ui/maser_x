@@ -14,7 +14,7 @@ export const getRemainingSubscriptionDays = (expiryDateStr) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// 🔄 دالة تمديد الاشتراك شهراً كاملاً
+// 🔄 دالة تمديد الاشتراك لمدة 4 أسابيع (28 يوماً)
 export const calculateNewExpiryDate = (currentExpiryStr) => {
   const today = new Date();
   let baseDate = currentExpiryStr ? new Date(currentExpiryStr) : today;
@@ -25,9 +25,10 @@ export const calculateNewExpiryDate = (currentExpiryStr) => {
   }
 
   const newExpiry = new Date(baseDate);
-  newExpiry.setMonth(newExpiry.getMonth() + 1);
+  newExpiry.setDate(newExpiry.getDate() + 28); // 👈 تم التعديل لإضافة 28 يوماً (4 أسابيع)
   return newExpiry.toISOString();
 };
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('main');
   const [selectedWorkDays, setSelectedWorkDays] = useState(['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس']);
