@@ -143,18 +143,16 @@ export default function App() {
       supabase.removeChannel(channel);
     };
   }, []);
-// 🔄 1️⃣ الدالة الشاملة للتصفير (تتعامل مع التصفير اليدوي والآلي)
-  const performTripsReset = async (isAutomated = false) => {
-    // إذا كان التصفير يدوياً من زر الأدمن، نطلب التأكيد أولاً
-    if (!isAutomated) {
-      const confirmReset = window.confirm(
-        "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
-      );
-      if (!confirmReset) return;
-    }
+// 🔄 1️⃣ الدالة الشاملة للتصفير اليدوي (خاصة بضغط الأدمن فقط)
+  const performTripsReset = async () => {
+    // نطلب التأكيد دائماً من الأدمن قبل التصفير اليدوي
+    const confirmReset = window.confirm(
+      "⚠️ هل أنت متأكد من تصفير جميع الرحلات اليومية؟ سيتطهر النظام وتتصفر حالات الطلاب ورحلات جميع السائقين للبدء بيوم جديد."
+    );
+    if (!confirmReset) return;
 
     try {
-      console.log(isAutomated ? "⏰ جاري التصفير التلقائي للرحلات (الساعة 6:00 PM بغداد)..." : "🔄 جاري التصفير اليدوي...");
+      console.log("🔄 جاري التصفير اليدوي وحفظ الأرشيف...");
 
       // حساب تاريخ اليوم بتوقيت بغداد بدقة (YYYY-MM-DD)
       const baghdadTodayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Baghdad' });
@@ -218,21 +216,12 @@ export default function App() {
 
       if (driverErr) throw driverErr;
 
-      if (isAutomated) {
-        // تسجل أن تصفير اليوم قد اكتمل لمنع تكراره لنفس اليوم
-        localStorage.setItem('last_trips_auto_reset_date', baghdadTodayDate);
-        console.log('✅ تم التصفير التلقائي لليوم بنجاح!');
-        window.location.reload();
-      } else {
-        alert('✅ تم حفظ سجل اليوم في الأرشيف، وتنظيف السجلات القديمة، وتصفير جميع الرحلات بنجاح!');
-        window.location.reload();
-      }
+      alert('✅ تم حفظ سجل اليوم في الأرشيف، وتنظيف السجلات القديمة، وتصفير جميع الرحلات بنجاح!');
+      window.location.reload();
 
     } catch (err) {
       console.error('❌ خطأ أثناء التصفير:', err);
-      if (!isAutomated) {
-        alert('❌ حدث خطأ أثناء التصفير: ' + err.message);
-      }
+      alert('❌ حدث خطأ أثناء التصفير: ' + err.message);
     }
   };
 
