@@ -236,8 +236,6 @@ export default function App() {
     // فحص دوري كل دقيقة لمراقبة حلول الساعة 6:00 مساءً مباشرة
     const timerInterval = setInterval(checkBaghdadTimeAndAutoReset, 60 * 1000);
 
-    return () => clearInterval(timerInterval);
-  }, []);
   
   const getBaghdadDateInfo = () => {
     const now = new Date();
