@@ -1932,10 +1932,9 @@ if (user && user.role === 'driver') {
               
               {/* زر أداوم غداً */}
               <button
-               onClick={() => {
-  // 🕒 فحص الوقت بتوقيت بغداد (متاح فقط من 6:00 م حتى 9:00 م)
-  const baghdadHour = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Baghdad" })).getHours();
-  const isRegistrationOpen = baghdadHour >= 18 && baghdadHour < 21;
+               أonClick={() => {
+  // 🔓 تفعيل استثنائي لهذا اليوم فقط (تم تعطيل القفل الزمني مؤقتاً)
+  const isRegistrationOpen = true; 
 
   if (!isRegistrationOpen) {
     alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد تصفير النظام الساعة 6:00 مساءً.");
