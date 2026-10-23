@@ -1931,7 +1931,6 @@ if (user && user.role === 'driver') {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               
               {/* زر أداوم غداً */}
-              {/* 🟢 زر أداوم غداً */}
 <button
   onClick={() => {
     // 🔓 تفعيل استثنائي (القفل معطل مؤقتاً)
