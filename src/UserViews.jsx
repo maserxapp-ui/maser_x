@@ -1933,11 +1933,15 @@ if (user && user.role === 'driver') {
               {/* 🟢 زر أداوم غداً */}
 <button
   onClick={() => {
-    // 🔓 تفعيل استثنائي (القفل معطل مؤقتاً)
-    const isRegistrationOpen = true; 
+    // 🕒 حساب الساعة الحالية بتوقيت بغداد بدقة
+    const nowInBaghdad = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Baghdad" }));
+    const currentHour = nowInBaghdad.getHours(); // الساعات من 0 إلى 23
+
+    // 🔒 مفتوح فقط من 6:00 مساءً (18) وحتى قبل 9:00 مساءً (21)
+    const isRegistrationOpen = currentHour >= 18 && currentHour < 21;
 
     if (!isRegistrationOpen) {
-      alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد تصفير النظام الساعة 6:00 مساءً.");
+      alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد الساعة 6:00 مساءً.");
       return;
     }
 
