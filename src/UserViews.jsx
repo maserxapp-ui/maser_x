@@ -1930,18 +1930,18 @@ if (user && user.role === 'driver') {
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               
-              {/* 🟢 زر أداوم غداً */}
+             {/* 🟢 زر أداوم غداً */}
 <button
   onClick={() => {
-    // 🕒 حساب الساعة الحالية بتوقيت بغداد بدقة
+    // 🕒 حساب الساعة والدقائق بتوقيت بغداد وتحويلها لقيمة عشرية
     const nowInBaghdad = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Baghdad" }));
-    const currentHour = nowInBaghdad.getHours(); // الساعات من 0 إلى 23
+    const currentHour = nowInBaghdad.getHours() + (nowInBaghdad.getMinutes() / 60); 
 
-    // 🔒 مفتوح فقط من 6:00 مساءً (18) وحتى قبل 9:00 مساءً (21)
-    const isRegistrationOpen = currentHour >= 18 && currentHour < 21;
+    // 🔒 مفتوح فقط من 6:00 مساءً (18) وحتى 9:30 مساءً (21.5)
+    const isRegistrationOpen = currentHour >= 18 && currentHour < 21.5;
 
     if (!isRegistrationOpen) {
-      alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:00 مساءً ويعود للعمل بعد الساعة 6:00 مساءً.");
+      alert("⚠️ انقفل تسجيل الدوام ليوم غد! ينتهي التسجيل عند الساعة 9:30 مساءً ويعود للعمل بعد الساعة 6:00 مساءً.");
       return;
     }
 
