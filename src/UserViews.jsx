@@ -1926,9 +1926,11 @@ if (user && user.role === 'driver') {
           const tomorrowIndex = (new Date().getDay() + 1) % 7;
           const tomorrowName = days[tomorrowIndex];
 
-          const isWorkDay = user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
-            ? user.work_days.includes(tomorrowName)
-            : true;
+          const hasExamNote = Boolean(user?.exam_note && user.exam_note.trim() !== '');
+
+const isWorkDay = (user?.work_days && Array.isArray(user.work_days) && user.work_days.length > 0
+  ? user.work_days.includes(tomorrowName)
+  : true) || hasExamNote;
 
           return (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
