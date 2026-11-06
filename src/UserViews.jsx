@@ -2133,13 +2133,13 @@ const isWorkDay = (user?.work_days && Array.isArray(user.work_days) && user.work
             justifyContent: 'center',
             gap: '6px'
           }}>
-          {studentData?.finish_status === 'finished'
-            ? 'تم تسجيل إنهاء دوامكِ اليوم ✅'
-            : !(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()]))
-            ? 'ليس لديكِ دوام رسمي اليوم 🚫'
-            : (studentData?.tomorrow_status === 'لا أداوم غداً' || studentData?.tomorrow_status === 'غائب')
-            ? 'أنتِ مسجلة غياب اليوم ⚠️'
-            : 'أنهيت دوامي (تنسيق سيارة العودة) 🎓'}
+         {studentData?.finish_status === 'finished'
+  ? 'تم تسجيل إنهاء دوامك اليوم 🟢'
+  : (!(studentData?.work_days && studentData.work_days.includes(['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][new Date().getDay()])) && !(studentData?.exam_note && studentData.exam_note.trim() !== ''))
+  ? '🚫 ليس لديك دوام رسمي اليوم'
+  : (studentData?.tomorrow_status === 'لا أداوم غداً' || studentData?.tomorrow_status === 'غائب')
+  ? '⚠️ أنت مسجلة غياب اليوم'
+  : '🔚 أنهيت دوامي (تنسيق سيارة العودة)'}
         </button>
 
       </div>
