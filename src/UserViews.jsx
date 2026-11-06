@@ -555,6 +555,43 @@ React.useEffect(() => {
 
 export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole, setLoginRole }) {
  const [employeePercentage, setEmployeePercentage] = useState('15');
+  // 📊 حالات وسجل الاستثناءات الشهري
+  const [monthlyCount, setMonthlyCount] = useState(0);
+  const [historyLogs, setHistoryLogs] = useState([]);
+
+  const fetchStudentExceptionsData = async (studentId) => {
+    if (!studentId) return;
+    const now = new Date();
+    const firstDayOfCurrentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    try {
+      // 1️⃣ حساب عدد استثناءات الشهر الحالي (يتصفّر تلقائياً مع بداية كل شهر جديد)
+      const { count: currentMonthCount } = await supabase
+        .from('student_exceptions_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .gte('exception_date', firstDayOfCurrentMonth);
+
+      // 2️⃣ جلب السجل التاريخي الكامل
+      const { data: historyList } = await supabase
+        .from('student_exceptions_log')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+
+      setMonthlyCount(currentMonthCount || 0);
+      setHistoryLogs(historyList || []);
+    } catch (err) {
+      console.error('خطأ في جلب السجل الشهري:', err);
+    }
+  };
+
+  useEffect(() => {
+    const currentId = user?.id || studentData?.id;
+    if (currentId) {
+      fetchStudentExceptionsData(currentId);
+    }
+  }, [user?.id, studentData?.id]);
 
   useEffect(() => {
     const fetchPercentage = async () => {
