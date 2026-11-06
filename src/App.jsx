@@ -695,7 +695,41 @@ const handleAutoDistribute = async (e, isAutomatic = false) => {
     `);
     printWindow.document.close();
   };
+// 📊 سجل واستثناءات الطالبات الشهرية للإدارة
+  const [exceptionsMap, setExceptionsMap] = useState({});
 
+  useEffect(() => {
+    const fetchAllMonthlyExceptions = async () => {
+      const now = new Date();
+      // تحديد أول يوم بالشهر الحالي YYYY-MM-01
+      const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+      try {
+        const { data: logs, error } = await supabase
+          .from('student_exceptions_log')
+          .select('student_id, exception_date, note')
+          .gte('exception_date', firstDay);
+
+        if (error) throw error;
+
+        // تجميع عدد الاستثناءات لكل طالبة
+        const map = {};
+        (logs || []).forEach(log => {
+          if (!map[log.student_id]) {
+            map[log.student_id] = { count: 0 };
+          }
+          map[log.student_id].count += 1;
+        });
+
+        setExceptionsMap(map);
+      } catch (err) {
+        console.error('خطأ بجلب استثناءات الإدارة:', err);
+      }
+    };
+
+    fetchAllMonthlyExceptions();
+  }, []);
+  
   // --- إدارة المشتركين ---
   const openAddModal = () => {
     setIsEditing(false);
@@ -1770,6 +1804,7 @@ else if (confirmedAttending) {
                           <th className="p-3">قيمة الاشتراك</th>
                           <th className="p-3">أيام الدوام</th> 
                           <th className="p-3 text-center">الحالة</th>
+                          <th className="p-3 text-center">📊 الاستثناءات</th>
                           <th className="p-3 text-center">الإجراءات</th>
                         </tr>
                       </thead>
@@ -1820,6 +1855,28 @@ else if (confirmedAttending) {
   {student.work_days && student.work_days.length > 0 
     ? student.work_days.join(' ، ') 
     : 'كل الأيام'}
+</td>
+                            {/* 📊 خلية عرض عدد الاستثناءات الشهري والتاريخ */}
+<td className="p-3 text-center align-middle">
+  {(() => {
+    const count = exceptionsMap[student.id]?.count || 0;
+    const now = new Date();
+    const startDate = `01/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const endDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+    return (
+      <div className="flex flex-col items-center justify-center gap-1">
+        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+          count > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+        }`}>
+          {count} استثناءات
+        </span>
+        <span className="text-[10px] text-slate-400">
+          من {startDate} إلى {endDate}
+        </span>
+      </div>
+    );
+  })()}
 </td>
                             <td className="p-3 text-center">{getStatusBadge(student.status)}</td>
                             <td className="p-3 text-center space-x-1 space-x-reverse">
