@@ -2055,43 +2055,60 @@ const isWorkDay = (user?.work_days && Array.isArray(user.work_days) && user.work
           🔄 الانسحاب من الدوام غداً (تصفير التحديد)
         </button>
 
-              {/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع الحفاظ على كودك) */}
-              {!isWorkDay && (
-                <button
-                  onClick={async () => {
-                    const examTime = prompt(`📝 غداً (${tomorrowName}) ليس ضمن دوامك الرسمي.\nيرجى تحديد وقت الامتحان (مثال: من الساعة 8:00 صباحاً إلى 11:30 صباحاً):`);
-                    if (examTime && examTime.trim() !== '') {
-                      try {
-                        // حفظ وقت الامتحان في عمود exam_note بـ Supabase
-                        await supabase
-                          .from('students')
-                          .update({
-                            exam_note: examTime.trim(),
-                            tomorrow_status: `لدي امتحان غداً (${examTime.trim()})`,
-                            is_absent: false
-                          })
-                          .eq('id', user.id);
-                      } catch (err) {
-                        console.error('خطأ بالحفظ:', err);
-                      }
-                      
-                      // استدعاء الدالة الخاصة بك
-                      handleStudentAction('exam_exception', `لدي امتحان غداً (${examTime})`);
-                    }
-                  }}
-                  style={{
-                    gridColumn: 'span 2',
-                    padding: '12px',
-                    borderRadius: '10px',
-                    border: '2px solid #e11d48',
-                    backgroundColor: '#ffe4e6',
-                    color: '#be123c',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    cursor: 'pointer'
-                  }}>
-                  📝 لدي امتحان غداً (طلب استثناء)
-                </button>
+{/* 📝 زر لدي امتحان (تم ربطه بعمود exam_note مع التوثيق الشهري) */}
+{!isWorkDay && (
+  <button
+    onClick={async () => {
+      const examTime = prompt(`📝 غداً (${tomorrowName}) ليس ضمن دوامك الرسمي.\nيرجى تحديد وقت الامتحان (مثال: من الساعة 8:00 صباحاً إلى 11:30 صباحاً):`);
+      if (examTime && examTime.trim() !== '') {
+        try {
+          const noteText = examTime.trim();
+
+          // 1️⃣ حفظ وقت الامتحان في عمود exam_note بـ Supabase
+          await supabase
+            .from('students')
+            .update({
+              exam_note: noteText,
+              tomorrow_status: `لدي امتحان غداً (${noteText})`,
+              is_absent: false
+            })
+            .eq('id', user.id);
+
+          // 2️⃣ ➕ التوثيق في سجل الاستثناءات التاريخي (للحساب الشهري)
+          const todayDate = new Date().toISOString().split('T')[0];
+          await supabase
+            .from('student_exceptions_log')
+            .insert([
+              {
+                student_id: user.id,
+                student_name: user.name || 'طالبة',
+                note: `امتحان (${noteText})`,
+                exception_date: todayDate
+              }
+            ]);
+
+        } catch (err) {
+          console.error('خطأ بالحفظ:', err);
+        }
+        
+        // استدعاء الدالة الخاصة بك
+        handleStudentAction('exam_exception', `لدي امتحان غداً (${examTime})`);
+      }
+    }}
+    style={{
+      gridColumn: 'span 2',
+      padding: '12px',
+      borderRadius: '10px',
+      border: '2px solid #e11d48',
+      backgroundColor: '#ffe4e6',
+      color: '#be123c',
+      fontWeight: 'bold',
+      fontSize: '13px',
+      cursor: 'pointer'
+    }}>
+    📝 لدي امتحان غداً (طلب استثناء)
+  </button>
+)}
               )}
 
             </div>
