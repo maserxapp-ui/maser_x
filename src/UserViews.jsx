@@ -871,23 +871,31 @@ export default function UserViews({ supabase, onBackToAdmin, logoImg, loginRole,
             const isPriceChanged = Number(user?.trip_price) !== Number(updatedDriver.trip_price);
             const isTripsChanged = Number(user?.completed_trips) !== Number(updatedDriver.completed_trips);
 
-            // نحدث فقط إذا تغير السعر أو عدد الرحلات
-            if (isPriceChanged || isTripsChanged) {
-              if (typeof setDriverData === 'function') {
-                setDriverData(prev => ({ ...prev, ...updatedDriver }));
-              }
-              if (typeof setUser === 'function') {
-                setUser(prev => ({ ...prev, ...updatedDriver }));
-              }
+           // نحدث فقط إذا تغير السعر أو عدد الرحلات
+if (isPriceChanged || isTripsChanged) {
+  // 🛡️ تنظيف السعر وتحويله لرقم صريح يمنع دمج النصوص والأرقام الغريبة
+  const safePrice = Number(String(updatedDriver.trip_price || 0).replace(/[^0-9]/g, ''));
 
-              const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-              const updatedUserData = {
-                ...currentUser,
-                completed_trips: updatedDriver.completed_trips,
-                trip_price: updatedDriver.trip_price,
-                points: updatedDriver.points,
-                trip_status: updatedDriver.trip_status
-              };
+  const cleanedDriver = {
+    ...updatedDriver,
+    trip_price: safePrice
+  };
+
+  if (typeof setDriverData === 'function') {
+    setDriverData(prev => ({ ...prev, ...cleanedDriver }));
+  }
+  if (typeof setUser === 'function') {
+    setUser(prev => ({ ...prev, ...cleanedDriver }));
+  }
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const updatedUserData = {
+    ...currentUser,
+    completed_trips: cleanedDriver.completed_trips,
+    trip_price: safePrice,
+    points: cleanedDriver.points,
+    trip_status: cleanedDriver.trip_status
+  };
 
               localStorage.setItem('user', JSON.stringify(updatedUserData));
             }
@@ -2761,18 +2769,19 @@ if (!students || students.length === 0) {
   alert("عذراً، لا يوجد طلاب مخصصون لك حالياً لإتمام الرحلة!");
   return;
 }
-    // 1️⃣ حساب عدد الرحلات والمبلغ الجديد
-        const currentTrips = Number(user?.completed_trips || 0);
+   // 🛡️ دالة لتنظيف أي رقم من الفواصل والرموز وحسابه بدقة
+        const parseMoney = (val) => Number(String(val || 0).replace(/[^0-9]/g, '')) || 0;
+
+        // 1️⃣ حساب عدد الرحلات والمبلغ الجديد
+        const currentTrips = parseMoney(user?.completed_trips);
         const newCompletedCount = currentTrips + 1;
 
-        const currentWalletPrice = Number(user?.trip_price || 0);
+        const currentWalletPrice = parseMoney(user?.trip_price);
         
-        // 💰 حساب أجرة الرحلة الفعلية فقط (من سعر الطلاب أو المتغير دون إضافة 10,000 عشوائية)
-        const addedTripPrice = Number(
-          typeof tripPrice !== 'undefined' && tripPrice !== null
-            ? tripPrice
-            : (students?.reduce((sum, st) => sum + Number(st.price || st.trip_price || 0), 0) || 0)
-        );
+        // 💰 حساب أجرة الرحلة الفعلية مع تنظيف كل سعر طالب من الفواصل وكلمة (د.ع)
+        const addedTripPrice = (typeof tripPrice !== 'undefined' && tripPrice !== null && tripPrice !== '')
+          ? parseMoney(tripPrice)
+          : (students?.reduce((sum, st) => sum + parseMoney(st.price || st.trip_price), 0) || 0);
 
         const newTotalPrice = currentWalletPrice + addedTripPrice;
 
@@ -3789,7 +3798,7 @@ const tomorrowEmployees = assignedEmployees.filter(emp => {
               <div>
                 <span className="text-slate-400 text-xs block">مجموع مستحقاتك المحصلة:</span>
                 <b className="text-emerald-400 text-lg block mt-0.5">
-                  {((user?.completed_trips || 0) * (user?.trip_price || 0)).toLocaleString('ar-EG')} د.ع
+                  {Number(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
                 </b>
               </div>
               <span className="text-3xl">💰</span>
