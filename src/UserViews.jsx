@@ -2769,57 +2769,58 @@ if (!students || students.length === 0) {
   alert("عذراً، لا يوجد طلاب مخصصون لك حالياً لإتمام الرحلة!");
   return;
 }
-   // 🛡️ دالة لتنظيف أي رقم من الفواصل والرموز وحسابه بدقة
-        const parseMoney = (val) => Number(String(val || 0).replace(/[^0-9]/g, '')) || 0;
 
-        // 1️⃣ حساب عدد الرحلات والمبلغ الجديد
-        const currentTrips = parseMoney(user?.completed_trips);
-        const newCompletedCount = currentTrips + 1;
+// 🛡️ دالة لتنظيف أي رقم من الفواصل والرموز وحسابه بدقة
+const parseMoney = (val) => Number(String(val || 0).replace(/[^0-9]/g, '')) || 0;
 
-        const currentWalletPrice = parseMoney(user?.trip_price);
-        
-        // 💰 حساب أجرة الرحلة الفعلية مع تنظيف كل سعر طالب من الفواصل وكلمة (د.ع)
-        const addedTripPrice = (typeof tripPrice !== 'undefined' && tripPrice !== null && tripPrice !== '')
-          ? parseMoney(tripPrice)
-          : (students?.reduce((sum, st) => sum + parseMoney(st.price || st.trip_price), 0) || 0);
+// 1️⃣ حساب عدد الرحلات ورصيد المحفظة
+const currentTrips = parseMoney(user?.completed_trips);
+const newCompletedCount = currentTrips + 1;
 
-        const newTotalPrice = currentWalletPrice + addedTripPrice;
+const currentWalletPrice = parseMoney(user?.trip_price);
 
-        // 2️⃣ تحديث قاعدة البيانات Supabase
-        const { error } = await supabase
-          .from('drivers')
-          .update({
-            trip_status: 'completed',
-            completed_trips: newCompletedCount,
-            trip_price: newTotalPrice
-          })
-          .eq('id', user.id);
+// 💰 أجرة الرحلة الواحدة (يأخذ سعر الرحلة المحدد، أو 10000 كحد افتراضي للرحلة)
+// 🟢 تم حذف جمع (st.price) الشهري نهائياً لمنع قفز المبلغ إلى 270 ألف
+const addedTripPrice = parseMoney(tripPrice) > 0 ? parseMoney(tripPrice) : 10000;
 
-        if (error) throw error;
+// الرصيد الجديد = رصيد المحفظة السابقة + أجرة هذه الرحلة فقط
+const newTotalPrice = currentWalletPrice + addedTripPrice;
 
-        // 3️⃣ تحديث حالة الواجهة
-        setDriverTripStatus('completed');
+// 2️⃣ تحديث قاعدة البيانات Supabase
+const { error } = await supabase
+  .from('drivers')
+  .update({
+    trip_status: 'completed',
+    completed_trips: newCompletedCount,
+    trip_price: newTotalPrice
+  })
+  .eq('id', user.id);
 
-        const updatedUser = {
-          ...user,
-          completed_trips: newCompletedCount,
-          trip_price: newTotalPrice,
-          trip_status: 'completed'
-        };
+if (error) throw error;
 
-        setUser(updatedUser);
-        if (typeof setDriverData === 'function') {
-          setDriverData(prev => ({ ...prev, ...updatedUser }));
-        }
+// 3️⃣ تحديث حالة الواجهة
+setDriverTripStatus('completed');
 
-        // 4️⃣ تحديث الـ localStorage لتثبيت القيم عند Refresh
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        if (localStorage.getItem('studentData')) {
-          const currentStudent = JSON.parse(localStorage.getItem('studentData') || '{}');
-          localStorage.setItem('studentData', JSON.stringify({ ...currentStudent, ...updatedUser }));
-        }
+const updatedUser = {
+  ...user,
+  completed_trips: newCompletedCount,
+  trip_price: newTotalPrice,
+  trip_status: 'completed'
+};
 
-        alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك 💰');
+setUser(updatedUser);
+if (typeof setDriverData === 'function') {
+  setDriverData(prev => ({ ...prev, ...updatedUser }));
+}
+
+// 4️⃣ تحديث الـ localStorage لتثبيت القيم عند Refresh
+localStorage.setItem('user', JSON.stringify(updatedUser));
+if (localStorage.getItem('studentData')) {
+  const currentStudent = JSON.parse(localStorage.getItem('studentData') || '{}');
+  localStorage.setItem('studentData', JSON.stringify({ ...currentStudent, ...updatedUser }));
+}
+
+alert('🎉 ممتاز! أتممت الرحلة وأوصلت جميع الطلاب بنجاح وتم إضافة أجرة الرحلة إلى محفظتك 💰');
     } catch (err) {
       alert('خطأ في إتمام الرحلة: ' + err.message);
     }
