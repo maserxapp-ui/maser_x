@@ -2779,9 +2779,12 @@ const newCompletedCount = currentTrips + 1;
 
 const currentWalletPrice = parseMoney(user?.trip_price);
 
-// 💰 أجرة الرحلة الواحدة (يأخذ سعر الرحلة المحدد، أو 10000 كحد افتراضي للرحلة)
-// 🟢 تم حذف جمع (st.price) الشهري نهائياً لمنع قفز المبلغ إلى 270 ألف
-const addedTripPrice = parseMoney(tripPrice) > 0 ? parseMoney(tripPrice) : 10000;
+// 💰 فحص سعر الرحلة بأمان دون إحداث خطأ (يقرأ سعر رحلة السائق المخزن 9000/8000 تلقائياً)
+const rawTripPrice = (typeof tripPrice !== 'undefined' && tripPrice) 
+  ? tripPrice 
+  : (user?.fixed_trip_price || user?.trip_price || 10000);
+
+const addedTripPrice = parseMoney(rawTripPrice);
 
 // الرصيد الجديد = رصيد المحفظة السابقة + أجرة هذه الرحلة فقط
 const newTotalPrice = currentWalletPrice + addedTripPrice;
