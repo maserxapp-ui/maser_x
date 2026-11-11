@@ -3774,41 +3774,48 @@ const tomorrowEmployees = assignedEmployees.filter(emp => {
 )}
 
       {/* 👛 3. تبويب المحفظة */}
-      {activeTab === 'wallet' && (
-        <div className="max-w-md mx-auto p-4 space-y-4">
-          <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-lg space-y-4 text-right border border-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">👛</span>
-              <h3 className="m-0 text-base font-bold text-sky-400">محفظة الرحلات الحالية</h3>
-            </div>
+{activeTab === 'wallet' && (() => {
+  const parseMoney = (val) => Number(String(val || 0).replace(/[^0-9]/g, '')) || 0;
+  
+  const tripFare = parseMoney(user?.trip_price) || 10000;
+  const tripsCount = parseMoney(user?.completed_trips);
+  const totalBalance = tripFare * tripsCount; // 💰 حساب المجموع: سعر الرحلة × عدد الرحلات
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                <span className="text-slate-400 text-xs block mb-1">سعر الرحلة</span>
-                <b className="text-slate-100 text-sm">
-                  {(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
-                </b>
-              </div>
+  return (
+    <div className="max-w-md mx-auto p-4 space-y-4">
+      <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-lg space-y-4 text-right border border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">👛</span>
+          <h3 className="m-0 text-base font-bold text-sky-400">محفظة الرحلات الحالية</h3>
+        </div>
 
-              <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                <span className="text-slate-400 text-xs block mb-1">الرحلات المكتملة</span>
-                <b className="text-sky-400 text-sm">
-                  {user?.completed_trips || 0} رحلة
-                </b>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+            <span className="text-slate-400 text-xs block mb-1">سعر الرحلة</span>
+            <b className="text-slate-100 text-sm">
+              {tripFare.toLocaleString('ar-EG')} د.ع
+            </b>
+          </div>
 
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
-              <div>
-                <span className="text-slate-400 text-xs block">مجموع مستحقاتك المحصلة:</span>
-                <b className="text-emerald-400 text-lg block mt-0.5">
-                  {Number(user?.trip_price || 0).toLocaleString('ar-EG')} د.ع
-                </b>
-              </div>
-              <span className="text-3xl">💰</span>
-            </div>
+          <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+            <span className="text-slate-400 text-xs block mb-1">الرحلات المكتملة</span>
+            <b className="text-sky-400 text-sm">
+              {tripsCount} رحلة
+            </b>
           </div>
         </div>
+
+        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+          <div>
+            <span className="text-slate-400 text-xs block">مجموع مستحقاتك المحصلة:</span>
+            <b className="text-emerald-400 text-lg block mt-0.5">
+              {totalBalance.toLocaleString('ar-EG')} د.ع
+            </b>
+          </div>
+          <span className="text-3xl">💰</span>
+        </div>
+      </div>
+    </div>
       )}
 
       {/* عرض شاشة المكافآت عند اختيار التبويب */}
