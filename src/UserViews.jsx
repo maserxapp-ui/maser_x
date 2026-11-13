@@ -1196,6 +1196,7 @@ const handleFinishShift = async () => {
       alert('⚠️ لا يمكنكِ الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلكِ بإتمام رحلة الذهاب الصباحية أولاً.');
       return;
     }
+  }
 
     // 2️⃣ تحديث حالة الطالبة في Supabase
     const { error: updateErr } = await supabase
