@@ -842,39 +842,41 @@ setGroupName(student.group_name || '');
   }
   
  const handleResetGoTrip = async (driver) => {
-    if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة الذهاب للسائق (${driver.name})؟`)) return;
+  if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة الذهاب للسائق (${driver.name})؟`)) return;
 
-    try {
-      // 1️⃣ تصفير حقول رحلة الذهاب للطلاب في جدول الطلاب
-      const { error: studentError } = await supabase
-        .from('students')
-        .update({ 
-          driver_id: null,
-          driver_name: null,
-          driver_phone: null,
-          assigned_driver: null
-        })
-        .or(`driver_id.eq.${driver.id},assigned_driver.eq.${driver.name}`);
+  try {
+    // 1️⃣ تثبيت وصول الطالبات للجامعة (is_dropped: true) ثم فك ارتباط السائق
+    const { error: studentError } = await supabase
+      .from('students')
+      .update({ 
+        driver_id: null,
+        driver_name: null,
+        driver_phone: null,
+        assigned_driver: null,
+        is_dropped: true
+      })
+      .or(`driver_id.eq.${driver.id},assigned_driver.eq.${driver.name}`);
 
-      if (studentError) throw studentError;
+    if (studentError) throw studentError;
 
-      // 2️⃣ تصفير حقل حالة الرحلة (trip_status) في جدول السائقين
-      const { error: driverError } = await supabase
-        .from('drivers')
-        .update({ trip_status: null })
-        .eq('id', driver.id);
+    // 2️⃣ تصفير حقل حالة الرحلة (trip_status) في جدول السائقين
+    const { error: driverError } = await supabase
+      .from('drivers')
+      .update({ trip_status: null })
+      .eq('id', driver.id);
 
-      if (driverError) throw driverError;
+    if (driverError) throw driverError;
 
-      alert(`🎉 تم تصفير رحلة الذهاب وحالة السائق ${driver.name} بنجاح!`);
-      
-      if (typeof fetchDrivers === 'function') fetchDrivers();
-      if (typeof fetchStudents === 'function') fetchStudents();
+    alert(`🎉 تم تصفير رحلة الذهاب وحالة السائق ${driver.name} بنجاح!`);
+    
+    if (typeof fetchDrivers === 'function') fetchDrivers();
+    if (typeof fetchStudents === 'function') fetchStudents();
 
-    } catch (err) {
-      alert('حدث خطأ أثناء تصفير رحلة الذهاب: ' + err.message);
-    }
-  };
+  } catch (err) {
+    alert('حدث خطأ أثناء تصفير رحلة الذهاب: ' + err.message);
+  }
+};
+  
   // 🌆 دالة تصفير رحلة العودة (الرحلة الثانية) للطلاب
   const handleResetReturnTrip = async (driver) => {
     if (!window.confirm(`هل أنت متأكد من تصفير طلاب رحلة العودة للسائق (${driver.name})؟`)) return;
