@@ -1163,27 +1163,34 @@ const handleFinishShift = async () => {
 
     const studentName = user?.name || user?.full_name || user?.username || 'طالبة';
 
-    // 🛑 1️⃣ التحقق من أن سائق الذهاب قد أتم الرحلة الصباحية
+   // 🛑 1️⃣ التحقق من وصول الطالبة للجامعة (سواء قبل تصفير السائق أو بعده)
     const { data: studentData, error: studentErr } = await supabase
       .from('students')
-      .select('driver_id')
+      .select('driver_id, is_dropped')
       .eq('id', user.id)
       .maybeSingle();
 
     if (studentErr) throw studentErr;
 
-    if (!studentData || !studentData.driver_id) {
-      alert('⚠️ لم يتم تحديد سائق لكِ في رحلة الذهاب بعد!');
+    if (!studentData) {
+      alert('⚠️ لم يتم العثور على بيانات الطالبة!');
       return;
     }
 
-    const { data: driverData, error: driverErr } = await supabase
-      .from('drivers')
-      .select('trip_status')
-      .eq('id', studentData.driver_id)
-      .maybeSingle();
+    // إذا لم تكن مسجلة كواصلة للجامعة (is_dropped)، نفحص حالة سائق الذهاب الحالي
+    if (!studentData.is_dropped) {
+      if (!studentData.driver_id) {
+        alert('⚠️ لم يتم تحديد سائق لكِ في رحلة الذهاب بعد!');
+        return;
+      }
 
-    if (driverErr) throw driverErr;
+      const { data: driverData, error: driverErr } = await supabase
+        .from('drivers')
+        .select('trip_status')
+        .eq('id', studentData.driver_id)
+        .maybeSingle();
+
+      if (driverErr) throw driverErr;
 
     if (driverData?.trip_status !== 'completed') {
       alert('⚠️ لا يمكنكِ الضغط على "أنهيت دوامي" الآن!\nيجب أن يقوم السائق الذي أقلكِ بإتمام رحلة الذهاب الصباحية أولاً.');
