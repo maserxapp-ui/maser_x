@@ -2770,44 +2770,30 @@ if (!students || students.length === 0) {
   return;
 }
 
-// 🛡️ دالة لتنظيف أي رقم من الفواصل والرموز وحسابه بدقة
+// 🛡️ دالة لتنظيف أي رقم من الفواصل والرموز
 const parseMoney = (val) => Number(String(val || 0).replace(/[^0-9]/g, '')) || 0;
 
-// 1️⃣ حساب عدد الرحلات ورصيد المحفظة
+// 1️⃣ زيادة عدد الرحلات بمقدار 1 فقط (بدون تعديل سعر الرحلة)
 const currentTrips = parseMoney(user?.completed_trips);
 const newCompletedCount = currentTrips + 1;
 
-const currentWalletPrice = parseMoney(user?.trip_price);
-
-// 💰 فحص سعر الرحلة بأمان دون إحداث خطأ (يقرأ سعر رحلة السائق المخزن 9000/8000 تلقائياً)
-const rawTripPrice = (typeof tripPrice !== 'undefined' && tripPrice) 
-  ? tripPrice 
-  : (user?.fixed_trip_price || user?.trip_price || 10000);
-
-const addedTripPrice = parseMoney(rawTripPrice);
-
-// الرصيد الجديد = رصيد المحفظة السابقة + أجرة هذه الرحلة فقط
-const newTotalPrice = currentWalletPrice + addedTripPrice;
-
-// 2️⃣ تحديث قاعدة البيانات Supabase
+// 2️⃣ تحديث قاعدة البيانات Supabase (نحدّث الحالة وعدد الرحلات فقط)
 const { error } = await supabase
   .from('drivers')
   .update({
     trip_status: 'completed',
-    completed_trips: newCompletedCount,
-    trip_price: newTotalPrice
+    completed_trips: newCompletedCount
   })
   .eq('id', user.id);
 
 if (error) throw error;
 
-// 3️⃣ تحديث حالة الواجهة
+// 3️⃣ تحديث حالة الواجهة (يبقى trip_price ثابتاً كما هو في قاعدة البيانات)
 setDriverTripStatus('completed');
 
 const updatedUser = {
   ...user,
   completed_trips: newCompletedCount,
-  trip_price: newTotalPrice,
   trip_status: 'completed'
 };
 
